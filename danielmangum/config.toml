@@ -1,0 +1,51 @@
+baseurl = "http://www.example.com" # Hostname (and path) to the root.
+publishDir = ".."
+title = "Daniel Mangum" # Site title.
+theme = "coder" # Set the theme.
+languagecode = "en" # The site’s language code.
+
+paginate = 20 # Default number of pages per page in pagination.
+canonifyurls = true # Enable to turn relative URLs into absolute.
+
+pygmentsstyle = "b2" # Color-theme or style for syntax highlighting.
+pygmentscodefences = true # Enable code fence background highlighting.
+pygmentscodefencesguesssyntax = true # Enable syntax guessing for code fences without specified language.
+
+[params] # theme parameters
+    author = "Daniel Mangum" # Author's name.
+    info = "I like writing code that writes code." # Author's job title or info.
+    description = "Daniel Mangum's personal website" # Site description.
+    keywords = "blog,developer,personal" # Site keywords.
+
+    disqusShortname = "yourdiscussshortname" # Enable or disable Disqus
+
+    # Whether you want to hide copyright and credits in the footer.
+    hideCredits = false
+    hideCopyright = false
+
+    # Custom CSS
+	custom_css = []
+
+# Social links
+[[params.social]]
+    name = "Github"
+    weight = 1
+    url = "https://github.com/hasheddan/"
+[[params.social]]
+    name = "Twitter"
+    weight = 2
+    url = "https://twitter.com/hasheddan/"
+[[params.social]]
+    name = "LinkedIn"
+    weight = 3
+    url = "https://www.linkedin.com/in/daniel-mangum-a530b8bb/"
+
+# Menu links
+[[menu.main]]
+    name = "Blog"
+    weight = 1
+    url  = "/posts/"
+[[menu.main]]
+    name = "About"
+    weight = 2
+    url = "/about/"
