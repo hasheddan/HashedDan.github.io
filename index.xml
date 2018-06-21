@@ -2,21 +2,21 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Daniel Mangum</title>
-    <link>http://danielmangum.com/</link>
+    <link>https://danielmangum.com/</link>
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
     <lastBuildDate>Wed, 20 Jun 2018 20:18:47 -0600</lastBuildDate>
     
-	<atom:link href="http://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Why I am Starting a Blog</title>
-      <link>http://danielmangum.com/posts/why-i-am-starting-a-blog/</link>
+      <link>https://danielmangum.com/posts/why-i-am-starting-a-blog/</link>
       <pubDate>Wed, 20 Jun 2018 20:18:47 -0600</pubDate>
       
-      <guid>http://danielmangum.com/posts/why-i-am-starting-a-blog/</guid>
+      <guid>https://danielmangum.com/posts/why-i-am-starting-a-blog/</guid>
       <description>I have always been envious of developers who share valuable information on their blog. I have thought for a long time that I wanted to be one of those developers that became famous in programming circles for the insight they shared. However, this also led me to be intimidated by the idea of writing my own posts. How could I ever measure up to these developers?
 That mindset changed when I realized how much I had benefitted in work, school, and on personal projects from the blog posts of developers.</description>
     </item>
