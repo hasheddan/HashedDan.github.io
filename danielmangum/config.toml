@@ -1,26 +1,27 @@
-baseurl = "http://www.example.com" # Hostname (and path) to the root.
+baseurl = "http://www.example.com"
 publishDir = ".."
-title = "Daniel Mangum" # Site title.
-theme = "coder" # Set the theme.
-languagecode = "en" # The site’s language code.
+title = "Daniel Mangum"
+theme = "coder"
+languagecode = "en"
+googleAnalytics = "UA-116820283-1"
 
-paginate = 20 # Default number of pages per page in pagination.
-canonifyurls = true # Enable to turn relative URLs into absolute.
+paginate = 20
+canonifyurls = true
 
-pygmentsstyle = "b2" # Color-theme or style for syntax highlighting.
-pygmentscodefences = true # Enable code fence background highlighting.
-pygmentscodefencesguesssyntax = true # Enable syntax guessing for code fences without specified language.
+pygmentsstyle = "b2" 
+pygmentscodefences = true 
+pygmentscodefencesguesssyntax = true
 
-[params] # theme parameters
-    author = "Daniel Mangum" # Author's name.
-    info = "I like writing code that writes code." # Author's job title or info.
-    description = "Daniel Mangum's personal website" # Site description.
-    keywords = "blog,developer,personal" # Site keywords.
+[params]
+    author = "Daniel Mangum"
+    info = "I like writing code that writes code."
+    description = "Daniel Mangum's personal website"
+    keywords = "blog,developer,personal"
 
-    disqusShortname = "yourdiscussshortname" # Enable or disable Disqus
+    disqusShortname = "yourdiscussshortname"
 
     # Whether you want to hide copyright and credits in the footer.
-    hideCredits = false
+    hideCredits = true
     hideCopyright = false
 
     # Custom CSS
