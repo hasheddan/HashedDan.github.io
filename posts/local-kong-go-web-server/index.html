@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="author" content="Daniel Mangum">
+    <meta name="description" content="Daniel Mangum&#39;s personal website">
+    <meta name="keywords" content="blog,developer,personal">
+
+    <base href="https://danielmangum.com">
+    <title>
+  Local Kong API Gateway for Go Web Server · Daniel Mangum
+</title>
+
+    <link rel="canonical" href="https://danielmangum.com/posts/local-kong-go-web-server/">
+
+    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
+    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
+    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
+
+    
+
+    
+
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+    
+
+    <meta name="generator" content="Hugo 0.42.1" />
+  </head>
+
+  <body class="">
+    <main class="wrapper">
+      <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com">
+      Daniel Mangum
+    </a>
+    
+    <ul class="navigation-list  float-right ">
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/posts/">Blog</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/about/">About</a>
+      </li>
+      
+    </ul>
+    
+  </section>
+</nav>
+
+
+      <div class="content">
+        
+  <section class="container post">
+  <article>
+    <header>
+      <h1 class="title">Local Kong API Gateway for Go Web Server</h1>
+      <h2 class="date">July 26, 2018</h2>
+
+      
+    </header>
+
+    
+
+<h1 id="introduction-to-kong-api-gateway-with-go-web-server">Introduction to Kong API Gateway with Go Web Server</h1>
+
+<p>This guide will teach you how to run the Kong API gateway locally as a proxy server for a Golang API using Docker.</p>
+
+<h2 id="the-go-api">The Go API</h2>
+
+<p>The Golang standard library has a very simple http library that makes it very easy to spin up a web server. For now, we will build the simplest implementation of a web server. Start by creating a new directory in your go/src/.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-mkdir go-api && cd ```" data-lang="mkdir go-api && cd ```">Then create a new file main.go.
+
+```touch main.go```
+
+And copy the following snippet into it:</code></pre></div>
+<p>package main</p>
+
+<p>import (
+    &ldquo;fmt&rdquo;
+    &ldquo;log&rdquo;
+    &ldquo;net/http&rdquo;
+)</p>
+
+<p>func handler(w http.ResponseWriter, r *http.Request) {
+    fmt.Fprintf(w, &ldquo;This is an endpoint.&rdquo;)
+}</p>
+
+<p>func main() {
+    http.HandleFunc(&ldquo;/test&rdquo;, handler)
+    log.Fatal(http.ListenAndServe(&rdquo;:8080&rdquo;, nil))
+}</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">This simple API has one endpoint and will serve on port 8080.
+
+While we are here, we can go ahead and create a very simple Dockerfile to run our web server in a container:
+
+```touch Dockerfile```
+
+And the contents:</pre></div>
+<p>FROM golang:onbuild
+EXPOSE 8080</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">We will move on to setting up the Kong server, but will come back to this when it is up and running.
+
+## The Kong Server
+
+Our next task is setting up the Kong server. We will use Docker to run the Kong image as well as a Cassandra database image. The first step is setting up a Docker network:
+
+```docker network create kong-net```
+
+Then we can run our Cassandra container:</pre></div>
+<p>docker run d &ndash;name kong-database /</p>
+
+<p>&ndash;network=kong-net /</p>
+
+<p>-p 9042:9042 /</p>
+
+<p>cassandra:3</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">And apply the database migrations to it:</pre></div>
+<p>docker run &ndash;rm /</p>
+
+<p>&ndash;network=knog-net /</p>
+
+<p>-e &ldquo;KONG_DATABASE=cassandra&rdquo; /</p>
+
+<p>-e &ldquo;KONG_PG_HOST=kong-database&rdquo; /</p>
+
+<p>-e &ldquo;KONG_CASSANDRA_CONTACT_POINTS=kong-database&rdquo; /</p>
+
+<p>kong:latest kong migrations up</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">Lastly, we will start the Kong server:</pre></div>
+<p>docker run -d &ndash;name kong /</p>
+
+<p>&ndash;network=kong-net /</p>
+
+<p>-e &ldquo;KONG_DATABASE=cassandra&rdquo; /</p>
+
+<p>-e &ldquo;KONG_PG_HOST=kong-database&rdquo; /</p>
+
+<p>-e &ldquo;KONG_CASSANDRA_CONTACT_POINTS=kong-database&rdquo; /</p>
+
+<p>-e &ldquo;KONG_PROXY_ACCESS_LOG=/dev/stdout&rdquo; /</p>
+
+<p>-e &ldquo;KONG_ADMIN_ACCESS_LOG=/dev/stdout&rdquo; /</p>
+
+<p>-e &ldquo;KONG_PROXY_ERROR_LOG=/dev/stderr&rdquo; /</p>
+
+<p>-e &ldquo;KONG_ADMIN_ERROR_LOG=/dev/stderr&rdquo; /</p>
+
+<p>-e &ldquo;KONG_ADMIN_LISTEN=0.0.0.0:8001, 0.0.0.0:8444 ssl&rdquo; /</p>
+
+<p>-p 8080:8080 /</p>
+
+<p>-p 8443:8443 /</p>
+
+<p>-p 8001:8001 /</p>
+
+<p>-p 8444:8444 /</p>
+
+<p>kong:latest</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">Now, to verify that the Kong server is up and running and has connected to the Cassandra container, we can use curl to query the Kong Admin API:
+
+```curl -i http://localhost:8001/```
+
+If connection was successful, you should receive an HTTP 200 OK response.
+
+## Adding our Web Server as a Kong Service
+
+Now we want to take our web server and use the Kong gateway as a proxy. First, let&#39;s use the Dockerfile we created at the beginning to get the web server running in a container:
+
+```docker build -t go-server .```
+
+```docker run -p 8080:8080 go-server```
+
+To check that the web server is running and that the port has been correctly mapped to localhost, go to http://localhost:8080/test and make sure that the response is &#34;This is an endpoint.&#34;
+
+Now that the web server is running, we need to register it as a Kong service. We will use the Kong Admin API to do so (there are many open source GUI&#39;s you can also use if you prefer that method). In order for Kong to find the web server, we must determine our local IP address.
+
+```ifconfig | grep inet```
+
+Now we can register the service with Kong:</pre></div>
+<p>curl -i -X POST &ndash;url <a href="http://localhost:8001/services/">http://localhost:8001/services/</a> &ndash;date &lsquo;name=go-server&rsquo; &ndash;data &lsquo;url=http://{yourIP}:8080&rsquo;</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">Lastly, we must also add a route for the service:</pre></div>
+<p>curl -i -X POST &ndash;url <a href="http://localhost:8001/services/go-server/routes">http://localhost:8001/services/go-server/routes</a> &ndash;data &lsquo;hosts[]={yourIP}&rsquo;</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">Now we can finally query our API endpoint through Kong!</pre></div>
+<p>curl -v &lsquo;<a href="http://localhost:8000/test'">http://localhost:8000/test'</a> &ndash;header &lsquo;Host {yourIP}&rsquo;
+```</p>
+
+<p>You should get an HTTP 200 OK response as well as the response string: &ldquo;This is an endpoint.&rdquo;</p>
+
+<p>Kong is a great way to provide authentication, load balancing, and more to your microservice API&rsquo;s, and as you can see it is very simple to setup. Feel free to contact me on Twitter at <a href="https://twitter.com/HashedDan">@HashedDan</a> with any questions or thoughts!</p>
+
+  </article>
+
+  <br/>
+
+  
+  
+</section>
+
+      </div>
+
+      <footer class="footer">
+  <section class="container">
+     © 2018  
+  </section>
+</footer>
+
+    </main>
+
+    
+<script>
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+
+  </body>
+
+</html>

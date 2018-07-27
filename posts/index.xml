@@ -6,10 +6,20 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Wed, 20 Jun 2018 20:18:47 -0600</lastBuildDate>
+    <lastBuildDate>Thu, 26 Jul 2018 15:52:16 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Local Kong API Gateway for Go Web Server</title>
+      <link>https://danielmangum.com/posts/local-kong-go-web-server/</link>
+      <pubDate>Thu, 26 Jul 2018 15:52:16 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/local-kong-go-web-server/</guid>
+      <description>Introduction to Kong API Gateway with Go Web Server This guide will teach you how to run the Kong API gateway locally as a proxy server for a Golang API using Docker.
+The Go API The Golang standard library has a very simple http library that makes it very easy to spin up a web server. For now, we will build the simplest implementation of a web server. Start by creating a new directory in your go/src/.</description>
+    </item>
     
     <item>
       <title>Why I am Starting a Blog</title>
