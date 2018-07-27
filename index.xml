@@ -19,7 +19,7 @@
       <guid>https://danielmangum.com/posts/local-kong-go-web-server/</guid>
       <description>This guide will teach you how to run the Kong API gateway locally as a proxy server for a Golang API using Docker.
 The Go API The Golang standard library has a very simple http library that makes it very easy to spin up a web server. For now, we will build the simplest implementation of a web server. Start by creating a new directory in your go/src/.
-Then create a new file main.</description>
+mkdir go-api &amp;amp;&amp;amp; cd $_ Then create a new file main.</description>
     </item>
     
     <item>

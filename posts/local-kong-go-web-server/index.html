@@ -74,122 +74,85 @@
 <h2 id="the-go-api">The Go API</h2>
 
 <p>The Golang standard library has a very simple http library that makes it very easy to spin up a web server. For now, we will build the simplest implementation of a web server. Start by creating a new directory in your go/src/.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-mkdir go-api && cd ```" data-lang="mkdir go-api && cd ```">Then create a new file main.go.
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">mkdir go-api &amp;&amp; cd $_</pre></div>
+<p>Then create a new file main.go.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">touch main.go</pre></div>
+<p>And copy the following snippet into it:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="color:#fff;font-weight:bold">package</span> main
 
-```touch main.go```
+<span style="color:#fff;font-weight:bold">import</span> (
+    <span style="color:#0ff;font-weight:bold">&#34;fmt&#34;</span>
+    <span style="color:#0ff;font-weight:bold">&#34;log&#34;</span>
+    <span style="color:#0ff;font-weight:bold">&#34;net/http&#34;</span>
+)
 
-And copy the following snippet into it:</code></pre></div>
-<p>package main</p>
+<span style="color:#fff;font-weight:bold">func</span> handler(w http.ResponseWriter, r *http.Request) {
+    fmt.Fprintf(w, <span style="color:#0ff;font-weight:bold">&#34;This is an endpoint.&#34;</span>)
+}
 
-<p>import (
-    &ldquo;fmt&rdquo;
-    &ldquo;log&rdquo;
-    &ldquo;net/http&rdquo;
-)</p>
+<span style="color:#fff;font-weight:bold">func</span> main() {
+    http.HandleFunc(<span style="color:#0ff;font-weight:bold">&#34;/test&#34;</span>, handler)
+    log.Fatal(http.ListenAndServe(<span style="color:#0ff;font-weight:bold">&#34;:8080&#34;</span>, <span style="color:#fff;font-weight:bold">nil</span>))
+}</pre></div>
+<p>This simple API has one endpoint and will serve on port 8080.</p>
 
-<p>func handler(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintf(w, &ldquo;This is an endpoint.&rdquo;)
-}</p>
+<p>While we are here, we can go ahead and create a very simple Dockerfile to run our web server in a container:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">touch Dockerfile</pre></div>
+<p>And the contents:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">FROM golang:onbuild
+EXPOSE 8080</pre></div>
+<p>We will move on to setting up the Kong server, but will come back to this when it is up and running.</p>
 
-<p>func main() {
-    http.HandleFunc(&ldquo;/test&rdquo;, handler)
-    log.Fatal(http.ListenAndServe(&rdquo;:8080&rdquo;, nil))
-}</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">This simple API has one endpoint and will serve on port 8080.
+<h2 id="the-kong-server">The Kong Server</h2>
 
-While we are here, we can go ahead and create a very simple Dockerfile to run our web server in a container:
+<p>Our next task is setting up the Kong server. We will use Docker to run the Kong image as well as a Cassandra database image. The first step is setting up a Docker network:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">docker network create kong-net</pre></div>
+<p>Then we can run our Cassandra container:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">docker run d --name kong-database /
+--network=kong-net /
+-p 9042:9042 /
+cassandra:3</pre></div>
+<p>And apply the database migrations to it:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">docker run --rm /
+--network=knog-net /
+-e &#34;KONG_DATABASE=cassandra&#34; /
+-e &#34;KONG_PG_HOST=kong-database&#34; /
+-e &#34;KONG_CASSANDRA_CONTACT_POINTS=kong-database&#34; /
+kong:latest kong migrations up</pre></div>
+<p>Lastly, we will start the Kong server:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">docker run -d --name kong /
+--network=kong-net /
+-e &#34;KONG_DATABASE=cassandra&#34; /
+-e &#34;KONG_PG_HOST=kong-database&#34; /
+-e &#34;KONG_CASSANDRA_CONTACT_POINTS=kong-database&#34; /
+-e &#34;KONG_PROXY_ACCESS_LOG=/dev/stdout&#34; /
+-e &#34;KONG_ADMIN_ACCESS_LOG=/dev/stdout&#34; /
+-e &#34;KONG_PROXY_ERROR_LOG=/dev/stderr&#34; /
+-e &#34;KONG_ADMIN_ERROR_LOG=/dev/stderr&#34; /
+-e &#34;KONG_ADMIN_LISTEN=0.0.0.0:8001, 0.0.0.0:8444 ssl&#34; /
+-p 8080:8080 /
+-p 8443:8443 /
+-p 8001:8001 /
+-p 8444:8444 /
+kong:latest</pre></div>
+<p>Now, to verify that the Kong server is up and running and has connected to the Cassandra container, we can use curl to query the Kong Admin API:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">curl -i http://localhost:8001/</pre></div>
+<p>If connection was successful, you should receive an HTTP 200 OK response.</p>
 
-```touch Dockerfile```
+<h2 id="adding-our-web-server-as-a-kong-service">Adding our Web Server as a Kong Service</h2>
 
-And the contents:</pre></div>
-<p>FROM golang:onbuild
-EXPOSE 8080</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">We will move on to setting up the Kong server, but will come back to this when it is up and running.
+<p>Now we want to take our web server and use the Kong gateway as a proxy. First, let&rsquo;s use the Dockerfile we created at the beginning to get the web server running in a container:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">docker build -t go-server .</pre></div><div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">docker run -p 8080:8080 go-server</pre></div>
+<p>To check that the web server is running and that the port has been correctly mapped to localhost, go to <a href="http://localhost:8080/test">http://localhost:8080/test</a> and make sure that the response is &ldquo;This is an endpoint.&rdquo;</p>
 
-## The Kong Server
-
-Our next task is setting up the Kong server. We will use Docker to run the Kong image as well as a Cassandra database image. The first step is setting up a Docker network:
-
-```docker network create kong-net```
-
-Then we can run our Cassandra container:</pre></div>
-<p>docker run d &ndash;name kong-database /</p>
-
-<p>&ndash;network=kong-net /</p>
-
-<p>-p 9042:9042 /</p>
-
-<p>cassandra:3</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">And apply the database migrations to it:</pre></div>
-<p>docker run &ndash;rm /</p>
-
-<p>&ndash;network=knog-net /</p>
-
-<p>-e &ldquo;KONG_DATABASE=cassandra&rdquo; /</p>
-
-<p>-e &ldquo;KONG_PG_HOST=kong-database&rdquo; /</p>
-
-<p>-e &ldquo;KONG_CASSANDRA_CONTACT_POINTS=kong-database&rdquo; /</p>
-
-<p>kong:latest kong migrations up</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">Lastly, we will start the Kong server:</pre></div>
-<p>docker run -d &ndash;name kong /</p>
-
-<p>&ndash;network=kong-net /</p>
-
-<p>-e &ldquo;KONG_DATABASE=cassandra&rdquo; /</p>
-
-<p>-e &ldquo;KONG_PG_HOST=kong-database&rdquo; /</p>
-
-<p>-e &ldquo;KONG_CASSANDRA_CONTACT_POINTS=kong-database&rdquo; /</p>
-
-<p>-e &ldquo;KONG_PROXY_ACCESS_LOG=/dev/stdout&rdquo; /</p>
-
-<p>-e &ldquo;KONG_ADMIN_ACCESS_LOG=/dev/stdout&rdquo; /</p>
-
-<p>-e &ldquo;KONG_PROXY_ERROR_LOG=/dev/stderr&rdquo; /</p>
-
-<p>-e &ldquo;KONG_ADMIN_ERROR_LOG=/dev/stderr&rdquo; /</p>
-
-<p>-e &ldquo;KONG_ADMIN_LISTEN=0.0.0.0:8001, 0.0.0.0:8444 ssl&rdquo; /</p>
-
-<p>-p 8080:8080 /</p>
-
-<p>-p 8443:8443 /</p>
-
-<p>-p 8001:8001 /</p>
-
-<p>-p 8444:8444 /</p>
-
-<p>kong:latest</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">Now, to verify that the Kong server is up and running and has connected to the Cassandra container, we can use curl to query the Kong Admin API:
-
-```curl -i http://localhost:8001/```
-
-If connection was successful, you should receive an HTTP 200 OK response.
-
-## Adding our Web Server as a Kong Service
-
-Now we want to take our web server and use the Kong gateway as a proxy. First, let&#39;s use the Dockerfile we created at the beginning to get the web server running in a container:
-
-```docker build -t go-server .```
-
-```docker run -p 8080:8080 go-server```
-
-To check that the web server is running and that the port has been correctly mapped to localhost, go to http://localhost:8080/test and make sure that the response is &#34;This is an endpoint.&#34;
-
-Now that the web server is running, we need to register it as a Kong service. We will use the Kong Admin API to do so (there are many open source GUI&#39;s you can also use if you prefer that method). In order for Kong to find the web server, we must determine our local IP address.
-
-```ifconfig | grep inet```
-
-Now we can register the service with Kong:</pre></div>
-<p>curl -i -X POST &ndash;url <a href="http://localhost:8001/services/">http://localhost:8001/services/</a> &ndash;date &lsquo;name=go-server&rsquo; &ndash;data &lsquo;url=http://{yourIP}:8080&rsquo;</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">Lastly, we must also add a route for the service:</pre></div>
-<p>curl -i -X POST &ndash;url <a href="http://localhost:8001/services/go-server/routes">http://localhost:8001/services/go-server/routes</a> &ndash;data &lsquo;hosts[]={yourIP}&rsquo;</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">Now we can finally query our API endpoint through Kong!</pre></div>
-<p>curl -v &lsquo;<a href="http://localhost:8000/test'">http://localhost:8000/test'</a> &ndash;header &lsquo;Host {yourIP}&rsquo;
-```</p>
-
+<p>Now that the web server is running, we need to register it as a Kong service. We will use the Kong Admin API to do so (there are many open source GUI&rsquo;s you can also use if you prefer that method). In order for Kong to find the web server, we must determine our local IP address.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">ifconfig | grep inet</pre></div>
+<p>Now we can register the service with Kong:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">curl -i -X POST --url http://localhost:8001/services/ --date &#39;name=go-server&#39; --data &#39;url=http://{yourIP}:8080&#39;</pre></div>
+<p>Lastly, we must also add a route for the service:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">curl -i -X POST --url http://localhost:8001/services/go-server/routes --data &#39;hosts[]={yourIP}&#39;</pre></div>
+<p>Now we can finally query our API endpoint through Kong!</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">curl -v &#39;http://localhost:8000/test&#39; --header &#39;Host {yourIP}&#39;</pre></div>
 <p>You should get an HTTP 200 OK response as well as the response string: &ldquo;This is an endpoint.&rdquo;</p>
 
 <p>Kong is a great way to provide authentication, load balancing, and more to your microservice API&rsquo;s, and as you can see it is very simple to setup. Feel free to contact me on Twitter at <a href="https://twitter.com/HashedDan">@HashedDan</a> with any questions or thoughts!</p>
