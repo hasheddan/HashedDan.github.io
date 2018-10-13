@@ -6,10 +6,19 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Thu, 26 Jul 2018 15:52:16 -0600</lastBuildDate>
+    <lastBuildDate>Sat, 13 Oct 2018 13:21:42 -0500</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Simple Linux Command Line Using Docker</title>
+      <link>https://danielmangum.com/posts/simple-linux-command-line-using-docker/</link>
+      <pubDate>Sat, 13 Oct 2018 13:21:42 -0500</pubDate>
+      
+      <guid>https://danielmangum.com/posts/simple-linux-command-line-using-docker/</guid>
+      <description>Docker containers are widely used for developing and running anything from web applications to redis caches. However, they can also be useful for running what can effectively be a light VM (a container operates very differently from a VM, but we are just talking about the usecase). I like to use a container for accessing the the Linux command line. However, many users do not know how to run a container in the background and access the shell.</description>
+    </item>
     
     <item>
       <title>Local Kong API Gateway for Go Web Server</title>
