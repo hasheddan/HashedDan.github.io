@@ -6,10 +6,20 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sat, 13 Oct 2018 13:21:42 -0500</lastBuildDate>
+    <lastBuildDate>Tue, 16 Oct 2018 22:33:54 -0500</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Dockerfile for Building Ionic Apps</title>
+      <link>https://danielmangum.com/posts/dokerfile-for-building-ionic-apps/</link>
+      <pubDate>Tue, 16 Oct 2018 22:33:54 -0500</pubDate>
+      
+      <guid>https://danielmangum.com/posts/dokerfile-for-building-ionic-apps/</guid>
+      <description>Building apps using Ionic is useful for the ability to build for both IOS and Android from the same codebase. However, mostly because Ionic is build on top of the Apache Cordova framework, it can be difficult to make sure your environment is configured with the required version of each build component.
+This is where Docker can be helpful. You can create a container that has a consistent environment and run it locally to build your project.</description>
+    </item>
     
     <item>
       <title>Simple Linux Command Line Using Docker</title>
