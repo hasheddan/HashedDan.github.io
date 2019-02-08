@@ -6,10 +6,20 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 16 Oct 2018 22:33:54 -0500</lastBuildDate>
+    <lastBuildDate>Thu, 07 Feb 2019 15:17:47 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Why You Shouldn&#39;t Use ^Parameters with CloudFormation Templates</title>
+      <link>https://danielmangum.com/posts/why-you-shouldnt-use-parameters-with-cloudformation-templates/</link>
+      <pubDate>Thu, 07 Feb 2019 15:17:47 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/why-you-shouldnt-use-parameters-with-cloudformation-templates/</guid>
+      <description>^Run-Time (I admit that the title is intended to be clickbait)
+CloudFormation has become a popular Infrastructure as Code (IaC) tool for organizations that use AWS exclusively as their cloud provider (whether it should be or not is another whole discussion). The tool features the ability to add parameters to your configuration scripts (written in either YAML or JSON). However, I will argue in this post that you should not use parameters in your (top-level) scripts by enumerating Adam Jacob&amp;rsquo;s (creator of Chef) 10 principles of IaC as detailed in his chapter in Web Operations and illustrating how the use of parameters either violates or does not add any further value for each of them.</description>
+    </item>
     
     <item>
       <title>Dockerfile for Building Ionic Apps</title>
