@@ -6,10 +6,19 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Thu, 07 Feb 2019 15:17:47 -0600</lastBuildDate>
+    <lastBuildDate>Mon, 11 Feb 2019 15:41:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Immediate Reflections on the AWS Solutions Architect Associate Exam (February 2019)</title>
+      <link>https://danielmangum.com/posts/aws-solutions-architect-associate-exam-reflections/</link>
+      <pubDate>Mon, 11 Feb 2019 15:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/aws-solutions-architect-associate-exam-reflections/</guid>
+      <description>I passed the AWS Solutions Architect Associate Certification Exam today and I wanted to write up a few immediate thoughts because I still feel as though the process is somewhat opaque for most people. Part of this may be because of the NDA that you are required to agree to prior to taking the exam. To be clear, everything mentioned in this post will be from a broad perspective and will not include any questions, materials, or test-specific information.</description>
+    </item>
     
     <item>
       <title>Why You Shouldn&#39;t Use ^Parameters with CloudFormation Templates</title>
