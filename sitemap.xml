@@ -3,6 +3,23 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>https://danielmangum.com/</loc>
+    <lastmod>2019-04-13T14:39:17-05:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/posts/</loc>
+    <lastmod>2019-04-13T14:39:17-05:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/posts/etl-to-elt/</loc>
+    <lastmod>2019-04-13T14:39:17-05:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://danielmangum.com/posts/aws-solutions-architect-associate-exam-reflections/</loc>
     <lastmod>2019-02-11T15:41:34-06:00</lastmod>
   </url>
@@ -38,18 +55,6 @@
   
   <url>
     <loc>https://danielmangum.com/categories/</loc>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://danielmangum.com/</loc>
-    <lastmod>2019-02-11T15:41:34-06:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://danielmangum.com/posts/</loc>
-    <lastmod>2019-02-11T15:41:34-06:00</lastmod>
     <priority>0</priority>
   </url>
   
