@@ -6,10 +6,19 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sat, 13 Apr 2019 14:39:17 -0500</lastBuildDate>
+    <lastBuildDate>Wed, 22 May 2019 16:36:56 -0500</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Presence vs. Planning</title>
+      <link>https://danielmangum.com/posts/presence-vs-planning/</link>
+      <pubDate>Wed, 22 May 2019 16:36:56 -0500</pubDate>
+      
+      <guid>https://danielmangum.com/posts/presence-vs-planning/</guid>
+      <description>Sometimes I find it hard to focus on the work I am doing. It can be easy to constantly be evaluating how everything you are doing affects the present, affects your future, and affects those around you. These are good questions to be asking, but at the right time. If we are always planning, how are we ever going to get anything done? On the other hand, if we are never planning, how do we have context when choosing what to do next?</description>
+    </item>
     
     <item>
       <title>Understanding ETL to ELT by Going to Costco</title>
