@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="author" content="Daniel Mangum">
+    <meta name="description" content="Daniel Mangum&#39;s personal website">
+    <meta name="keywords" content="blog,developer,personal">
+
+    <base href="https://danielmangum.com">
+    <title>
+  HashiCode Ep. 1: Terraform Remote Backend Locking · Daniel Mangum
+</title>
+
+    <link rel="canonical" href="https://danielmangum.com/posts/tf-remote-backend-locking/">
+
+    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
+    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
+    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
+
+    
+
+    
+
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+    
+
+    <meta name="generator" content="Hugo 0.55.0" />
+  </head>
+
+  <body class="">
+    <main class="wrapper">
+      <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com">
+      Daniel Mangum
+    </a>
+    
+    <ul class="navigation-list  float-right ">
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/posts/">Blog</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/about/">About</a>
+      </li>
+      
+    </ul>
+    
+  </section>
+</nav>
+
+
+      <div class="content">
+        
+  <section class="container post">
+  <article>
+    <header>
+      <h1 class="title">HashiCode Ep. 1: Terraform Remote Backend Locking</h1>
+      <h2 class="date">June 17, 2019</h2>
+
+      
+    </header>
+
+    
+
+<p><em>This is the first installment of HashiCode, a blog post series where I go through the source code of HashiCorp tools to learn more about what happens behind the scenes when you interact with tools as a user.</em></p>
+
+<p><em>Disclaimer: this episode is referencing code from the Terraform codebase as of commit <a href="https://github.com/hashicorp/terraform/tree/43a754829ae7afcb26bccd275fb3ae9d3e0cda88">43a7548</a>. Becuase Terraform is a constanly evolving open source tool, the code is subject to change. However, the ideas expressed will largely remain the same.</em></p>
+
+<p>One of the issues that teams using Terraform to provision infrastructure run into quickly is managing who is changing what and at what time are they doing it. Terraform introduces the concept of <a href="https://www.terraform.io/docs/state/remote.html">remote state</a>, which allows users to interact with the same existing infrastructure resources. While this is powerful, it also provides more opportunities for issues. One of the most common solutions is <strong>locking</strong>.</p>
+
+<p>If you have ever interacted with a database, you may be familiar with the concept of locking. It solves the problem of data races when two different sessions are attempting to modify the same value at the same time. A common example is banking: imagine you have $100 in your bank account. If you deposited $20 and another user on your bank account deposited $50 at the same time, there is potential that one transaction overwrites the other. In short, if the second transaction begins before the first transaction ends, your bank balance will only be $150 instead of $170 when the second transaction ends. This is because when the second transaction started the bank account had $100 in it, and it increased that value by $50 and committed it.</p>
+
+<p>Locking solves this by <em>locking</em> writes to the database when a transaction starts. So going back to the bank example, when the first transaction begins it would take out a lock on the account, and when the second transaction wanted to begin, it would be told to wait until the first finished. The first would finish, bringing the balance to $120, then release the lock. The second would then take out a lock, and since the first transaction has completed and been committed, would then increase the balance to $150, before releasing the lock. This is a simple example, and there are multiple locking strategies that can be implemented to address certain types of collisions, but I will leave you to research more about that on your own. One of my favorite summaries is <a href="http://www.agiledata.org/essays/concurrencyControl.html">here</a>, and if you are interested in how locking is actually implemented in common database management systems take a look <a href="https://www.geeksforgeeks.org/implementation-of-locking-in-dbms/">here</a>.</p>
+
+<p>You may have already begun to see how this could come up in modifying remote state, and how a <code>.tfstate</code> file is much like a database. Just like collisions may occur when multiple parties are writing to a database, collisions may also occur when modifying infrastructure. For instance, if I want to add a target group to an application load balancer on AWS, and you want to delete that load balancer at the same time, what happens? Similarly, if I want to reference outputs from the state of another Terraform configuration, what happens if the state of that configuration is being changed while I try to read it? As previously mentioned, if we are sharing state remotely, we are interacting with the same source of truth.</p>
+
+<p><a href="https://aws.amazon.com/s3/">S3</a> is a common place to store shared state files for Terraform. Terraform allows for the use of multiple types of backends, and S3 has been one of the most popular since it was implemented as a remote state wrapper by Gruntwork&rsquo;s <a href="https://github.com/gruntwork-io/terragrunt">Terragrunt</a> prior to officially being fully implemented within Terraform itself. It works with <a href="https://aws.amazon.com/dynamodb/">DynamoDB</a> to allow for full backend functionality, which includes storage, versioning, encryption, and locking. As we look through the actual Terraform <a href="https://github.com/hashicorp/terraform">source code</a> to see how S3 is implemented as a backend, we can gain a greater understanding for what happens when we use it and how we can leverage it within an organization.</p>
+
+<h2 id="a-background-on-backends">A Background on Backends</h2>
+
+<p>If you have ever used Terraform you are probably familair with the concept of <code>.tfstate</code> files. Whether you know exactly how they are constructed, or you just know that they are a remnant of running most Terraform operations, they are handling a big part of the functionality of Terraform. They keep track of what has already been provisioned, which allows Terraform to know what exists, how it can be updated / deleted, and how new resources can interact with existing. If you were to delete a <code>.tfstate</code> file, then run <code>terraform apply</code>, Terraform would recreate all the resources defined in your configuration, and you be no longer able to manage the existing resources that you previously deployed.</p>
+
+<p>Backends come in two flavors in Terraform: <em>standard</em> and <em>enhanced</em>. The difference between the two is pretty straightforward. Most backends are standard, which means they basically just manage state. Enhanced backends do this as well, but also can execute remote operations so that you can initiate Terraform commands from your local machine, but then go about your day as the provisioning process is offloaded to an enhanced backend. You can read more about the difference between types of backends <a href="https://www.terraform.io/docs/backends/types/index.html">here</a>, but it is useful to think about backends by talking about the one that you are probably already familiar with: <strong>local</strong>.</p>
+
+<p>Local itself is an enhanced backend because it both handles state and can execute operations. Backends are basically just engines, giving Terraform the compute and storage resources (and some light logic to interact with them) that it needs to work. Because we are primarily interested in the topic of remote state locking, we will focus in only on the the subset of functionality that is encompassed by a standard backend. So how does the local backend handle state? Well we already alluded to it earlier. It uses your local file system and creates <code>.tfstate</code> files. But it actually doesn&rsquo;t have to! While there are two types of backends, we actually <em>always are using an enhanced backend</em>. This is because to ever interact with a standard backend we must go through an enhanced one (namely <code>local</code>, more on this later).</p>
+
+<blockquote>
+<p>The local backend, which is of type <em>backend.Enhanced</em> is actually used to execute all of the backends of type <em>backend.Backend</em>.</p>
+</blockquote>
+
+<p>To truly understand this, we must look into the source code. HashiCorp tools are mostly written in Go (<a href="https://github.com/hashicorp/vagrant">Vagrant</a>, the oldest tool, is written in Ruby). A common design pattern in Go, and most programming languages for that matter, is to define an interface which describes the functionality of a broad type, and then have multiple implementations that adhere to the specifications. HashiCorp utilizes this pattern quite heavily, and it allows for the tools to be built using a &ldquo;plugin&rdquo; architecture, which has been a significant factor in their rapid adoption and growth (we will certainly be diving deeper into this plugin architecture in later episodes of HashiCode). Importantly, both the &ldquo;internal&rdquo; (or built-in) and extendable parts of Terraform are constructed in this manner, and backends, which would be considered internal in this case are no exception.</p>
+
+<p>The general <code>Backend</code> interface is defined in <a href="https://github.com/hashicorp/terraform/blob/43a754829ae7afcb26bccd275fb3ae9d3e0cda88/backend/backend.go">terraform/backend/backend.go</a>. Here is a snippet of it in which I have removed code comments for brevity:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">// Backend is the minimal interface that must be implemented to enable Terraform.
+type Backend interface {
+	ConfigSchema() *configschema.Block
+	PrepareConfig(cty.Value) (cty.Value, tfdiags.Diagnostics)
+	Configure(cty.Value) tfdiags.Diagnostics
+	StateMgr(workspace string) (statemgr.Full, error)
+	DeleteWorkspace(name string) error
+	Workspaces() ([]string, error)
+}</pre></div>
+<p>As the comment on the exported <code>Backend</code> interface suggests, this is the &ldquo;minimal interface that must be implemented&rdquo;. If we go back and think about our two types of backends (standard and enhanced) and remember that the functionality of an enhanced backend is a <em>superset</em> of that of the standard backend, then we can reach the conclusion that a standard backend must implement these six methods, while an enhanced backend must implement these six plus some more. And the code reflects this! If we look just below the <code>Backend</code> interface, we see the <code>Enhanced</code> interface (comments preserved this time):</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">// Enhanced implements additional behavior on top of a normal backend.
+//
+// Enhanced backends allow customizing the behavior of Terraform operations.
+// This allows Terraform to potentially run operations remotely, load
+// configurations from external sources, etc.
+type Enhanced interface {
+	Backend
+
+	// Operation performs a Terraform operation such as refresh, plan, apply.
+	// It is up to the implementation to determine what &#34;performing&#34; means.
+	// This DOES NOT BLOCK. The context returned as part of RunningOperation
+	// should be used to block for completion.
+	// If the state used in the operation can be locked, it is the
+	// responsibility of the Backend to lock the state for the duration of the
+	// running operation.
+	Operation(context.Context, *Operation) (*RunningOperation, error)
+}</pre></div>
+<p>Here we see another powerful property of Go, the ability for one interface to <em>wrap</em> another. This concept is called <em>composition</em>. Most programming languages allow for composition, but users frequently confuse composition with inheritance. Go does not provide classes or inheritance, but instead achieves polymorphism through composition and struct embedding. In this way, eliminates the fundamental problem of a <a href="https://en.wikipedia.org/wiki/Fragile_base_class">fragile base class</a> in object oriented programming. Composition an interface esstentially is just saying &ldquo;I will do everything this interface does, plus some more&rdquo;. So here, <code>Enhanced</code> is saying that it will do everything that <code>Backend</code> does, but also implement the ability to execute <code>Operation()</code>. This is exactly what we stated earlier about standard and enhanced backends: enhanced backends can do everything standard ones do, but can also execute <em>remote operations</em>. Do not take the clarity of this code for granted. You will see many code bases that are not near as readable / understandable as this, which is both a nod to the Go language and also to Mitchell Hashimoto, one of the founders of HashiCorp and the writer of this very block of code (You can actually check out the commit message where this was added <a href="https://github.com/hashicorp/terraform/commit/8a070ddef0659652636fcf570988c33eee19ec6b">here</a>. The fact that it has not been touched for two years is a pretty solid indication of the effectiveness of the initial implementation).</p>
+
+<p>So back to our original question: why do we have to go through an enhanced backend to interact with a standard one? Well if we consider that Terraform must always be able to execute operations and must always be able to handle state, and we also acknowledge that both of these things are always handled by a backend, then we reach the conclusion that we can never only be using a standard backend because we would be unable to execute any operations. If this still feels confusing, let&rsquo;s consider that there are only two types of enhanced backends: <code>local</code> and <code>remote</code> (i.e. Terraform Enterprise). Remote performs operations (i.e. <code>Operation()</code>) and manages state (i.e. <code>Backend</code>) in Terraform Enterprise. Local, on the other hand, performs operations locally, but can substitute either local or a remote-state <code>Backend</code> to manage state.</p>
+
+<p>This is a good time to look at the structure of the <code>terraform/backend</code> directory.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">backend/
+    atlas/          # Legacy backend Atlas support
+    init/           # Provides initialization methods for each backend type to Terraform
+    local/          # Local backend that implements Enhanced
+    remote/         # Remote (TF Enterprise) backend that implements Enhanced
+    remote-state/   # Remote state backends that implement Backend
+    backend.go      # Backend and Enhanced interfaces
+    ...</pre></div>
+<p>As you can see, the directory structure closely reflects the separation of functionality for each backend. If we look into <a href="https://github.com/hashicorp/terraform/blob/43a754829ae7afcb26bccd275fb3ae9d3e0cda88/backend/init/init.go">terraform/backend/init/init.go</a> we can see how each backend implementation is exposed to Terraform:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">// Init initializes the backends map with all our hardcoded backends.
+func Init(services *disco.Disco) {
+	backendsLock.Lock()
+	defer backendsLock.Unlock()
+
+	backends = map[string]backend.InitFn{
+		// Enhanced backends.
+		&#34;local&#34;:  func() backend.Backend { return backendLocal.New() },
+		&#34;remote&#34;: func() backend.Backend { return backendRemote.New(services) },
+
+		// Remote State backends.
+		&#34;artifactory&#34;: func() backend.Backend { return backendArtifactory.New() },
+		&#34;atlas&#34;:       func() backend.Backend { return backendAtlas.New() },
+		&#34;azurerm&#34;:     func() backend.Backend { return backendAzure.New() },
+		&#34;consul&#34;:      func() backend.Backend { return backendConsul.New() },
+		&#34;etcd&#34;:        func() backend.Backend { return backendEtcdv2.New() },
+		&#34;etcdv3&#34;:      func() backend.Backend { return backendEtcdv3.New() },
+		&#34;gcs&#34;:         func() backend.Backend { return backendGCS.New() },
+		&#34;http&#34;:        func() backend.Backend { return backendHTTP.New() },
+		&#34;inmem&#34;:       func() backend.Backend { return backendInmem.New() },
+		&#34;manta&#34;:       func() backend.Backend { return backendManta.New() },
+		&#34;oss&#34;:         func() backend.Backend { return backendOSS.New() },
+		&#34;pg&#34;:          func() backend.Backend { return backendPg.New() },
+		&#34;s3&#34;:          func() backend.Backend { return backendS3.New() },
+		&#34;swift&#34;:       func() backend.Backend { return backendSwift.New() },
+
+		// Deprecated backends.
+		&#34;azure&#34;: func() backend.Backend {
+			return deprecateBackend(
+				backendAzure.New(),
+				`Warning: &#34;azure&#34; name is deprecated, please use &#34;azurerm&#34;`,
+			)
+		},
+	}
+}</pre></div>
+<p>Now let&rsquo;s venture into <a href="https://github.com/hashicorp/terraform/blob/43a754829ae7afcb26bccd275fb3ae9d3e0cda88/backend/local/backend.go">terraform/backend/local/backend.go</a>. Luckily for us, the comments are verbose and do a great job of explaining exactly what we are looking at:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">// Local is an implementation of EnhancedBackend that performs all operations
+// locally. This is the &#34;default&#34; backend and implements normal Terraform
+// behavior as it is well known.
+type Local struct {
+	// CLI and Colorize control the CLI output. If CLI is nil then no CLI
+	// output will be done. If CLIColor is nil then no coloring will be done.
+	CLI      cli.Ui
+	CLIColor *colorstring.Colorize
+
+	// ShowDiagnostics prints diagnostic messages to the UI.
+	ShowDiagnostics func(vals ...interface{})
+
+	// The State* paths are set from the backend config, and may be left blank
+	// to use the defaults. If the actual paths for the local backend state are
+	// needed, use the StatePaths method.
+	//
+	// StatePath is the local path where state is read from.
+	//
+	// StateOutPath is the local path where the state will be written.
+	// If this is empty, it will default to StatePath.
+	//
+	// StateBackupPath is the local path where a backup file will be written.
+	// Set this to &#34;-&#34; to disable state backup.
+	//
+	// StateWorkspaceDir is the path to the folder containing data for
+	// non-default workspaces. This defaults to DefaultWorkspaceDir if not set.
+	StatePath         string
+	StateOutPath      string
+	StateBackupPath   string
+	StateWorkspaceDir string
+
+	// The OverrideState* paths are set based on per-operation CLI arguments
+	// and will override what&#39;d be built from the State* fields if non-empty.
+	// While the interpretation of the State* fields depends on the active
+	// workspace, the OverrideState* fields are always used literally.
+	OverrideStatePath       string
+	OverrideStateOutPath    string
+	OverrideStateBackupPath string
+
+	// We only want to create a single instance of a local state, so store them
+	// here as they&#39;re loaded.
+	states map[string]statemgr.Full
+
+	// Terraform context. Many of these will be overridden or merged by
+	// Operation. See Operation for more details.
+	ContextOpts *terraform.ContextOpts
+
+	// OpInput will ask for necessary input prior to performing any operations.
+	//
+	// OpValidation will perform validation prior to running an operation. The
+	// variable naming doesn&#39;t match the style of others since we have a func
+	// Validate.
+	OpInput      bool
+	OpValidation bool
+
+	// Backend, if non-nil, will use this backend for non-enhanced behavior.
+	// This allows local behavior with remote state storage. It is a way to
+	// &#34;upgrade&#34; a non-enhanced backend to an enhanced backend with typical
+	// behavior.
+	//
+	// If this is nil, local performs normal state loading and storage.
+	Backend backend.Backend
+
+	// RunningInAutomation indicates that commands are being run by an
+	// automated system rather than directly at a command prompt.
+	//
+	// This is a hint not to produce messages that expect that a user can
+	// run a follow-up command, perhaps because Terraform is running in
+	// some sort of workflow automation tool that abstracts away the
+	// exact commands that are being run.
+	RunningInAutomation bool
+
+	// opLock locks operations
+	opLock sync.Mutex
+}
+
+var _ backend.Backend = (*Local)(nil)
+
+// New returns a new initialized local backend.
+func New() *Local {
+	return NewWithBackend(nil)
+}
+
+// NewWithBackend returns a new local backend initialized with a
+// dedicated backend for non-enhanced behavior.
+func NewWithBackend(backend backend.Backend) *Local {
+	return &amp;Local{
+		Backend: backend,
+	}
+}</pre></div>
+<p>The first thing you may notice is the <code>Local</code> struct, which has comments that conveniently tell us that it implements EnhancedBackend (i.e. <code>backend.Enhanced</code>). As we have said many times, an enhanced backend (<code>backend.Enhanced</code>) must implement everything that a standard (<code>backend.Backend</code>) does, plus be able to perform operations. If you look farther down in this file, you will see the following methods implemented:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">func (b *Local) ConfigSchema() *configschema.Block
+func (b *Local) PrepareConfig(obj cty.Value) (cty.Value, tfdiags.Diagnostics)
+func (b *Local) Configure(obj cty.Value) tfdiags.Diagnostics
+func (b *Local) Workspaces() ([]string, error)
+func (b *Local) DeleteWorkspace(name string) error
+func (b *Local) StateMgr(name string) (statemgr.Full, error)</pre></div>
+<p>We recognize these as implementations of the six required methods found in <code>backend.Backend</code>. So we can think of these as the standard backend methods that are used to handle state. You can also see in the <code>Local</code> struct that there is a field Backend of type <code>backend.Backend</code>. This reminds us a lot of how the <code>backend.Enhanced</code> interface (which <code>Local</code> is implementing here) wrapped <code>backend.Backend</code>! However, I said earlier that <code>local</code> may manage state itself, or substitute in one of the <code>remote-state</code> backends to do so. How does that work? Well let&rsquo;s look back up to <code>New()</code> and <code>NewWithBackend()</code> just after the <code>Local</code> struct. If you look closely, you can see that <code>New()</code> simply calls <code>NewWithBackend(nil)</code> which sets the <code>Backend</code> field of <code>Local</code> to <code>nil</code>. Then, if we look at each of the six methods defined to implement <code>backend.Backend</code>, we notice that they all start with the following code block:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">    if b.Backend != nil {
+		return b.Backend.ConfigSchema() # This is the example from ConigSchema()
+	}</pre></div>
+<p>This basically says if we have substituted in another <code>backend.Backend</code> (i.e. <code>b.Backend != nil</code>) then turn over the implementation of this method to that backend. Otherwise, the method as defined in <code>Local</code> will execute. This is the behavior that you may be familiar with. If you look through these methods and their child methods, you will notice the functionality defined to write local <code>.tfstate</code> files and manage all state in your filesystem. However, the <code>Operation()</code> method, which is also defined farther down in this file, does not contain the same code block to check which backend is configured. This is because <code>Operation()</code> is part of <code>backend.Enhanced</code>, so the given <code>backend.Backend</code> is standard so is not able to execute operations.</p>
+
+<blockquote>
+<p>In short, <code>Local</code> must manage operations, but may or may not manage state.</p>
+</blockquote>
+
+<h2 id="the-s3-remote-state-backend">The S3 Remote State Backend</h2>
+
+<p>So let&rsquo;s take a look at one of the <code>backend.Backend</code> implementations that <code>Local</code> might push off handling state to. These are kept in <a href="https://github.com/hashicorp/terraform/tree/43a754829ae7afcb26bccd275fb3ae9d3e0cda88/backend/remote-state">terraform/backend/remote-state</a>. Upon navigating to the directory you will see a multitude of implementations ranging from Consul to Postgres. Each of the implementation directories contains at least the following three files:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">backend.go          # Creation of the given remote state backend (implements backend.Backend)
+backend_state.go    # Implementation of required backend.Backend methods
+client.go           # Implementation of methods used to interact with the remote state provider</pre></div>
+<p>Upon further examination of each of the remote state implementations, you will notice that their <code>backend.go</code> files all follow a similar pattern. Namely, they all embed <code>*schema.Backend</code>. We briefly mentioned earlier that another way that Go achieves polymorphism is through <em>struct embedding</em>, and that is exactly what is happening here. The <code>schema</code> package lives in the <code>helper/</code> directory, which is one that you may want to become familiar with if you plan on contributing to Terraform yourself. It contains many helpful libraries for abstracting away complexity that is common across a certain class of Terraform components and don&rsquo;t need to be reimplemented. In fact, that is exactly what it does here for our remote state backends. Let&rsquo;s take a look at <a href="https://github.com/hashicorp/terraform/blob/43a754829ae7afcb26bccd275fb3ae9d3e0cda88/backend/remote-state/s3/backend.go">terraform/backend/remote-state/s3/backend.go</a>. Skip over the <code>New()</code> function for a moment and check out the <code>Backend</code> struct:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">type Backend struct {
+	*schema.Backend
+
+	// The fields below are set from configure
+	s3Client  *s3.S3
+	dynClient *dynamodb.DynamoDB
+
+	bucketName           string
+	keyName              string
+	serverSideEncryption bool
+	acl                  string
+	kmsKeyID             string
+	ddbTable             string
+	workspaceKeyPrefix   string
+}</pre></div>
+<p>At the top, you&rsquo;ll see the aforementioned embedding of <code>*schema.Backend</code>, as well as a number of other fields specifically related to S3 as a remote state provider. Now if we look back at the <code>New()</code> function (exluded here for brevity), we will notice the creation of a <code>*schema.Backend</code>, which is a pointer to a struct, configured once again with S3 specific components. The schema is then embedded into a struct of type <code>s3.Backend</code> before being returned. You&rsquo;ll remember from where we looked at <code>Init()</code> above that this is exactly how an S3 remote state backend gets initialized.</p>
+
+<p>So why does each of the remote state providers embed <code>*schema.Backend</code>? To understand, it is helpful to remember that the <code>backend.Backend</code> interface (or as we like to call it, the standard backend interface) requires the implementation of six methods. Unsurprisingly, all of the remote state backends implement a few of those methods in very similar ways. <code>ConigSchema()</code>, <code>PrepareConfig()</code>, and <code>Configure()</code> share much of the same steps for each, so instead of reimplementing them every time we add a new remote state provider, we instead choose for each remote state backend to adhere to a contract with <code>*schema.Backend</code> saying that they will provide the necessary information for <code>*schema.Backend</code> to execute those methods for them (notice that they do cheat on this somewhat by setting the <code>ConfigureFunc</code> for <code>*schema.Backend</code> to call if additional custom configuration is needed for the provider). If you look at the <code>Backend</code> implementation in <a href="https://github.com/hashicorp/terraform/blob/43a754829ae7afcb26bccd275fb3ae9d3e0cda88/helper/schema/backend.go">terraform/helper/schema/backend.go</a>, the comments reinforce what we have just discovered:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">// Backend represents a partial backend.Backend implementation and simplifies
+// the creation of configuration loading and validation.
+//
+// Unlike other schema structs such as Provider, this struct is meant to be
+// embedded within your actual implementation. It provides implementations
+// only for Input and Configure and gives you a method for accessing the
+// configuration in the form of a ResourceData that you&#39;re expected to call
+// from the other implementation funcs.
+type Backend struct {
+	// Schema is the schema for the configuration of this backend. If this
+	// Backend has no configuration this can be omitted.
+	Schema map[string]*Schema
+
+	// ConfigureFunc is called to configure the backend. Use the
+	// FromContext* methods to extract information from the context.
+	// This can be nil, in which case nothing will be called but the
+	// config will still be stored.
+	ConfigureFunc func(context.Context) error
+
+	config *ResourceData
+}</pre></div>
+<p>Now let&rsquo;s look at S3&rsquo;s <a href="https://github.com/hashicorp/terraform/blob/43a754829ae7afcb26bccd275fb3ae9d3e0cda88/backend/remote-state/s3/backend_state.go">backend_state.go</a> file. This is where the remaining three <code>backend.Backend</code> methods are implemented: <code>Workspaces()</code>, <code>DeleteWorkspace()</code>, and <code>StateMgr()</code>. You&rsquo;ll also notice an unexported function (Go fields and functions are always exported if capitalized, always unexported if lowercase, read more <a href="https://www.ardanlabs.com/blog/2014/03/exportedunexported-identifiers-in-go.html">here</a>) named <code>remoteClient()</code>:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">// get a remote client configured for this state
+func (b *Backend) remoteClient(name string) (*RemoteClient, error) {
+	if name == &#34;&#34; {
+		return nil, errors.New(&#34;missing state name&#34;)
+	}
+
+	client := &amp;RemoteClient{
+		s3Client:             b.s3Client,
+		dynClient:            b.dynClient,
+		bucketName:           b.bucketName,
+		path:                 b.path(name),
+		serverSideEncryption: b.serverSideEncryption,
+		acl:                  b.acl,
+		kmsKeyID:             b.kmsKeyID,
+		ddbTable:             b.ddbTable,
+	}
+
+	return client, nil
+}</pre></div>
+<p>What you see here is all of those S3-specific config data being passed to a <code>RemoteClient</code> struct. Then if you look a little bit further down in the <code>StateMgr()</code> function, you&rsquo;ll notice that <code>remoteClient()</code> is the first thing that is called. Once again, this is a common pattern that you will see across the remote state backends: create a client and then use it to interact with the state provider. In the case of S3, we are passing in thing such as the AWS S3 and DynamoDB Go clients, the bucket name, the path for the <code>.tfstate</code> file, and various other values. All of these are used to write state files to an S3 bucket, as well as handle locking.</p>
+
+<h2 id="so-what-about-this-locking-business">So what about this locking business?</h2>
+
+<p>We briefly defined what locking is at the beginning, but let&rsquo;s revisit now that we have a little more context. Locking solves the problem of simulatenous access to state. If I am updating the state, I don&rsquo;t want you updating it or reading it until my changes are complete and committed. As we dive even further into the S3 remote state backend, we will see one implementation of how locking can be applied to remote state in Terraform.</p>
+
+<p>Going back to the <code>StateMgr()</code> function, let&rsquo;s examine what it does after creating a remote client:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">func (b *Backend) StateMgr(name string) (state.State, error) {
+	client, err := b.remoteClient(name)
+	if err != nil {
+		return nil, err
+	}
+
+	stateMgr := &amp;remote.State{Client: client}
+	// Check to see if this state already exists.
+	// If we&#39;re trying to force-unlock a state, we can&#39;t take the lock before
+	// fetching the state. If the state doesn&#39;t exist, we have to assume this
+	// is a normal create operation, and take the lock at that point.
+	//
+	// If we need to force-unlock, but for some reason the state no longer
+	// exists, the user will have to use aws tools to manually fix the
+	// situation.
+	existing, err := b.Workspaces()
+	if err != nil {
+		return nil, err
+	}
+
+	exists := false
+	for _, s := range existing {
+		if s == name {
+			exists = true
+			break
+		}
+	}
+
+	// We need to create the object so it&#39;s listed by States.
+	if !exists {
+		// take a lock on this state while we write it
+		lockInfo := state.NewLockInfo()
+		lockInfo.Operation = &#34;init&#34;
+		lockId, err := client.Lock(lockInfo)
+		if err != nil {
+			return nil, fmt.Errorf(&#34;failed to lock s3 state: %s&#34;, err)
+		}
+
+		// Local helper function so we can call it multiple places
+		lockUnlock := func(parent error) error {
+			if err := stateMgr.Unlock(lockId); err != nil {
+				return fmt.Errorf(strings.TrimSpace(errStateUnlock), lockId, err)
+			}
+			return parent
+		}
+
+		// Grab the value
+		// This is to ensure that no one beat us to writing a state between
+		// the `exists` check and taking the lock.
+		if err := stateMgr.RefreshState(); err != nil {
+			err = lockUnlock(err)
+			return nil, err
+		}
+
+		// If we have no state, we have to create an empty state
+		if v := stateMgr.State(); v == nil {
+			if err := stateMgr.WriteState(states.NewState()); err != nil {
+				err = lockUnlock(err)
+				return nil, err
+			}
+			if err := stateMgr.PersistState(); err != nil {
+				err = lockUnlock(err)
+				return nil, err
+			}
+		}
+
+		// Unlock, the state should now be initialized
+		if err := lockUnlock(nil); err != nil {
+			return nil, err
+		}
+
+	}
+
+	return stateMgr, nil
+}</pre></div>
+<p>The first thing that jumps out is that we are wrapping the <code>client</code> in a struct of type <code>remote.State</code>. If we jump over to <a href="https://github.com/hashicorp/terraform/blob/43a754829ae7afcb26bccd275fb3ae9d3e0cda88/state/remote/state.go">terraform/state/remote/state.go</a> we can take a look at exactly what <code>remote.State</code> encompasses and implements:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="color:#007f7f">// State implements the State interfaces in the state package to handle
+</span><span style="color:#007f7f">// reading and writing the remote state. This State on its own does no
+</span><span style="color:#007f7f">// local caching so every persist will go to the remote storage and local
+</span><span style="color:#007f7f">// writes will go to memory.
+</span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">type</span> State <span style="color:#fff;font-weight:bold">struct</span> {
+	mu sync.Mutex
+
+	Client Client
+
+	lineage          <span style="color:#fff;font-weight:bold">string</span>
+	serial           <span style="color:#fff;font-weight:bold">uint64</span>
+	state, readState *states.State
+	disableLocks     <span style="color:#fff;font-weight:bold">bool</span>
+}</pre></div>
+<p>Methods implemented by <code>remote.State</code>:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">func (s *State) State() *states.State
+func (s *State) StateForMigration() *statefile.File
+func (s *State) WriteState(state *states.State) error
+func (s *State) WriteStateForMigration(f *statefile.File, force bool) error
+func (s *State) RefreshState() error
+func (s *State) refreshState() error
+func (s *State) PersistState() error
+func (s *State) Lock(info *state.LockInfo) (string, error)
+func (s *State) Unlock(id string) error
+func (s *State) DisableLocks()
+func (s *State) StateSnapshotMeta() statemgr.SnapshotMeta</pre></div>
+<p>Now we are really getting somewhere! These look like methods that might be called by commands with which we are familiar. We can think about what is actually happening when we <code>plan</code>, <code>apply</code>, or <code>destroy</code>. Here we are able to write state, referesh state, lock, unlock, and much more. These methods are all defined as interfaces in the <a href="https://github.com/hashicorp/terraform/tree/43a754829ae7afcb26bccd275fb3ae9d3e0cda88/states/statemgr">terraform/states/statemgr</a> package, which I would encourage you to look through, along with the places they are actually called in like <a href="https://github.com/hashicorp/terraform/blob/43a754829ae7afcb26bccd275fb3ae9d3e0cda88/command/meta_backend.go">terraform/command/meta_backend.go</a>. You can also wait until the last section of the episode, where I will quickly tie everything together.</p>
+
+<p>Before we move on to the S3 client, check out the Client interface in the same directory: <a href="https://github.com/hashicorp/terraform/blob/43a754829ae7afcb26bccd275fb3ae9d3e0cda88/state/remote/remote.go">terraform/state/remote/remote.go</a>. Here we define the methods we need to implement for our S3 client to be a compatible remote state backend:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">// Client is the interface that must be implemented for a remote state
+// driver. It supports dumb put/get/delete, and the higher level structs
+// handle persisting the state properly here.
+type Client interface {
+	Get() (*Payload, error)
+	Put([]byte) error
+	Delete() error
+}
+
+// ClientLocker is an optional interface that allows a remote state
+// backend to enable state lock/unlock.
+type ClientLocker interface {
+	Client
+	state.Locker
+}</pre></div>
+<p>Since we are using a remote state backend that does in fact implement locking, we will be using the <code>ClientLocker</code> interface, which requires everything that <code>Client</code> does plus everything that <code>state.Locker</code> does (hint: <code>state.Locker</code> is actually just an alias for <code>statemgr.Locker</code>, which only required the <code>Lock</code> and <code>Unlock</code> methods). If we look at our S3 client in <a href="https://github.com/hashicorp/terraform/blob/43a754829ae7afcb26bccd275fb3ae9d3e0cda88/backend/remote-state/s3/client.go">terraform/backend/remote-state/s3/client.go</a>, we see that it does in fact implement <code>Get()</code>, <code>Put()</code>, <code>Delete()</code>, <code>Lock()</code>, and <code>Unlock()</code>. These methods are called thoughout the methods implemented in <code>remote.State</code>, but since we are focused on <code>Lock()</code> and <code>Unlock()</code>, which are used before and after each operation respectively, we can just look back at our <code>StateMgr()</code> function for an example.</p>
+
+<p>Essentially what this function is doing is taking a lock, initializing the state in S3 (i.e. writing an empty <code>.tfstate</code> file in the specified path), then unlocking. These actions are well defined because of strong naming conventions and verbose comments, but we have yet to look into what literally happens when we take a lock. Some of it happens in the <code>StateMgr()</code> function:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">        // take a lock on this state while we write it
+		lockInfo := state.NewLockInfo()
+		lockInfo.Operation = &#34;init&#34;
+		lockId, err := client.Lock(lockInfo)
+		if err != nil {
+			return nil, fmt.Errorf(&#34;failed to lock s3 state: %s&#34;, err)
+		}</pre></div>
+<p>We use some helpful utilies to generate our <code>lockInfo</code>, but then we hand it off to the S3 client. In the client, <code>Lock()</code> looks like this:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">func (c *RemoteClient) Lock(info *state.LockInfo) (string, error) {
+	if c.ddbTable == &#34;&#34; {
+		return &#34;&#34;, nil
+	}
+
+	info.Path = c.lockPath()
+
+	if info.ID == &#34;&#34; {
+		lockID, err := uuid.GenerateUUID()
+		if err != nil {
+			return &#34;&#34;, err
+		}
+
+		info.ID = lockID
+	}
+
+	putParams := &amp;dynamodb.PutItemInput{
+		Item: map[string]*dynamodb.AttributeValue{
+			&#34;LockID&#34;: {S: aws.String(c.lockPath())},
+			&#34;Info&#34;:   {S: aws.String(string(info.Marshal()))},
+		},
+		TableName:           aws.String(c.ddbTable),
+		ConditionExpression: aws.String(&#34;attribute_not_exists(LockID)&#34;),
+	}
+	_, err := c.dynClient.PutItem(putParams)
+
+	if err != nil {
+		lockInfo, infoErr := c.getLockInfo()
+		if infoErr != nil {
+			err = multierror.Append(err, infoErr)
+		}
+
+		lockErr := &amp;state.LockError{
+			Err:  err,
+			Info: lockInfo,
+		}
+		return &#34;&#34;, lockErr
+	}
+
+	return info.ID, nil
+}</pre></div>
+<p>We breezed by DynamoDB earlier, but if you are not familiar, it is a NoSQL document database that is fully managed by AWS. If you have ever used <a href="https://www.mongodb.com/">MongoDB</a>, it is very similar. What we want to do with a lock is tell everyone else that they can&rsquo;t access the state right now, while also checking that no one else is already accessing it. Going sequentially through the function implementation:
+1. We check to make sure a DynamoDB table name was defined on backend configuration
+2. We check if the lock ID that is passed in is empty, and we generate a UUID for it if it is
+3. We write the lock info to the Dynamo table
+4. If there is already a lock at the same state path, we fail and return error
+5. Otherwise, we return the <code>info.ID</code>, which is now part of the <code>Info</code> document at our state path in DynamoDB</p>
+
+<p>Then, back to <code>StateMgr()</code>, after initializing our state in S3 (feel free to look <code>WriteState()</code> and <code>PersistState()</code> functions for a deeper understanding), all of our changes in regards to <code>.tfstate</code> are complete and we can <code>Unlock()</code> by means of the <code>lockUnlock()</code> helper function. <code>Unlock()</code> is implemented in the S3 client as follows:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">func (c *RemoteClient) Unlock(id string) error {
+	if c.ddbTable == &#34;&#34; {
+		return nil
+	}
+
+	lockErr := &amp;state.LockError{}
+
+	// TODO: store the path and lock ID in separate fields, and have proper
+	// projection expression only delete the lock if both match, rather than
+	// checking the ID from the info field first.
+	lockInfo, err := c.getLockInfo()
+	if err != nil {
+		lockErr.Err = fmt.Errorf(&#34;failed to retrieve lock info: %s&#34;, err)
+		return lockErr
+	}
+	lockErr.Info = lockInfo
+
+	if lockInfo.ID != id {
+		lockErr.Err = fmt.Errorf(&#34;lock id %q does not match existing lock&#34;, id)
+		return lockErr
+	}
+
+	params := &amp;dynamodb.DeleteItemInput{
+		Key: map[string]*dynamodb.AttributeValue{
+			&#34;LockID&#34;: {S: aws.String(c.lockPath())},
+		},
+		TableName: aws.String(c.ddbTable),
+	}
+	_, err = c.dynClient.DeleteItem(params)
+
+	if err != nil {
+		lockErr.Err = err
+		return lockErr
+	}
+	return nil
+}</pre></div>
+<p>Once again going sequentially:
+1. We check to make sure a DynamoDB table name was defined on backend configuration
+2. Get the current lock info at the our state path in DynamoDB, return if unable or does not exist
+3. Make sure the lock id retrieved matches the one that we put there when we used <code>Lock()</code>, return error if not
+4. Delete our lock from DynamoDB, return nil error (lock deleted, everything okay)</p>
+
+<p>This is pretty simple, but very powerful. These two simple locking and unlocking functions allow us to make sure that no one else in our organization can access state as it is being modified, and we likewise cannot get a lock on the state if someone else has one.</p>
+
+<h2 id="command-line-to-code">Command Line to Code</h2>
+
+<p>Wow we have jumped around a lot! It is okay if it is overwhelming. To bring it all together, let&rsquo;s start as a user, and go all the way to the the depths of the code that we reached. So where to begin?</p>
+
+<p>Locking doesn&rsquo;t only take place when we initialize state. When it is enabled, it is used every time state is modified or accessed in any way. The nice thing about the way Terraform is architected is that if we want to add a new command to the CLI, we don&rsquo;t have to worry about locking. We know that a remote state backend that claims to have locking enabled must be implementing it (although unless you look at the source code you are trusting that it implements it correctly). Let&rsquo;s look at a simple example: reading the current state for a given configuration. The Terraform entrypoint is <code>terraform/main.go</code>, which initializes all of the available commands in <code>terraform/command.go</code>. For the actual implementation of the various commands, you must look into the <code>terraform/commands</code> directory. The command we need to read the current state is: <code>terraform state list</code>. The implementation lives in <code>terraform/command/state_list.go</code>(<a href="https://github.com/hashicorp/terraform/blob/43a754829ae7afcb26bccd275fb3ae9d3e0cda88/command/state_list.go">https://github.com/hashicorp/terraform/blob/43a754829ae7afcb26bccd275fb3ae9d3e0cda88/command/state_list.go</a>). The primary functionality is in <code>Run()</code>:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">func (c *StateListCommand) Run(args []string) int {
+	args, err := c.Meta.process(args, true)
+	if err != nil {
+		return 1
+	}
+
+	var statePath string
+	cmdFlags := c.Meta.defaultFlagSet(&#34;state list&#34;)
+	cmdFlags.StringVar(&amp;statePath, &#34;state&#34;, &#34;&#34;, &#34;path&#34;)
+	lookupId := cmdFlags.String(&#34;id&#34;, &#34;&#34;, &#34;Restrict output to paths with a resource having the specified ID.&#34;)
+	if err := cmdFlags.Parse(args); err != nil {
+		return cli.RunResultHelp
+	}
+	args = cmdFlags.Args()
+
+	if statePath != &#34;&#34; {
+		c.Meta.statePath = statePath
+	}
+
+	// Load the backend
+	b, backendDiags := c.Backend(nil)
+	if backendDiags.HasErrors() {
+		c.showDiagnostics(backendDiags)
+		return 1
+	}
+
+	// Get the state
+	env := c.Workspace()
+	stateMgr, err := b.StateMgr(env)
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(errStateLoadingState, err))
+		return 1
+	}
+	if err := stateMgr.RefreshState(); err != nil {
+		c.Ui.Error(fmt.Sprintf(&#34;Failed to load state: %s&#34;, err))
+		return 1
+	}
+
+	state := stateMgr.State()
+	if state == nil {
+		c.Ui.Error(fmt.Sprintf(errStateNotFound))
+		return 1
+	}
+
+	var addrs []addrs.AbsResourceInstance
+	var diags tfdiags.Diagnostics
+	if len(args) == 0 {
+		addrs, diags = c.lookupAllResourceInstanceAddrs(state)
+	} else {
+		addrs, diags = c.lookupResourceInstanceAddrs(state, args...)
+	}
+	if diags.HasErrors() {
+		c.showDiagnostics(diags)
+		return 1
+	}
+
+	for _, addr := range addrs {
+		if is := state.ResourceInstance(addr); is != nil {
+			if *lookupId == &#34;&#34; || *lookupId == states.LegacyInstanceObjectID(is.Current) {
+				c.Ui.Output(addr.String())
+			}
+		}
+	}
+
+	c.showDiagnostics(diags)
+
+	return 0
+}</pre></div>
+<p>It is fairly large, so let&rsquo;s narrow it down to the part we really care about, which is sandwiched in the middle:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4">    // Load the backend
+	b, backendDiags := c.Backend(nil)
+	if backendDiags.HasErrors() {
+		c.showDiagnostics(backendDiags)
+		return 1
+	}
+
+	// Get the state
+	env := c.Workspace()
+	stateMgr, err := b.StateMgr(env)
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf(errStateLoadingState, err))
+		return 1
+	}
+	if err := stateMgr.RefreshState(); err != nil {
+		c.Ui.Error(fmt.Sprintf(&#34;Failed to load state: %s&#34;, err))
+		return 1
+	}
+
+	state := stateMgr.State()
+	if state == nil {
+		c.Ui.Error(fmt.Sprintf(errStateNotFound))
+		return 1
+	}</pre></div>
+<p>Some of these calls should look familiar. The first thing we want to do is get the backend that has been configured for this session. <code>c.Backend(nil)</code> is calling the <code>Backend()</code> function in <a href="https://github.com/hashicorp/terraform/blob/43a754829ae7afcb26bccd275fb3ae9d3e0cda88/command/meta_backend.go">terraform/command/meta_backend.go</a>. This is where all of the setup for initializing the backend happens. I won&rsquo;t go through it here, but if you take a look you will see it checking if there is a remote state backend set, and if so, it is taking a local backend (enhanced) and injecting in the remote state backend (standard), just like we discussed early on in this post. Then, once we have setup the backend, we call that <code>StateMgr()</code> function that we spent so much time in and just examined for how it handles locking. This is the power of this type of construction. The <code>state list</code> command does not know or care which remote state backend is behind the scenes. It may use locking or it may not, but all the command cares about is that it satisfies its contract as specified by the <code>backend.Backend</code> (standard backend) interface.</p>
+
+<p>Likewise, the <code>RefreshState()</code> and <code>State()</code> functions that we saw implemented in <a href="https://github.com/hashicorp/terraform/blob/43a754829ae7afcb26bccd275fb3ae9d3e0cda88/state/remote/state.go">remote.State</a> are obscured to the command, just like the <code>Get()</code>, <code>Put()</code>, <code>Lock</code>, and <code>Unlock</code> functions that are implemented in the <code>s3.Client</code> and called in <code>RefreshState()</code> and <code>State()</code> are obscured to <code>remote.State</code>. This separation of responsibilities lends itself to projects that can scale quickly, be extended by the community, and worked on in a distributed manner. It is no surprise that you see those very traits across the HashiCorp company.</p>
+
+<h2 id="final-thoughts">Final Thoughts</h2>
+
+<p>I find the most effective way to learn a new code base is to interact with the binary as a user, think of a question you have about how it works, then trace the command you issued to the question you had. We started out this episode wanting to learn how the S3 remote state backend did locking, but we walked away understanding more about how HashiCorp architects its tools, what polymorphism looks like in Go, and a new confidence in contributing to open source projects that seem large and daunting.</p>
+
+<p>I love open source because it is about people. Good projects survive because of empathy, not because of engineering. This is the first episode of HashiCode, and I hope that it is another step towards caring for people in the community.</p>
+
+<p>As always, please feel free to reach out with question or comments on Twitter by tagging me or directly messaging me at <a href="https://twitter.com/hasheddan">@hasheddan</a>!</p>
+
+  </article>
+
+  <br/>
+
+  
+  
+</section>
+
+      </div>
+
+      <footer class="footer">
+  <section class="container">
+     © 2019  
+  </section>
+</footer>
+
+    </main>
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+
+  </body>
+
+</html>
