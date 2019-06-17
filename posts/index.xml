@@ -12,11 +12,11 @@
     
     
     <item>
-      <title>HashiCode Ep. 1: Terraform Remote Backend Locking</title>
-      <link>https://danielmangum.com/posts/tf-remote-backend-locking/</link>
+      <title>HashiCode Ep. 1: Terraform Remote State Backend Locking</title>
+      <link>https://danielmangum.com/posts/tf-remote-state-backend-locking/</link>
       <pubDate>Mon, 17 Jun 2019 00:31:39 -0500</pubDate>
       
-      <guid>https://danielmangum.com/posts/tf-remote-backend-locking/</guid>
+      <guid>https://danielmangum.com/posts/tf-remote-state-backend-locking/</guid>
       <description>This is the first installment of HashiCode, a blog post series where I go through the source code of HashiCorp tools to learn more about what happens behind the scenes when you interact with tools as a user.
 Disclaimer: this episode is referencing code from the Terraform codebase as of commit 43a7548. Becuase Terraform is a constanly evolving open source tool, the code is subject to change. However, the ideas expressed will largely remain the same.</description>
     </item>
