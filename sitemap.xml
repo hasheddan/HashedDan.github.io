@@ -3,6 +3,11 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>https://danielmangum.com/posts/please-mind-your-metaphors/</loc>
+    <lastmod>2019-08-19T00:07:58-05:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://danielmangum.com/posts/tf-remote-state-backend-locking/</loc>
     <lastmod>2019-06-17T00:31:39-05:00</lastmod>
   </url>
@@ -63,13 +68,13 @@
   
   <url>
     <loc>https://danielmangum.com/</loc>
-    <lastmod>2019-06-17T00:31:39-05:00</lastmod>
+    <lastmod>2019-08-19T00:07:58-05:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://danielmangum.com/posts/</loc>
-    <lastmod>2019-06-17T00:31:39-05:00</lastmod>
+    <lastmod>2019-08-19T00:07:58-05:00</lastmod>
     <priority>0</priority>
   </url>
   
