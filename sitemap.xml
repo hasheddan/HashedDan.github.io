@@ -4,16 +4,21 @@
   
   <url>
     <loc>https://danielmangum.com/</loc>
-    <lastmod>2020-03-10T14:39:17-05:00</lastmod>
+    <lastmod>2020-03-30T14:39:17-05:00</lastmod>
   </url>
   
   <url>
-    <loc>https://danielmangum.com/posts/crossplane-aws-open-source/</loc>
-    <lastmod>2020-03-10T14:39:17-05:00</lastmod>
+    <loc>https://danielmangum.com/posts/crossplane-openfaas/</loc>
+    <lastmod>2020-03-30T14:39:17-05:00</lastmod>
   </url>
   
   <url>
     <loc>https://danielmangum.com/posts/</loc>
+    <lastmod>2020-03-30T14:39:17-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/posts/crossplane-aws-open-source/</loc>
     <lastmod>2020-03-10T14:39:17-05:00</lastmod>
   </url>
   
