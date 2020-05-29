@@ -3,6 +3,21 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>https://danielmangum.com/</loc>
+    <lastmod>2020-03-10T14:39:17-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/posts/crossplane-aws-open-source/</loc>
+    <lastmod>2020-03-10T14:39:17-05:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/posts/</loc>
+    <lastmod>2020-03-10T14:39:17-05:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://danielmangum.com/posts/please-mind-your-metaphors/</loc>
     <lastmod>2019-08-19T00:07:58-05:00</lastmod>
   </url>
@@ -63,24 +78,10 @@
   
   <url>
     <loc>https://danielmangum.com/categories/</loc>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://danielmangum.com/</loc>
-    <lastmod>2019-08-19T00:07:58-05:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>https://danielmangum.com/posts/</loc>
-    <lastmod>2019-08-19T00:07:58-05:00</lastmod>
-    <priority>0</priority>
   </url>
   
   <url>
     <loc>https://danielmangum.com/tags/</loc>
-    <priority>0</priority>
   </url>
   
 </urlset>
