@@ -34,7 +34,7 @@
 
     
 
-    <meta name="generator" content="Hugo 0.57.2" />
+    <meta name="generator" content="Hugo 0.68.3" />
   </head>
 
   <body class="">
@@ -72,37 +72,29 @@
       
     </header>
 
-    
-
-<p>Building apps using Ionic is useful for the ability to build for both IOS and Android from the same codebase. However, mostly because Ionic is build on top of the Apache Cordova framework, it can be difficult to make sure your environment is configured with the required version of each build component.</p>
-
+    <p>Building apps using Ionic is useful for the ability to build for both IOS and Android from the same codebase. However, mostly because Ionic is build on top of the Apache Cordova framework, it can be difficult to make sure your environment is configured with the required version of each build component.</p>
 <p>This is where Docker can be helpful. You can create a container that has a consistent environment and run it locally to build your project.</p>
-
 <p>The Dockerfile <a href="https://github.com/HashedDan/docker-ionic/blob/master/Dockerfile">here</a> creates an environment suitable for building Android applications. The file that is created on build for Android is referred to as an APK. To generate your APK without modifying the Dockerfile at all, follow the directions below:</p>
-
 <h2 id="step-1-build-image">Step 1: Build Image</h2>
-
 <p>You can choose your own name for the image.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-docker build -t <image_name> . --force-rm```" data-lang="docker build -t <image_name> . --force-rm```">## Step 2: Run Container
-Use the same image name as above to run container as background process.</code></pre></div>
-<p>docker run -t -d <image_name>```</p>
-
+<p><code>docker build -t &lt;image_name&gt; . --force-rm</code></p>
+<h2 id="step-2-run-container">Step 2: Run Container</h2>
+<p>Use the same image name as above to run container as background process.</p>
+<p><code>docker run -t -d &lt;image_name&gt;</code></p>
 <h2 id="step-3-connect-to-container">Step 3: Connect to Container</h2>
-
 <p>Find the name of the running container (Docker will generate one).</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-docker container ls```" data-lang="docker container ls```">Get a bash shell in the container.</code></pre></div>
-<p>docker exec -i -t <container_name> /bin/bash```</p>
-
+<p><code>docker container ls</code></p>
+<p>Get a bash shell in the container.</p>
+<p><code>docker exec -i -t &lt;container_name&gt; /bin/bash</code></p>
 <h2 id="step-4-copy-project-to-container">Step 4: Copy Project To Container</h2>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-docker cp <local_path> <container_name>:<container_path>```" data-lang="docker cp <local_path> <container_name>:<container_path>```">## Step 5: Build For Android</code></pre></div>
-<p>ionic cordova build &ndash;release android```</p>
-
+<p><code>docker cp &lt;local_path&gt; &lt;container_name&gt;:&lt;container_path&gt;</code></p>
+<h2 id="step-5-build-for-android">Step 5: Build For Android</h2>
+<p><code>ionic cordova build --release android</code></p>
 <h2 id="step-6-clean-up">Step 6: Clean-Up</h2>
-
-<p>Move your APK to local machine (it should be in <ionic_proj_name>/platforms/android/build/outputs/apk).</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-docker cp <container_name>:<ionic_proj_name>/platforms/android/build/outputs/apk <local_path>```" data-lang="docker cp <container_name>:<ionic_proj_name>/platforms/android/build/outputs/apk <local_path>```"> Kill container.</code></pre></div>
-<p>docker kill <container_name>```</p>
-
+<p>Move your APK to local machine (it should be in &lt;ionic_proj_name&gt;/platforms/android/build/outputs/apk).</p>
+<p><code>docker cp &lt;container_name&gt;:&lt;ionic_proj_name&gt;/platforms/android/build/outputs/apk &lt;local_path&gt;</code></p>
+<p>Kill container.</p>
+<p><code>docker kill &lt;container_name&gt;</code></p>
 <p>As always, send me a message <a href="https://twitter.com/HashedDan">@HashedDan</a> on Twitter for any questions or comments!</p>
 
   </article>

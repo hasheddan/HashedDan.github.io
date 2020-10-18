@@ -34,7 +34,7 @@
 
     
 
-    <meta name="generator" content="Hugo 0.57.2" />
+    <meta name="generator" content="Hugo 0.68.3" />
   </head>
 
   <body class="">
@@ -73,18 +73,16 @@
     </header>
 
     <p>Docker containers are widely used for developing and running anything from web applications to redis caches. However, they can also be useful for running what can effectively be a light VM (a container operates very differently from a VM, but we are just talking about the usecase). I like to use a container for accessing the the Linux command line. However, many users do not know how to run a container in the background and access the shell. Here is a simple way to do so, with a very <a href="https://gist.github.com/HashedDan/2d1859904c1767fa7682e2fbe7ac0eb2">minimal Ubuntu container</a>:</p>
-
 <ul>
 <li>Create a directory and a Dockerfile inside. Use the linked Dockerfule above for a minimal Ubuntu configuration.</li>
 <li>Build the container with your desired image name:
-<code>docker build -t &lt;image_name&gt; .</code>
-- Run the container in the background: <code>docker run -t -d &lt;image_name&gt;</code>
-- Identify container name: <code>docker container ls</code>
-- Connect to the Linux shell in the container: <code>docker exec -i -t &lt;container_name&gt; /bin/bash</code>
-- When done, kill the background container process: <code>docker kill &lt;container_name&gt;</code>
-
-Send me a message <a href="https://twitter.com/HashedDan">@HashedDan</a> on Twitter for any questions or comments!</li>
+<code>docker build -t &lt;image_name&gt; .</code></li>
+<li>Run the container in the background: <code>docker run -t -d &lt;image_name&gt;</code></li>
+<li>Identify container name: <code>docker container ls</code></li>
+<li>Connect to the Linux shell in the container: <code>docker exec -i -t &lt;container_name&gt; /bin/bash</code></li>
+<li>When done, kill the background container process: <code>docker kill &lt;container_name&gt;</code></li>
 </ul>
+<p>Send me a message <a href="https://twitter.com/HashedDan">@HashedDan</a> on Twitter for any questions or comments!</p>
 
   </article>
 
