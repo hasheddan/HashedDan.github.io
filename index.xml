@@ -120,7 +120,7 @@ This is where Docker can be helpful. You can create a container that has a consi
       <pubDate>Sat, 13 Oct 2018 13:21:42 -0500</pubDate>
       
       <guid>https://danielmangum.com/posts/simple-linux-command-line-using-docker/</guid>
-      <description>Docker containers are widely used for developing and running anything from web applications to redis caches. However, they can also be useful for running what can effectively be a light VM (a container operates very differently from a VM, but we are just talking about the usecase). I like to use a container for accessing the the Linux command line. However, many users do not know how to run a container in the background and access the shell.</description>
+      <description>Docker containers are widely used for developing and running anything from web applications to redis caches. However, they can also be useful for running what can effectively be a light VM (a container operates very differently from a VM, but we are just talking about the use case). I like to use a container for accessing the the Linux command line. However, many users do not know how to run a container in the background and access the shell.</description>
     </item>
     
     <item>
