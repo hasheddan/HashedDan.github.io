@@ -6,10 +6,19 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 20 Oct 2020 18:51:26 -0500</lastBuildDate>
+    <lastBuildDate>Sun, 25 Oct 2020 18:51:26 -0500</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Understanding Non-Local Jumps (setjmp/longjmp) in RISC-V Assembly</title>
+      <link>https://danielmangum.com/posts/non-local-jumps-riscv/</link>
+      <pubDate>Sun, 25 Oct 2020 18:51:26 -0500</pubDate>
+      
+      <guid>https://danielmangum.com/posts/non-local-jumps-riscv/</guid>
+      <description>This post explores RISC-V assembly by examining the implementation of the setjmp and longjmp functions from the C standard library. I frequently find that I grasp concepts more quickly when I have actual code that I can disassemble because it allows me to connect information with intent. I believe RISC-V and similar efforts will fundamentally shift how computers are made and programmed. I hope that sharing my knowledge will inspire the same joy in others that I feel when imagining a future of open hardware.</description>
+    </item>
     
     <item>
       <title>Podcast Guest: Using Kubernetes And Crossplane To Provision Cloud Infrastructure (Full Stack Journey)</title>
