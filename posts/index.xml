@@ -6,10 +6,19 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 25 Oct 2020 18:51:26 -0500</lastBuildDate>
+    <lastBuildDate>Mon, 30 Nov 2020 05:51:26 -0500</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Tweet Thread: Crossplane Packages and K8s Features You Thought You Didn&#39;t Have</title>
+      <link>https://danielmangum.com/posts/crossplane-packages-k8s-features/</link>
+      <pubDate>Mon, 30 Nov 2020 05:51:26 -0500</pubDate>
+      
+      <guid>https://danielmangum.com/posts/crossplane-packages-k8s-features/</guid>
+      <description>The following is an unroll of a tweet thread about Crossplane packages that I posted after reading Dave Anderson&amp;rsquo;s post &amp;ldquo;A better Kubernetes, from the ground up&amp;rdquo;. I found many of the points in the post compelling, but feel that the existing extensibility model of Kubernetes allows for implementing at least some of the desired features without tearing down the entire system, as evidenced by the implementation of Crossplane packages. It is my hope that some of the design decisions we have made with Crossplane can be generally abstracted and improved upon to continue to enhance the Kubernetes ecosystem.</description>
+    </item>
     
     <item>
       <title>Understanding Non-Local Jumps (setjmp/longjmp) in RISC-V Assembly</title>
