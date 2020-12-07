@@ -6,10 +6,19 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 30 Nov 2020 05:51:26 -0500</lastBuildDate>
+    <lastBuildDate>Sun, 06 Dec 2020 05:51:26 -0500</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Installing Vivado 2020.x on Ubuntu 20.04</title>
+      <link>https://danielmangum.com/posts/vivado-2020-x-ubuntu-20-04/</link>
+      <pubDate>Sun, 06 Dec 2020 05:51:26 -0500</pubDate>
+      
+      <guid>https://danielmangum.com/posts/vivado-2020-x-ubuntu-20-04/</guid>
+      <description>Vivado is Xilinx&amp;rsquo;s IDE for HDL synthesis and analysis. It is a powerful tool, but can be a bit of a pain to setup and use. I recently went through the installation process on my main development machine, where I cam currently running Ubuntu 20.04, after I purchased a Digilent Arty A7-35T development board, which is designed around the Xilinx Artix-7 FPGA. While it didn&amp;rsquo;t take too long to get up and running (ignoring the time waiting for the actual installation to complete), I found the existing installation documentation quite verbose, which made following along more difficult than it should have been.</description>
+    </item>
     
     <item>
       <title>Tweet Thread: Crossplane Packages and K8s Features You Thought You Didn&#39;t Have</title>

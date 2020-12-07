@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="author" content="Daniel Mangum">
+    <meta name="description" content="Daniel Mangum&#39;s personal website">
+    <meta name="keywords" content="blog,developer,personal">
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@hasheddan" />
+    <meta name="twitter:title" content="Installing Vivado 2020.x on Ubuntu 20.04"/>
+    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
+
+    <base href="https://danielmangum.com">
+    <title>
+  Installing Vivado 2020.x on Ubuntu 20.04 · Daniel Mangum
+</title>
+
+    <link rel="canonical" href="https://danielmangum.com/posts/vivado-2020-x-ubuntu-20-04/">
+
+    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
+    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
+    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
+
+    
+
+    
+
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+    
+
+    <meta name="generator" content="Hugo 0.68.3" />
+  </head>
+
+  <body class="">
+    <main class="wrapper">
+      <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com">
+      Daniel Mangum
+    </a>
+    
+    <ul class="navigation-list  float-right ">
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/posts/">Blog</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/about/">About</a>
+      </li>
+      
+    </ul>
+    
+  </section>
+</nav>
+
+
+      <div class="content">
+        
+  <section class="container post">
+  <article>
+    <header>
+      <h1 class="title">Installing Vivado 2020.x on Ubuntu 20.04</h1>
+      <h2 class="date">December 6, 2020</h2>
+      <style>
+        .twitter-tweet-rendered {
+          display:block;
+          margin-left:auto;
+          margin-right:auto;
+        }
+      </style>
+
+      
+    </header>
+
+    <p><a href="https://www.xilinx.com/products/design-tools/vivado.html">Vivado</a> is <a href="https://www.xilinx.com/">Xilinx&rsquo;s</a> IDE for HDL synthesis and analysis. It is a powerful tool, but can be a bit of a pain to setup and use. I recently went through the installation process on my main development machine, where I cam currently running <a href="https://releases.ubuntu.com/20.04/">Ubuntu 20.04</a>, after I purchased a <a href="https://store.digilentinc.com/arty-a7-artix-7-fpga-development-board-for-makers-and-hobbyists/">Digilent Arty A7-35T</a> development board, which is designed around the <a href="https://www.xilinx.com/products/silicon-devices/fpga/artix-7.html">Xilinx Artix-7 FPGA</a>. While it didn&rsquo;t take too long to get up and running (ignoring the time waiting for the actual installation to complete), I found the existing installation documentation quite verbose, which made following along more difficult than it should have been. The primary issue I (unsurprisingly) ran into was that Ubuntu 20.04 is not officially supported by Vivado 2020.1, which requires a workaround that is detailed below. The subsequent Vivado 2020.2 release has <a href="https://forums.xilinx.com/t5/Installation-and-Licensing/Xilinx-Unified-Installer-2020-1-Exception-in-thread-quot-SPLASH/m-p/1159785/highlight/true#M30552">addressed the issue</a>, but still does not officially support Ubuntu 20.04.</p>
+<blockquote>
+<p>If you prefer to follow the official documentation for installation, it can be found <a href="https://www.xilinx.com/content/dam/xilinx/support/documentation/sw_manuals/xilinx2020_1/ug973-vivado-release-notes-install-license.pdf#namedDest=InstallingTheVivadoDesignSuiteTools">here</a>. There is also <a href="https://reference.digilentinc.com/vivado/installing-vivado/start">helpful documentation</a> from Digilent, which is especially useful if you are primarily using one of their boards.</p>
+</blockquote>
+<h2 id="downloading-the-xilinx-unified-installer">Downloading the Xilinx Unified Installer</h2>
+<p>Xilinx provides a number of development tools for their products and follows the familiar pattern of releasing a single unified installer that allows users to install any of them from a single entry point. The following steps describe how to download the installer for your machine.</p>
+<ol>
+<li>Navigate to the <a href="https://www.xilinx.com/support/download.html?_ga=2.260602445.115923376.1607278706-574785482.1605024210">Xilinx Downloads Page</a></li>
+</ol>
+<p>Here you should be met by a set of tabs, each with a different tool. By default, you should see <code>Vivado (Hardware Developer)</code> tab first. If you scroll down, you should see options to download the Xilinx Unified Installer Self Extracting Web Installer for a variety of platforms.</p>
+<p><img src="../static/vivado_blog1_1.png" alt="Xilinx Download Page"></p>
+<p>We want the Linux installer, but we will need to create a Xilinx account first. Click on the <code>Xilinx Unified Installer 2020.2: Linux Self Extracting Web Installer</code> link and you should be redirected to the Xilinx login page.</p>
+<ol start="2">
+<li>Create a Xilinx Account</li>
+</ol>
+<p>Some Vivado editions require that you have a license. To program Artix-7 boards you should typically be fine with just using the Design Edition, which only requires a Xilinx account. Walk through the steps to create a new account and activate your user.</p>
+<p><img src="../static/vivado_blog1_2.png" alt="Xilinx Create User"></p>
+<ol start="3">
+<li>Download the Unified Installer</li>
+</ol>
+<p>After you have created and activated your user, you can navigate back to the downloads page and click the link again. The installer should now download successfully.</p>
+<blockquote>
+<p>It is a good idea to verify the integrity of the installer after download. As pictured in the screenshots above, Xilinx provides digests, signature, and a public key for the download. The official documentation has a <a href="https://www.xilinx.com/content/dam/xilinx/support/documentation/sw_manuals/xilinx2020_1/ug973-vivado-release-notes-install-license.pdf#namedDest=InstallingTheVivadoDesignSuiteTools">great section</a> on how you can verify your downloads, so I will omit those steps here for brevity.</p>
+</blockquote>
+<h2 id="optional-faking-your-os-version">(Optional) Faking Your OS Version</h2>
+<p>As I mentioned in the introduction, Vivado 2020.x does not officially support Ubuntu 20.04. However, in my experience (and the experience of many others online), it mostly works just fine. Do keep in mind that it is generally not advisable to deceive a program into thinking it is running on a different platform than it is, and there is inherent risk in doing so. Additionally, you will likely be installing Vivado 2020.2 now that it is available.</p>
+<p>That being said, if you are installing Vivado 2020.1 on an incompatible version of Ubuntu, you can fake an older OS version by editing the <code>/etc/os-version</code> file. If you do not do so, you will likely see the following output when attempting to run the installer. It program doesn&rsquo;t fully crash, but you won&rsquo;t be able to use the GUI.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+Verifying archive integrity... All good.
+Uncompressing Xilinx Installer...............................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+Exception in thread &#34;SPLASH_LOAD_MESSAGE&#34; java.lang.IllegalStateException: no splash screen available
+        at java.desktop/java.awt.SplashScreen.checkVisible(Unknown Source)
+        at java.desktop/java.awt.SplashScreen.getBounds(Unknown Source)
+        at java.desktop/java.awt.SplashScreen.getSize(Unknown Source)
+        at com.xilinx.installer.gui.H.run(Unknown Source)
+
+</code></pre></div><p>The <code>/etc/os-version</code> likely looks something like the following for you:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+NAME=&#34;Ubuntu&#34;
+VERSION=&#34;20.04.1 LTS (Focal Fossa)&#34;
+ID=ubuntu
+ID_LIKE=debian
+PRETTY_NAME=&#34;Ubuntu 20.04.1 LTS&#34;
+VERSION_ID=&#34;20.04&#34;
+HOME_URL=&#34;https://www.ubuntu.com/&#34;
+SUPPORT_URL=&#34;https://help.ubuntu.com/&#34;
+BUG_REPORT_URL=&#34;https://bugs.launchpad.net/ubuntu/&#34;
+PRIVACY_POLICY_URL=&#34;https://www.ubuntu.com/legal/terms-and-policies/privacy-policy&#34;
+VERSION_CODENAME=focal
+UBUNTU_CODENAME=focal
+
+</code></pre></div><p>The specific field you will want to change is <code>VERSION</code>, and it should be set to <code>18.04.4</code> or earlier. You will need to edit as super user as <code>os-version</code> will be a read only file.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">VERSION=&#34;18.04.4 LTS (Bionic Beaver)&#34;
+</code></pre></div><p>After saving your changes, the unified installer should run successfully.</p>
+<p><strong>Make sure that you change the version back to its appropriate value after installing Vivado. Failure to do so can cause issues when running other applications on your machine.</strong></p>
+<h2 id="running-the-unified-installer">Running the Unified Installer</h2>
+<p>You can run the unified installer by making it executable and running as super user.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">chmod +x Xilinx_Unified_2020.1_0602_1208_Lin64.bin &amp;&amp; ./Xilinx_Unified_2020.1_0602_1208_Lin64.bin
+</code></pre></div><blockquote>
+<p>Digilent documentation will specify that you run the installer as root. With newer versions, such as 2020.x, this is no longer necessary as cable driver installation has been isolated as a separate step. More on this below.</p>
+</blockquote>
+<p>After a few seconds, you should be greeted with the Welcome window.</p>
+<p><img src="../static/vivado_blog1_3.png" alt="Xilinx Installer Welcome"></p>
+<p>Here we are presented with the helpful reminder that our OS version is not supported, but we will press on. The next window will ask you to login to your Xilinx account. The same credentials you provided when creating your user at the beginning of this account should be utilized here.</p>
+<p><img src="../static/vivado_blog1_4.png" alt="Xilinx Installer Login"></p>
+<p>Next, you&rsquo;ll need to agree to terms and conditions.</p>
+<p><img src="../static/vivado_blog1_5.png" alt="Xilinx Terms and Conditions"></p>
+<p>Now we will actually begin to customize the installation. As mentioned earlier, this installer can be used to install many different Xilinx products. The two you would likely be considering are Vivado, of course, and Vitis. Vitis is a newer development suite from Xilinx that is targeted more at software developers rather than hardware developers. The <a href="https://www.xilinx.com/news/press/2019/xilinx-announces-vitis--a-unified-software-platform-unlocking-a-new-design-experience-for-all-developers.html">initial press release</a> does a pretty good of explaining the motivation behind it. This quote is particularly illustrative of when you might want to choose Vitis over Vivado:</p>
+<blockquote>
+<p>Vitis is separate to the Vivado® Design Suite, which will still be supported for those who want to program using hardware code, but Vitis can also boost the productivity of hardware developers by packaging hardware modules as software-callable functions.</p>
+</blockquote>
+<p>As part of the announcement, Xilinx also announced a <a href="https://developer.xilinx.com/">new developer portal</a>, which has some examples that will give you an idea of what the Vitis workflow looks like. It should also be noted that, as shown in the screenshot below, installing Vitis will also install Vivado. Today we are just going to be installing Vivado as our primary goal will be programming at the hardware level.</p>
+<p><img src="../static/vivado_blog1_6.png" alt="Xilinx Install Vivado"></p>
+<p>Next we will select the version of Vivado we want to install. Since we are not purchasing a license, the <code>Systems Edition</code> will not be an option. The <code>WebPACK</code> version is a fine option for getting started, but there is a good chance you will want some of features in the <code>Design Edition</code> eventually, so it likely makes sense to go ahead and start off with it (as you will see later, it is preferable to not frequently reinstall these tools).</p>
+<p><img src="../static/vivado_blog1_7.png" alt="Xilinx Vivado Design Edition"></p>
+<p>You will also have to configure options for your installation. I chose the defaults minus &ldquo;Acquire or Manage a License Key&rdquo; and &ldquo;Enable WebTalk for Vivado to send usage statistics to Xilinx&rdquo; (sorry Xilinx).</p>
+<p><img src="../static/vivado_blog1_8.png" alt="Xilinx Vivado Configure Install"></p>
+<p>The final steps are to choose an installation location and confirm install. It is a large installation to say the least (see &ldquo;Final Disk Usage: 48.97 GB&rdquo;), and as such will take quite a long time to install. I started mine on a Saturday morning and checked back in during the afternoon and it had finished by that point.</p>
+<blockquote>
+<p>You should not see the same errors displayed for me as they are only due to the fact that I had previously already installed Vivado 2020.1.</p>
+</blockquote>
+<p><img src="../static/vivado_blog1_9.png" alt="Xilinx Vivado Location"></p>
+<p><img src="../static/vivado_blog1_10.png" alt="Xilinx Vivado Install"></p>
+<p>Hit install and you are off to the races!</p>
+<h2 id="installing-cable-drivers">Installing Cable Drivers</h2>
+<p>I mentioned earlier that cable drivers are now installed separately from the Vivado installation process. After your installation is complete, you should find a script that you can run to make sure the correct drivers are installed.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">sudo ./tools/Xilinx/data/xicom/cable_drivers/lin64/install_script/install_drivers/install_drivers
+</code></pre></div><h2 id="launch-vivado">Launch Vivado</h2>
+<p>Vivado should be ready to go at this point. You&rsquo;ll need to add <code>vivado</code> to your <code>PATH</code>. Xilinx has once again provided a helper script to add the relevant executables.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">source /tools/Xilinx/2020.1/settings64.sh
+</code></pre></div><blockquote>
+<p>This will only add to <code>PATH</code> for the current session. Add <code>export PATH=/tools/Xilinx/Vivado/2020.1/bin:$PATH</code> to <code>~/.profile</code> if you want <code>vivado</code> to be available in any session.</p>
+</blockquote>
+<p>Now you should be able to enter <code>vivado</code> and see the following quick start window.</p>
+<p><img src="../static/vivado_blog1_11.png" alt="Xilinx Vivado Quick Start"></p>
+<h2 id="wrapping-up">Wrapping Up</h2>
+<p>Hardware programming can feel intimidating, but the more you interact with the various toolchains the more you begin to gain familiarity. I will continue to share guides and tutorials here, and, as always, please feel free to send me a message <a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter with any questions or comments!</p>
+
+  </article>
+
+  <br/>
+
+  
+  
+</section>
+
+      </div>
+
+      <footer class="footer">
+  <section class="container">
+     © 2020  
+  </section>
+</footer>
+
+    </main>
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+
+  </body>
+
+</html>
