@@ -6,10 +6,20 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 06 Dec 2020 05:51:26 -0500</lastBuildDate>
+    <lastBuildDate>Wed, 09 Dec 2020 05:51:26 -0500</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Conference Talk: Building an Enterprise Infrastructure Control Plane on Kubernetes</title>
+      <link>https://danielmangum.com/posts/kubecon-na-20-infra-control-plane/</link>
+      <pubDate>Wed, 09 Dec 2020 05:51:26 -0500</pubDate>
+      
+      <guid>https://danielmangum.com/posts/kubecon-na-20-infra-control-plane/</guid>
+      <description>I had the privilege of joining Steven Borrelli from Mastercard for a tutorial at Kubecon North America 2020 on building an enterprise infrastructure control plane on Kubernetes using Crossplane. Relevant links and the talk recording can be found below.
+ Slide Deck Source Code Text Transcript    Please feel free to send me a message @hasheddan on Twitter with any questions or comments!</description>
+    </item>
     
     <item>
       <title>Installing Vivado 2020.x on Ubuntu 20.04</title>
