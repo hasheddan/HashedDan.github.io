@@ -6,10 +6,19 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Wed, 09 Dec 2020 05:51:26 -0500</lastBuildDate>
+    <lastBuildDate>Sun, 14 Feb 2021 01:41:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Rate Limiting in controller-runtime and client-go</title>
+      <link>https://danielmangum.com/posts/controller-runtime-client-go-rate-limiting/</link>
+      <pubDate>Sun, 14 Feb 2021 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/controller-runtime-client-go-rate-limiting/</guid>
+      <description>If you have written a Kubernetes controller, you are likely familiar with controller-runtime, or at least client-go. controller-runtime is a framework for building controllers that allows consumers to setup multiple controllers that are all handled under controller manager. Behind the the scenes, controller-runtime is using client-go to communicate with the Kubernetes API server to watch for changes on resources and pass them along to the relevant controllers. It handles a number of aspects of plumbing up these controllers, including caching, queuing, and more.</description>
+    </item>
     
     <item>
       <title>Conference Talk: Building an Enterprise Infrastructure Control Plane on Kubernetes</title>
