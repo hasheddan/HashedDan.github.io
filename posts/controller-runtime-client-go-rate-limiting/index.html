@@ -85,7 +85,7 @@ are likely <a href="https://github.com/kubernetes-sigs/controller-runtime">famil
 <code>controller-runtime</code></a>,
 or <a href="https://github.com/kubernetes/client-go">at least <code>client-go</code></a>.
 <code>controller-runtime</code> is a framework for building controllers that allows
-consumers to setup multiple controllers that are all handled under controller
+consumers to setup multiple controllers that are all handled under a controller
 manager. Behind the the scenes, <code>controller-runtime</code> is using <code>client-go</code> to
 communicate with the Kubernetes <a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/">API
 server</a>
@@ -281,7 +281,7 @@ and see what options we have for telling <code>controller-runtime</code> what to
 </code></pre></div><p>So we can either say requeue after some period of time, requeue immediately, or
 don&rsquo;t requeue at all. Then there is also the <code>error</code> we return. The permutations
 of these values, and how <code>controller-runtime</code> will respond to them are outlined
-below (you also look directly at the
+below (you can also look directly at the
 <a href="https://github.com/kubernetes-sigs/controller-runtime/blob/16bf3ad036b908d897543c415fcc0bafc5cec711/pkg/internal/controller/controller.go#L297">source</a>).</p>
 <table>
 <thead>
@@ -301,12 +301,12 @@ below (you also look directly at the
 </tr>
 <tr>
 <td align="center">true</td>
-<td align="center">any</td>
+<td align="center">0</td>
 <td align="center">nil</td>
 <td align="center">Requeue with rate limiting.</td>
 </tr>
 <tr>
-<td align="center">false</td>
+<td align="center">any</td>
 <td align="center">&gt;0</td>
 <td align="center">nil</td>
 <td align="center">Requeue after specified <code>RequeueAfter</code>.</td>

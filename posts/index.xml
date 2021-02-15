@@ -17,7 +17,7 @@
       <pubDate>Sun, 14 Feb 2021 01:41:34 -0600</pubDate>
       
       <guid>https://danielmangum.com/posts/controller-runtime-client-go-rate-limiting/</guid>
-      <description>If you have written a Kubernetes controller, you are likely familiar with controller-runtime, or at least client-go. controller-runtime is a framework for building controllers that allows consumers to setup multiple controllers that are all handled under controller manager. Behind the the scenes, controller-runtime is using client-go to communicate with the Kubernetes API server to watch for changes on resources and pass them along to the relevant controllers. It handles a number of aspects of plumbing up these controllers, including caching, queuing, and more.</description>
+      <description>If you have written a Kubernetes controller, you are likely familiar with controller-runtime, or at least client-go. controller-runtime is a framework for building controllers that allows consumers to setup multiple controllers that are all handled under a controller manager. Behind the the scenes, controller-runtime is using client-go to communicate with the Kubernetes API server to watch for changes on resources and pass them along to the relevant controllers. It handles a number of aspects of plumbing up these controllers, including caching, queuing, and more.</description>
     </item>
     
     <item>
