@@ -6,10 +6,20 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 14 Feb 2021 01:41:34 -0600</lastBuildDate>
+    <lastBuildDate>Sat, 20 Feb 2021 01:41:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Scraping controller-runtime Prometheus Metrics Locally</title>
+      <link>https://danielmangum.com/posts/controller-runtime-scrape-prometheus-local/</link>
+      <pubDate>Sat, 20 Feb 2021 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/controller-runtime-scrape-prometheus-local/</guid>
+      <description>controller-runtime exposes a metrics server by default on port 8080 for any controller Manager. Metrics are registered for the client, workqueue, and on a per-controller basis.
+Controllers initialize metrics when started, and write to the registry at various points throughout operation, such as when processing items off the workqueue and after completed reconciliation loops. If you are using a framework like Kubebuilder, it will generate manifests for the necessary objects, such as a ServiceMonitor, to scrape these metrics using kube-prometheus in your Kubernetes cluster.</description>
+    </item>
     
     <item>
       <title>Rate Limiting in controller-runtime and client-go</title>
