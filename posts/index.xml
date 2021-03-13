@@ -6,10 +6,19 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sat, 20 Feb 2021 01:41:34 -0600</lastBuildDate>
+    <lastBuildDate>Sat, 13 Mar 2021 01:41:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Is Crossplane the Infrastructure LLVM?</title>
+      <link>https://danielmangum.com/posts/crossplane-infrastructure-llvm/</link>
+      <pubDate>Sat, 13 Mar 2021 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/crossplane-infrastructure-llvm/</guid>
+      <description>If I was to explain LLVM in a painfully simple manner, I might say something like: &amp;ldquo;LLVM is a framework that allows you to define a syntax for interacting with computers, and instantly have it work for all computers&amp;rdquo;. This description does a colossal disservice to the scope of the project, but it serves to illustrate the basic idea: there are many languages (frontends) and many CPU architectures (backends) and we don&amp;rsquo;t want to re-implement every translation permutation.</description>
+    </item>
     
     <item>
       <title>Scraping controller-runtime Prometheus Metrics Locally</title>
