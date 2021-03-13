@@ -117,16 +117,16 @@ Crossplane is neither a language nor a target architecture &ndash; its documenta
 says it is &ldquo;&hellip; an open source Kubernetes add-on that supercharges your
 Kubernetes clusters enabling you to provision and manage infrastructure,
 services, and applications from kubectl&rdquo;. That is some great marketing copy!
-<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup></p>
+<sup id="fnref:1"><a href="posts/crossplane-infrastructure-llvm/#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup></p>
 <p>We&rsquo;ll keep up our trend of overly simplifying extremely complex systems by
 describing <a href="https://kubernetes.io/">Kubernetes</a> as a &ldquo;distributed system
 framework that just incidentally happens to be commonly used for orchestrating
-containers&rdquo;<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup>. Even folks who have had only the most elementary introduction
+containers&rdquo;<sup id="fnref:2"><a href="posts/crossplane-infrastructure-llvm/#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup>. Even folks who have had only the most elementary introduction
 to Kubernetes will likely recognize some of the API types it offers, such as
 <code>Pods</code>, <code>Deployments</code>, and <code>Services</code>. These are the components that lead the
 project to frequently be described as a &ldquo;container orchestrator&rdquo;, and they are
 built-in the the API server.</p>
-<p>Kubernetes also, (in)famously<sup id="fnref:3"><a href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup>, allows anyone to extend the API using another
+<p>Kubernetes also, (in)famously<sup id="fnref:3"><a href="posts/crossplane-infrastructure-llvm/#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup>, allows anyone to extend the API using another
 built-in type <a href="https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/">named
 <code>CustomResourceDefinitions</code></a>
 (CRDs). Crossplane takes advantage of this functionality by introducing a <a href="https://doc.crds.dev/github.com/crossplane/crossplane">few
@@ -148,7 +148,7 @@ Let&rsquo;s take a look at Providers first.</p>
 <a href="https://kubernetes.io/docs/concepts/architecture/controller/">controllers</a> that
 reconcile them. These CRDs are high-fidelity, 1:1 representations of external
 APIs. We refer to this type of CRD as a &ldquo;managed resource&rdquo;, and they are all
-cluster-scoped<sup id="fnref:4"><a href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup>. The controllers that reconcile them know how to take the
+cluster-scoped<sup id="fnref:4"><a href="posts/crossplane-infrastructure-llvm/#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup>. The controllers that reconcile them know how to take the
 specification of the resource and drive its external state to match it. Common
 examples of Crossplane Providers include
 <a href="https://github.com/crossplane/provider-gcp">provider-gcp</a>,
@@ -169,11 +169,11 @@ and some depend on the existence of other resources before they can be used
 effectively. An <code>RDSInstance</code> might require other AWS managed resources, such as
 a<code>VPC</code>, <code>Subnet</code>, <code>SecurityGroup</code>, etc. as well as SQL resources, such as
 <code>Database</code>, <code>User</code>, and <code>Grant</code>, before an application can connect. It is
-difficult for even an experienced cloud architect<sup id="fnref:5"><a href="#fn:5" class="footnote-ref" role="doc-noteref">5</a></sup>. In response,
+difficult for even an experienced cloud architect<sup id="fnref:5"><a href="posts/crossplane-infrastructure-llvm/#fn:5" class="footnote-ref" role="doc-noteref">5</a></sup>. In response,
 organizations either require developers to contact infrastructure admins and ask
 them to set up the proper resources they need, or they throw security out the
 window and subject developers to baptism by fire. The first solution removes any
-notion of DevOps<sup id="fnref:6"><a href="#fn:6" class="footnote-ref" role="doc-noteref">6</a></sup>, and the second is not something anyone is going to be
+notion of DevOps<sup id="fnref:6"><a href="posts/crossplane-infrastructure-llvm/#fn:6" class="footnote-ref" role="doc-noteref">6</a></sup>, and the second is not something anyone is going to be
 excited about, unless your name is <a href="https://twitter.com/IanColdwater">Ian
 Coldwater</a>.</p>
 <p>Crossplane aspires to provide a third option by allowing infrastructure admins
@@ -268,7 +268,7 @@ for these types to be of any use to us.</p>
 <p>The <code>Composition</code> type is used to define a new template. These can be relatively
 simple, such mapping our namespace-scoped <code>DB</code> to a cluster-scoped <code>RDSInstance</code>
 and hard-coding some fields. This is useful for a policy enforcement and
-permission isolation<sup id="fnref:7"><a href="#fn:7" class="footnote-ref" role="doc-noteref">7</a></sup>. An example <code>Composition</code> that does this could look as
+permission isolation<sup id="fnref:7"><a href="posts/crossplane-infrastructure-llvm/#fn:7" class="footnote-ref" role="doc-noteref">7</a></sup>. An example <code>Composition</code> that does this could look as
 follows:</p>
 <div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">
 <span style="color:#fff;font-weight:bold">apiVersion</span>: apiextensions.crossplane.io/v1
@@ -413,7 +413,7 @@ entirely. Yep &ndash; there is some fun stuff you can do here.</p>
     <span style="color:#fff;font-weight:bold">name</span>: db-conn
 
 </code></pre></div><p>Whoa, that&rsquo;s pretty simple! You&rsquo;re telling me that&rsquo;s all I have to do to create
-a fairly complex database instance? Neat! <sup id="fnref:8"><a href="#fn:8" class="footnote-ref" role="doc-noteref">8</a></sup> Behind the scenes, Crossplane is
+a fairly complex database instance? Neat! <sup id="fnref:8"><a href="posts/crossplane-infrastructure-llvm/#fn:8" class="footnote-ref" role="doc-noteref">8</a></sup> Behind the scenes, Crossplane is
 executing the following steps:</p>
 <ol>
 <li>Create a corresponding cluster-scoped XR (<code>my-db-xxx</code>) for the
@@ -455,7 +455,7 @@ out an <code>RDSInstance</code>, we spit out:</p>
 <p>&hellip;and they all work together because of a powerful feature of Crossplane
 managed resources called <a href="https://crossplane.io/docs/v1.1/concepts/managed-resources.html#dependencies">cross-resource
 references</a>.
-<sup id="fnref:9"><a href="#fn:9" class="footnote-ref" role="doc-noteref">9</a></sup></p>
+<sup id="fnref:9"><a href="posts/crossplane-infrastructure-llvm/#fn:9" class="footnote-ref" role="doc-noteref">9</a></sup></p>
 <p>So we&rsquo;ve established how Crossplane composition works, let&rsquo;s get back to
 packaging. Your XRDs and <code>Compositions</code> are essentially how you are buidling
 your own platform API, and if you have a limited number of clusters, it may make
@@ -463,7 +463,7 @@ sense to just throw them in a git repo and <code>kubectl apply</code> them when 
 updates. There are a fair amount of Crossplane users that follow this exact
 strategy. However, I ask you to indulge me for a moment while I explore another
 strategy that will likely seem excessive at first, but I promise to prove its
-worth in a moment<sup id="fnref:10"><a href="#fn:10" class="footnote-ref" role="doc-noteref">10</a></sup>.</p>
+worth in a moment<sup id="fnref:10"><a href="posts/crossplane-infrastructure-llvm/#fn:10" class="footnote-ref" role="doc-noteref">10</a></sup>.</p>
 <p>As mentioned before, Crossplane has a concept of a Configuration package. This
 is similar to the Provider package, but instead of CRDs and a controller, they
 only include XRDs and <code>Compositions</code>. They also can declare dependencies on
@@ -473,12 +473,12 @@ are present in the cluster and will install them if they are not. Both types of
 Crossplane packages are formatted as <a href="https://github.com/opencontainers/image-spec">OCI
 images</a>, meaning that they can be
 pushed to any registry, such as DockerHub, GCR, or the <a href="https://cloud.upbound.io/browse">Upbound
-Registry</a>. <sup id="fnref:11"><a href="#fn:11" class="footnote-ref" role="doc-noteref">11</a></sup></p>
+Registry</a>. <sup id="fnref:11"><a href="posts/crossplane-infrastructure-llvm/#fn:11" class="footnote-ref" role="doc-noteref">11</a></sup></p>
 <p>This allows you (and anyone else if the package is public or shared) to have a
 &ldquo;one-click&rdquo; experience of deploying your entire platform API to any Crossplane
 cluster in a repeatable way. Once again, this has limited value if you are
 running a single cluster for your internal control plane, but if you have any
-intention of sharing, it can be very powerful. <sup id="fnref:12"><a href="#fn:12" class="footnote-ref" role="doc-noteref">12</a></sup></p>
+intention of sharing, it can be very powerful. <sup id="fnref:12"><a href="posts/crossplane-infrastructure-llvm/#fn:12" class="footnote-ref" role="doc-noteref">12</a></sup></p>
 <h3 id="crossplane-as-a-cluster-api-backend">Crossplane as a Cluster API Backend</h3>
 <p>I think up until this point we have done an admirable job of showing how
 Crossplane can provide value to an organization that wishes to allow developers
@@ -515,7 +515,7 @@ have a lot of similarities with Crossplane providers:
 <a href="https://github.com/kubernetes-sigs/cluster-api-provider-gcp">cluster-api-provider-gcp</a>,
 <a href="https://github.com/kubernetes-sigs/cluster-api-provider-aws">cluster-api-provider-aws</a>,
 and so on. Each of these providers supplies concrete implementations of the
-abstract types required by core CAPI. <sup id="fnref:13"><a href="#fn:13" class="footnote-ref" role="doc-noteref">13</a></sup> For instance, core CAPI has a
+abstract types required by core CAPI. <sup id="fnref:13"><a href="posts/crossplane-infrastructure-llvm/#fn:13" class="footnote-ref" role="doc-noteref">13</a></sup> For instance, core CAPI has a
 <a href="https://doc.crds.dev/github.com/kubernetes-sigs/cluster-api/cluster.x-k8s.io/Cluster/v1alpha3@v0.3.13">Cluster</a>
 type, which references a concrete provider implementation <a href="https://doc.crds.dev/github.com/kubernetes-sigs/cluster-api/cluster.x-k8s.io/Cluster/v1alpha3@v0.3.13#spec-infrastructureRef">in its
 <code>spec.infrastructureRef</code></a>.
@@ -526,7 +526,7 @@ controller</a>
 that sets up all of the infrastructure required to run Kubernetes on GCP, other
 than the nodes (which are handled by the <code>GCPMachine</code> / <code>GCPMachineTemplate</code>
 types and their corresponding controllers). The list of infrastructure resources
-managed by the <code>GCPCluster</code> controller includes<sup id="fnref:14"><a href="#fn:14" class="footnote-ref" role="doc-noteref">14</a></sup>:</p>
+managed by the <code>GCPCluster</code> controller includes<sup id="fnref:14"><a href="posts/crossplane-infrastructure-llvm/#fn:14" class="footnote-ref" role="doc-noteref">14</a></sup>:</p>
 <ul>
 <li><code>Network</code></li>
 <li><code>Router</code></li>
@@ -608,46 +608,46 @@ questions or comments!</p>
 <hr>
 <ol>
 <li id="fn:1" role="doc-endnote">
-<p>I&rsquo;m allowed to say snarky stuff like this because I helped write it. <a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>I&rsquo;m allowed to say snarky stuff like this because I helped write it. <a href="posts/crossplane-infrastructure-llvm/#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:2" role="doc-endnote">
-<p>I had too much coffee this morning and now I&rsquo;m just getting carried away. <a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>I had too much coffee this morning and now I&rsquo;m just getting carried away. <a href="posts/crossplane-infrastructure-llvm/#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:3" role="doc-endnote">
-<p>Once again, I am calling myself out here as we have really taken this extension mechanism to its logical conclusion by shoving <a href="https://doc.crds.dev/github.com/crossplane/provider-aws">a lot</a> of CRDs into your cluster. <a href="#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>Once again, I am calling myself out here as we have really taken this extension mechanism to its logical conclusion by shoving <a href="https://doc.crds.dev/github.com/crossplane/provider-aws">a lot</a> of CRDs into your cluster. <a href="posts/crossplane-infrastructure-llvm/#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:4" role="doc-endnote">
-<p>Please read this <a href="https://blog.crossplane.io/crossplane-vs-cloud-infrastructure-addons/">wonderful post</a> by fellow Crossplane maintainer <a href="https://twitter.com/internegz">Nic Cope</a> before you commence yelling at me. <a href="#fnref:4" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>Please read this <a href="https://blog.crossplane.io/crossplane-vs-cloud-infrastructure-addons/">wonderful post</a> by fellow Crossplane maintainer <a href="https://twitter.com/internegz">Nic Cope</a> before you commence yelling at me. <a href="posts/crossplane-infrastructure-llvm/#fnref:4" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:5" role="doc-endnote">
-<p>This was my job title once and I still don&rsquo;t know what it means &ndash; yet here I am using it in a blog post that I proclaim contains valuable information. Life comes at you fast. <a href="#fnref:5" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>This was my job title once and I still don&rsquo;t know what it means &ndash; yet here I am using it in a blog post that I proclaim contains valuable information. Life comes at you fast. <a href="posts/crossplane-infrastructure-llvm/#fnref:5" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:6" role="doc-endnote">
-<p>There I go again, using words that don&rsquo;t mean anything. <a href="#fnref:6" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>There I go again, using words that don&rsquo;t mean anything. <a href="posts/crossplane-infrastructure-llvm/#fnref:6" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:7" role="doc-endnote">
-<p>Read more about moving the level of permissioning to the level of abstraction in this other <a href="https://blog.crossplane.io/crossplane-vs-terraform/">terrific post</a> by <a href="https://twitter.com/internegz">Nic</a>. Also, if you are familiar with <a href="https://www.openpolicyagent.org/">Open Policy Agent</a> your mind is probably already going to some wild places. <a href="#fnref:7" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>Read more about moving the level of permissioning to the level of abstraction in this other <a href="https://blog.crossplane.io/crossplane-vs-terraform/">terrific post</a> by <a href="https://twitter.com/internegz">Nic</a>. Also, if you are familiar with <a href="https://www.openpolicyagent.org/">Open Policy Agent</a> your mind is probably already going to some wild places. <a href="posts/crossplane-infrastructure-llvm/#fnref:7" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:8" role="doc-endnote">
-<p>Update: the day has progressed, the coffee is wearing off, and sarcasm levels are rising. <a href="#fnref:8" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>Update: the day has progressed, the coffee is wearing off, and sarcasm levels are rising. <a href="posts/crossplane-infrastructure-llvm/#fnref:8" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:9" role="doc-endnote">
-<p>This feature is another reason to have cluster-scoped managed resources &ndash; okay, you can continue yelling at me now. <a href="#fnref:9" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>This feature is another reason to have cluster-scoped managed resources &ndash; okay, you can continue yelling at me now. <a href="posts/crossplane-infrastructure-llvm/#fnref:9" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:10" role="doc-endnote">
-<p>Apologies for burying the lede here. Also, did you know that it is spelled &ldquo;lede&rdquo; when you say &ldquo;burying the lede&rdquo;? I sure didn&rsquo;t. Or maybe it isn&rsquo;t spelled &ldquo;lede&rdquo; and &ldquo;lead&rdquo; is actually correct. I really don&rsquo;t know at this point, <a href="https://www.merriam-webster.com/words-at-play/bury-the-lede-versus-lead">you decide</a>. <a href="#fnref:10" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>Apologies for burying the lede here. Also, did you know that it is spelled &ldquo;lede&rdquo; when you say &ldquo;burying the lede&rdquo;? I sure didn&rsquo;t. Or maybe it isn&rsquo;t spelled &ldquo;lede&rdquo; and &ldquo;lead&rdquo; is actually correct. I really don&rsquo;t know at this point, <a href="https://www.merriam-webster.com/words-at-play/bury-the-lede-versus-lead">you decide</a>. <a href="posts/crossplane-infrastructure-llvm/#fnref:10" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:11" role="doc-endnote">
-<p>The Upound Registry provides some additional functionality for indexing Crossplane packages over any vanilla image registry, plus I work for Upbound so I am basically required by law to shill for it. There are some real benefits, but you can also use other registries if you please. <a href="#fnref:11" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>The Upound Registry provides some additional functionality for indexing Crossplane packages over any vanilla image registry, plus I work for Upbound so I am basically required by law to shill for it. There are some real benefits, but you can also use other registries if you please. <a href="posts/crossplane-infrastructure-llvm/#fnref:11" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:12" role="doc-endnote">
-<p>I promise the moment of truth is coming. <a href="#fnref:12" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>I promise the moment of truth is coming. <a href="posts/crossplane-infrastructure-llvm/#fnref:12" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:13" role="doc-endnote">
-<p>Hmm, this sounds familiar. <a href="#fnref:13" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>Hmm, this sounds familiar. <a href="posts/crossplane-infrastructure-llvm/#fnref:13" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:14" role="doc-endnote">
-<p>You can see more detail and relevant controller links in <a href="https://github.com/crossplane/provider-gcp/issues/303">this issue</a>. <a href="#fnref:14" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>You can see more detail and relevant controller links in <a href="https://github.com/crossplane/provider-gcp/issues/303">this issue</a>. <a href="posts/crossplane-infrastructure-llvm/#fnref:14" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 </ol>
 </section>
