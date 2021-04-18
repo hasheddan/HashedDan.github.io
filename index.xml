@@ -6,10 +6,19 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sat, 13 Mar 2021 01:41:34 -0600</lastBuildDate>
+    <lastBuildDate>Sun, 18 Apr 2021 01:41:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>chdir to cwd: permission denied</title>
+      <link>https://danielmangum.com/posts/runc-chdir-to-cwd/</link>
+      <pubDate>Sun, 18 Apr 2021 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/runc-chdir-to-cwd/</guid>
+      <description>This post describes a breaking change in runc v1.0.0-rc93, that has subsequently had a workaround implemented that will presumably be included in v1.0.0-rc94. Thanks to @haircommander for talking through the issue with me and implementing the subsequent workaround, and to @mattomata for his consultation on the distroless/static:nonroot behavior. If you are not interested in the background of the issue, you can skip reading this post and take a look at my detailed testing scenarios on the Crossplane repo, or my breakdown of the conflict with the nonroot image on the distroless repo.</description>
+    </item>
     
     <item>
       <title>Is Crossplane the Infrastructure LLVM?</title>

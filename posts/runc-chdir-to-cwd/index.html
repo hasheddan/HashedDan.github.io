@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="author" content="Daniel Mangum">
+    <meta name="description" content="Daniel Mangum&#39;s personal website">
+    <meta name="keywords" content="blog,developer,personal">
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@hasheddan" />
+    <meta name="twitter:title" content="chdir to cwd: permission denied"/>
+    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
+
+    <base href="https://danielmangum.com">
+    <title>
+  chdir to cwd: permission denied · Daniel Mangum
+</title>
+
+    <link rel="canonical" href="https://danielmangum.com/posts/runc-chdir-to-cwd/">
+
+    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
+    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
+    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
+
+    
+
+    
+
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+    
+
+    <meta name="generator" content="Hugo 0.68.3" />
+  </head>
+
+  <body class="">
+    <main class="wrapper">
+      <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com">
+      Daniel Mangum
+    </a>
+    
+    <ul class="navigation-list  float-right ">
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/posts/">Blog</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/about/">About</a>
+      </li>
+      
+    </ul>
+    
+  </section>
+</nav>
+
+
+      <div class="content">
+        
+  <section class="container post">
+  <article>
+    <header>
+      <h1 class="title">chdir to cwd: permission denied</h1>
+      <h2 class="date">April 18, 2021</h2>
+      <style>
+        .twitter-tweet-rendered {
+          display:block;
+          margin-left:auto;
+          margin-right:auto;
+        }
+      </style>
+
+      
+    </header>
+
+    <p><em>This post describes a <a href="https://github.com/opencontainers/runc/commit/d869d05aba0fc2519060b3b20b679ac5a5068e78">breaking
+change</a>
+in <a href="https://github.com/opencontainers/runc/releases/tag/v1.0.0-rc93">runc
+v1.0.0-rc93</a>,
+that has subsequently had a <a href="https://github.com/opencontainers/runc/pull/2894">workaround
+implemented</a> that will
+presumably be included in
+<a href="https://github.com/opencontainers/runc/milestone/11">v1.0.0-rc94</a>. Thanks to
+<a href="https://twitter.com/haircommander">@haircommander</a> for talking through the
+issue with me and implementing the subsequent workaround, and to
+<a href="https://twitter.com/mattomata">@mattomata</a> for his consultation on the
+<a href="https://github.com/GoogleContainerTools/distroless"><code>distroless/static:nonroot</code>
+behavior</a>. If you are not
+interested in the background of the issue, you can skip reading this post and
+take a look at my detailed testing scenarios on the <a href="https://github.com/crossplane/crossplane/pull/2245">Crossplane
+repo</a>, or my breakdown of
+the conflict with the <code>nonroot</code> image on the <a href="https://github.com/GoogleContainerTools/distroless/issues/718">distroless
+repo</a>.</em></p>
+<p>Recently, a <a href="https://crossplane.io/">Crossplane</a> user reported that they had
+upgraded to the latest version of <a href="https://www.openshift.com/">Openshift</a> and
+their <code>Pods</code> started immediately <a href="https://sysdig.com/blog/debug-kubernetes-crashloopbackoff/">going into
+<code>CrashLoopBackoff</code></a>.
+They went back and verified that the same version of Crossplane was running
+successfully on the older Openshift version, but now the containers were exiting
+with:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">level=error msg=&#34;container_linux.go:366: starting container process caused: chdir to cwd (\&#34;/home/nonroot\&#34;) set in config.json failed: permission denied&#34;
+</code></pre></div><p>Fortunately, though this error is quite verbose for someone who is not familiar
+with container runtime internals, it is extremely helpful for a developer as it
+provides the file name, line number, and explicit expression of the action that
+caused the error. Most <a href="https://kubernetes.io/">Kubernetes</a> platforms these days
+use <a href="https://containerd.io/"><em>containerd</em></a> as their &ldquo;high-level&rdquo; container
+runtime, and <a href="https://github.com/opencontainers/runc"><em>runc</em></a> as their
+&ldquo;low-level&rdquo; container runtime. I won&rsquo;t go into too much detail on the
+responsibilities of each (I recommend you check out this <a href="https://www.ianlewis.org/en/container-runtimes-part-1-introduction-container-r">blog
+series</a>
+by <a href="https://www.ianlewis.org/">Ian Lewis</a>), but an extremely simple explanation
+is that <em>containerd</em> orchestrates containers whose lifecycle is managed by
+<em>runc</em>. This error has to do with actually starting the container, which is a
+dead giveaway that we are dealing with <em>runc</em>, but if you weren&rsquo;t sure it could
+be confirmed by looking at the source of
+<a href="https://github.com/opencontainers/runc/blob/master/libcontainer/container_linux.go">container_linux.go</a>.</p>
+<p>A container is essentially just a <a href="https://tldp.org/LDP/tlk/kernel/processes.html">Linux
+process</a> that is sandboxed using
+<a href="https://man7.org/linux/man-pages/man7/namespaces.7.html">namespaces</a> and
+<a href="https://man7.org/linux/man-pages/man7/cgroups.7.html">cgroups</a>. This means that
+they have the same properties that any other process has, including state,
+various identifiers, scheduling criteria, and more (if you want to learn more
+about all of the attributes of a process, taking a look at the
+<a href="https://github.com/torvalds/linux/blob/c98ff1d013d2d53911c4b3e8ba14c7cd141cf1ed/include/linux/sched.h#L649">task_struct</a>
+in the Linux Kernel source is a great adventure). The <a href="https://github.com/opencontainers/image-spec">OCI Image
+Specification</a> allows you to
+define some of these properties, which are then enforced by the container
+runtime, in this case <em>runc</em>.</p>
+<p>Unfortunately (or fortunately, depending on how you look at it), these
+attributes can be defined at various levels of the container orchestration
+stack, notably build time and run time. For example, in a
+<a href="https://docs.docker.com/engine/reference/builder/">Dockerfile</a> you can define a
+<a href="https://docs.docker.com/engine/reference/builder/#user"><code>USER</code></a>,
+<a href="https://docs.docker.com/engine/reference/builder/#workdir"><code>WORKDIR</code></a>, and
+<a href="https://docs.docker.com/engine/reference/builder/#entrypoint"><code>ENTRYPOINT</code></a>,
+but you can also <a href="https://docs.docker.com/engine/reference/run/#overriding-dockerfile-image-defaults">override
+them</a>
+when running a container using the image you built. Similarly, Kubernetes
+exposes some of these attributes in the <code>Pod</code> specification through <a href="https://kubernetes.io/docs/tasks/configure-pod-container/security-context/">fields such
+as</a>
+<code>runAsUser</code>, <code>runAsGroup</code>, and <code>workingDir</code>. This allows for maximum
+flexibility, but also can lead to a rocky user experience when building widely
+distributed images or running 3rd party images in your cluster.</p>
+<p>So back to the original issue: the parameters used to run the Crossplane
+containerized processes had not been changed, but <em>runc</em> was now failing to
+start them. Once again looking at the error message, we can see that <em>runc</em> is
+unable to <code>chdir</code> to the <code>cwd</code> (or <code>WORKDIR</code> in <code>Dockerfile</code> parlance). When a
+container is started, <em>runc</em> must identify the <code>cwd</code> that is specified in the
+image manifest, or overridden by the container orchestrator, and switch to that
+directory before actually starting the process. Since this step was now failing,
+there must have been a change in how <em>runc</em> executes it.</p>
+<p>Taking a look at <a href="https://bugzilla.redhat.com/show_bug.cgi?id=1934177">this issue in the Red Hat bug
+tracker</a>, we can see that a
+<a href="https://github.com/opencontainers/runc/commit/d869d05aba0fc2519060b3b20b679ac5a5068e78">recent
+change</a>
+in <em>runc</em> switched from executing the <code>chdir</code> step with the <code>UID</code> of <em>runc</em> to
+the <code>UID</code> specified by the container image (or overridden by the container
+orchestrator). But why was this change primarily causing problems for images
+built on the <code>distroless/static:nonroot</code> <a href="https://github.com/GoogleContainerTools/distroless">base
+image</a>? To understand, we
+must first take a look at how the base image is built.</p>
+<p>The purpose of the distroless project is to provide base images that have the
+minimum components required for an application to run. Many common base images,
+such as <a href="https://hub.docker.com/_/alpine">alpine</a>, are stripped of much of the
+cruft of a full Linux distribution, but there are still many tools and utilities
+that are unneeded and expose unnecessary attack vectors if a container was
+compromised. So distroless just packages the <a href="https://github.com/GoogleContainerTools/distroless/blob/main/base/README.md#image-contents">bare
+essentials</a>,
+which for a Go application are packages such as <code>ca-certificates</code> and <code>tzdata</code>.
+The distroless project also offers a <code>nonroot</code> variant of this bare bones image,
+which is essentially the same as <code>static</code>, but <a href="https://github.com/GoogleContainerTools/distroless/blob/2e539660094d9c2910f6134df1d0d3919479c393/base/base.bzl#L19">sets the
+user</a>
+to <code>nonroot</code> (UID = <code>65532</code>), and the working directory to <code>/home/nonroot</code>.</p>
+<blockquote>
+<p>Note: these images are built with <a href="https://bazel.build/">Bazel</a>, but you can
+get a good idea of how the <code>.bzl</code> files map to a <code>Dockerfile</code> without
+requiring a deep understanding of the build system just by looking at the
+<a href="https://github.com/bazelbuild/rules_docker">docker rules</a>.</p>
+</blockquote>
+<p>The <code>/home/nonroot</code> directory gets created with <code>0700</code> permissions, which
+<a href="http://www.filepermissions.com/file-permission/0700">means</a> that the owning
+user (<code>nonroot</code>) has <code>Read</code>, <code>Write</code>, and <code>Execute</code> permissions on the
+directory, but other users, even those in the same group, have <em>no permissions</em>.
+In order to <code>chdir</code>, the calling process must have <code>Execute</code> permissions on the
+target directory. In this case only UID <code>65532</code> has those permissions, but the
+<code>nonroot</code> image sets the user for us so that shouldn&rsquo;t be an issue right?</p>
+<p>As mentioned before, the build time properties are sometimes overridden at run
+time, and on Openshift, this <a href="https://www.openshift.com/blog/a-guide-to-openshift-and-uids"><em>always</em>
+happens</a> unless
+explicitly overridden. When a <code>Namespace</code> is created on an Openshift cluster, it
+is given a range of UIDs and GIDs, and each <code>Pod</code> that gets deployed in the
+<code>Namespace</code> is assigned the first UID and GID in the range. However, this is not
+new functionality in Openshift, so if the <code>65532</code> UID was already being
+overridden in older versions, why were the containers able to be started
+successfully?</p>
+<p>The reason lies in the fact that the newer version of Openshift had upgraded to
+<em>runc</em> <code>v1.0.0-rc93</code> which included the aforementioned change to <code>chdir</code> with
+the container user rather than the user for the <em>runc</em> process itself. Unless
+running in <a href="https://github.com/opencontainers/runc#rootless-containers">rootless
+mode</a>, <em>runc</em> runs
+as the <code>root</code> user, which typically has special privileged
+<a href="https://man7.org/linux/man-pages/man7/capabilities.7.html">capabilities</a>, such
+as <code>CAP_FOWNER</code>, which allow it bypass permissions. So though the older
+Openshift version was still using a &ldquo;random&rdquo; UID, since the underlying <em>runc</em>
+version was executing <code>chdir</code> as root, it was not resulting in a permission
+denied error.</p>
+<p>Whether this change is a feature or a bug is mostly a matter of how one
+interprets the responsibilities of a container runtime. However, regardless of
+it being &ldquo;correct&rdquo; or not, it was a breaking change to a rather important
+component of the container ecosystem, which has led to a <a href="https://github.com/opencontainers/runc/pull/2894">subsequent
+workaround</a> being introduced
+that will presumably be included in
+<a href="https://github.com/opencontainers/runc/milestone/11">v1.0.0-rc94</a>. As for
+current users of the <code>nonroot</code> base image, though I have detailed the situation
+in an <a href="https://github.com/GoogleContainerTools/distroless/issues/718">issue on the distroless
+repo</a>, I would
+not expect (nor recommend) that a change be made to the image configuration. The
+purpose of the image is to enforce the use of the single <code>nonroot</code> user, so
+making it possible not to breaks the original intention. Instead, if you agree
+with Red Hat&rsquo;s
+<a href="https://www.openshift.com/blog/a-guide-to-openshift-and-uids">assertion</a> (see
+the &ldquo;Traditional Applications and UIDs&rdquo; section) that an application should not
+&ldquo;expect a specific UID under which they will be running&rdquo;, a viable alternative
+is to use the plain <code>distroless/static</code> image and manually set UID = <code>65532</code> in
+your image build, effectively saying that &ldquo;you will run as <code>nonroot</code> by default,
+but you are free to override if you know what you&rsquo;re doing&rdquo;. This is the
+<a href="https://github.com/crossplane/crossplane/pull/2245">direction we have gone</a> in
+the <a href="https://github.com/crossplane/crossplane/releases/tag/v1.1.1">most recent Crossplane
+release</a>.</p>
+<h2 id="closing-thoughts">Closing Thoughts</h2>
+<p>Hopefully this post serves as a helpful guide for other folks that encounter
+this issue. I want to give a huge shout out to all the folks who work on
+projects like <em>runc</em> and <em>containerd</em>, which are the foundation for much of the
+infrastructure of the cloud native landscape. When there are changes that break
+existing behavior I encourage folks to respond with grace and constructive
+feedback. Often times, as is true with this change, the new behavior is in the
+interest of protecting users, even if it can cause short term headaches.</p>
+<p>Send me a message <a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter for any
+questions or comments!</p>
+
+  </article>
+
+  <br/>
+
+  
+  
+</section>
+
+      </div>
+
+      <footer class="footer">
+  <section class="container">
+     © 2021  
+  </section>
+</footer>
+
+    </main>
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+
+  </body>
+
+</html>
