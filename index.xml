@@ -6,10 +6,20 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 18 Apr 2021 01:41:34 -0600</lastBuildDate>
+    <lastBuildDate>Sat, 22 May 2021 01:41:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Using a ConfigMap as an OCI Image Cache</title>
+      <link>https://danielmangum.com/posts/config-map-oci-image-cache/</link>
+      <pubDate>Sat, 22 May 2021 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/config-map-oci-image-cache/</guid>
+      <description>For folks familiar with Crossplane, you likely know that we adopt the design practice of using interfaces over implementations as frequently as possible. Even if we begin with an implementation, such as the current composition engine, we make sure to consider a future with potentially many implementations for the same functionality.
+One of the places where we have taken advantage of Kubernetes&amp;rsquo; similar approach to interfaces is in how we cache Crossplane package images.</description>
+    </item>
     
     <item>
       <title>chdir to cwd: permission denied</title>
