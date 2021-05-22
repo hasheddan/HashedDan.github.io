@@ -120,21 +120,22 @@ Crossplane with a
 simply copying into a local directory. This is great when running on a local
 machine, but is somewhat cumbersome to do if you are a Crossplane end-user (i.e.
 requires direct access to <code>Nodes</code> in your cluster).</p>
-<p>Yesterday I was feeling a little dangerous<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup> and thinking about how we could
-reduce the burden on folks who want to rapidly test their package images without
-pushing them to a registry then having Crossplane install them by downloading
-from it. Essentially, I wanted to make the development loop feel as
-&ldquo;Kubernetes-native&rdquo; as possible. You might be thinking to yourself: &ldquo;Dan, have
-you heard of the <code>kubectl cp</code> command?&quot;. As it turns out, I have! What a
-useful<sup id="fnref:3"><a href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup> little tool! However, <code>kubectl cp</code> (and its good friend <code>kubectl exec</code>) are not super useful to us here as the former requires <code>tar</code> to be
-present in the container and the latter requires, well, at least something to
-write file contents. With Crossplane, we are out of luck because it is built on
-a <a href="https://github.com/GoogleContainerTools/distroless">distroless</a> base image,
+<p>Yesterday I was thinking about how we could reduce the burden on folks who want
+to rapidly test their package images without pushing them to a registry then
+having Crossplane install them by downloading from it. Essentially, I wanted to
+make the development loop feel as &ldquo;Kubernetes-native&rdquo; as possible. You might be
+thinking to yourself: &ldquo;Dan, have you heard of the <code>kubectl cp</code> command?&quot;. As it
+turns out, I have! What a useful<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup> little tool! However, <code>kubectl cp</code> (and its
+good friend <code>kubectl exec</code>) are not super useful to us here as the former
+requires <code>tar</code> to be present in the container and the latter requires, well, at
+least something to write file contents. With Crossplane, we are out of luck
+because it is built on a
+<a href="https://github.com/GoogleContainerTools/distroless">distroless</a> base image,
 which includes the absolute minimum components for our binary to run. Also,
 though <code>kubectl cp</code> and <code>kubectl exec</code> are commands provided by <code>kubectl</code>
 itself, they feel more like backdoors than interacting with the Kubernetes API.</p>
 <p>So what do Kubernetes users do when they need to store some unstructured data?
-You guessed it<sup id="fnref:4"><a href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup>: <code>ConfigMap</code>. If I was to personify <code>ConfigMap</code>, I would
+You guessed it<sup id="fnref:3"><a href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup>: <code>ConfigMap</code>. If I was to personify <code>ConfigMap</code>, I would
 describe it as that friend you have that has zero opinions and will say &ldquo;sure!&rdquo;
 to almost anything. Need to store some configuration data? I got you. Want me to
 handle some definitely sensitive information in plaintext? Say no more. When the
@@ -206,7 +207,7 @@ install a package from a registry, Crossplane will fail to cache its contents
 because the path will not be writeable. This is especially a problem when the
 package we loaded into the cache has dependencies on packages that are not in
 the cache.</li>
-<li><code>ConfigMaps</code> have a size limit of <code>1 MiB</code><sup id="fnref:5"><a href="#fn:5" class="footnote-ref" role="doc-noteref">5</a></sup>. Even with our tiny Crossplane
+<li><code>ConfigMaps</code> have a size limit of <code>1 MiB</code><sup id="fnref:4"><a href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup>. Even with our tiny Crossplane
 packages, we can run up on that quite quickly.</li>
 </ol>
 <p>That being said, this workflow is only for development, so these limitations may
@@ -244,16 +245,13 @@ questions or comments!</p>
 <p>Downloading package images directly also means that we have more control over what &ldquo;pulling a package&rdquo; means, once again providing an interface that enables multiple implementations behind the API line. But that&rsquo;s a story for another day ;) <a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:2" role="doc-endnote">
-<p>Yeah&hellip; I had two cups of coffee. <a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>And potentially <a href="https://www.cvedetails.com/cve/CVE-2019-1002101/#:~:text=Vulnerability%20Details%20%3A%20CVE%2D2019%2D,containers%20and%20the%20user%20machine.&amp;text=An%20attacker%20could%20use%20this,permissions%20of%20the%20local%20user.">horrifingly dangerous</a>&hellip; <a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:3" role="doc-endnote">
-<p>And potentially <a href="https://www.cvedetails.com/cve/CVE-2019-1002101/#:~:text=Vulnerability%20Details%20%3A%20CVE%2D2019%2D,containers%20and%20the%20user%20machine.&amp;text=An%20attacker%20could%20use%20this,permissions%20of%20the%20local%20user.">horrifingly dangerous</a>&hellip; <a href="#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>It was in the title, but we could all use some extra wins these days! <a href="#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:4" role="doc-endnote">
-<p>It was in the title, but we could all use some extra wins these days! <a href="#fnref:4" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
-</li>
-<li id="fn:5" role="doc-endnote">
-<p>Ah yes, the good ol&rsquo; Megabyte (MB) vs Mebibyte (MiB) <a href="https://blog.digilentinc.com/mib-vs-mb-whats-the-difference/">distinction</a>. I hate this just as much as you do, but I&rsquo;m just glad we can all agree that numbers should <a href="http://gph.is/2hwqCGg">always be represented as base 2</a>. <a href="#fnref:5" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>Ah yes, the good ol&rsquo; Megabyte (MB) vs Mebibyte (MiB) <a href="https://blog.digilentinc.com/mib-vs-mb-whats-the-difference/">distinction</a>. I hate this just as much as you do, but I&rsquo;m just glad we can all agree that numbers should <a href="http://gph.is/2hwqCGg">always be represented as base 2</a>. <a href="#fnref:4" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 </ol>
 </section>
