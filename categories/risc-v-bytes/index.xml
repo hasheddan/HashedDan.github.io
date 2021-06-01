@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>RISC-V Bytes on Daniel Mangum</title>
+    <link>https://danielmangum.com/categories/risc-v-bytes/</link>
+    <description>Recent content in RISC-V Bytes on Daniel Mangum</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Tue, 01 Jun 2021 01:41:34 -0600</lastBuildDate>
+    
+	<atom:link href="https://danielmangum.com/categories/risc-v-bytes/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>RISC-V Bytes: Cross-Platform Debugging with QEMU and GDB</title>
+      <link>https://danielmangum.com/posts/risc-v-bytes-qemu-gdb/</link>
+      <pubDate>Tue, 01 Jun 2021 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/risc-v-bytes-qemu-gdb/</guid>
+      <description>This is part of a new series I am starting on the blog where we&amp;rsquo;ll explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
+ To start of the series, we are just going to get setup to do some exploration. I am going to assume you will not primarily be using a RISC-V machine1, so we need to configure our local development environment for cross-platform compiling, emulation, and debugging.</description>
+    </item>
+    
+  </channel>
+</rss>

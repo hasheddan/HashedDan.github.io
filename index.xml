@@ -6,10 +6,20 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sat, 22 May 2021 01:41:34 -0600</lastBuildDate>
+    <lastBuildDate>Tue, 01 Jun 2021 01:41:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>RISC-V Bytes: Cross-Platform Debugging with QEMU and GDB</title>
+      <link>https://danielmangum.com/posts/risc-v-bytes-qemu-gdb/</link>
+      <pubDate>Tue, 01 Jun 2021 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/risc-v-bytes-qemu-gdb/</guid>
+      <description>This is part of a new series I am starting on the blog where we&amp;rsquo;ll explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
+ To start of the series, we are just going to get setup to do some exploration. I am going to assume you will not primarily be using a RISC-V machine1, so we need to configure our local development environment for cross-platform compiling, emulation, and debugging.</description>
+    </item>
     
     <item>
       <title>Using a ConfigMap as an OCI Image Cache</title>

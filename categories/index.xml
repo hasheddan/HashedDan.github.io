@@ -6,9 +6,19 @@
     <description>Recent content in Categories on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
+    <lastBuildDate>Tue, 01 Jun 2021 01:41:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/categories/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>RISC-V Bytes</title>
+      <link>https://danielmangum.com/categories/risc-v-bytes/</link>
+      <pubDate>Tue, 01 Jun 2021 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/categories/risc-v-bytes/</guid>
+      <description></description>
+    </item>
     
   </channel>
 </rss>

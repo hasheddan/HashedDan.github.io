@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="author" content="Daniel Mangum">
+    <meta name="description" content="Daniel Mangum&#39;s personal website">
+    <meta name="keywords" content="blog,developer,personal">
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@hasheddan" />
+    <meta name="twitter:title" content="RISC-V Bytes: Cross-Platform Debugging with QEMU and GDB"/>
+    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
+
+    <base href="https://danielmangum.com">
+    <title>
+  RISC-V Bytes: Cross-Platform Debugging with QEMU and GDB · Daniel Mangum
+</title>
+
+    <link rel="canonical" href="https://danielmangum.com/posts/risc-v-bytes-qemu-gdb/">
+
+    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
+    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
+    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
+
+    
+
+    
+
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+    
+
+    <meta name="generator" content="Hugo 0.68.3" />
+  </head>
+
+  <body class="">
+    <main class="wrapper">
+      <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com">
+      Daniel Mangum
+    </a>
+    
+    <ul class="navigation-list  float-right ">
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/posts/">Blog</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/about/">About</a>
+      </li>
+      
+    </ul>
+    
+  </section>
+</nav>
+
+
+      <div class="content">
+        
+  <section class="container post">
+  <article>
+    <header>
+      <h1 class="title">RISC-V Bytes: Cross-Platform Debugging with QEMU and GDB</h1>
+      <h2 class="date">June 1, 2021</h2>
+      <style>
+        .twitter-tweet-rendered {
+          display:block;
+          margin-left:auto;
+          margin-right:auto;
+        }
+      </style>
+
+      
+    </header>
+
+    <blockquote>
+<p>This is part of a new series I am starting on the blog where we&rsquo;ll explore
+<a href="https://riscv.org/">RISC-V</a> by breaking down real programs and explaining how
+they work. You can view all posts in this series on the <a href="https://danielmangum.com/categories/risc-v-bytes">RISC-V Bytes
+page</a>.</p>
+</blockquote>
+<p>To start of the series, we are just going to get setup to do some exploration. I
+am going to assume you will not primarily be using a RISC-V machine<sup id="fnref:1"><a href="posts/risc-v-bytes-qemu-gdb/#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>, so we
+need to configure our local development environment for cross-platform
+compiling, emulation, and debugging.</p>
+<h2 id="installing-tools">Installing Tools</h2>
+<p>As the title of this post suggests, we are going to install the RISC-V GNU
+toolchain for our C compiler (<code>gcc</code>) and our debugger (<code>gdb</code>). We&rsquo;ll be using
+the 64-bit variant of the RISC-V ISA throughout this series. If you are running
+Ubuntu, the easiest way to install the toolchain is by by downloading the
+<a href="https://github.com/riscv/riscv-gnu-toolchain/releases">latest release</a> from the
+RISC-V GNU toolchain GitHub
+<a href="https://github.com/riscv/riscv-gnu-toolchain/releases">repository</a>. However,
+there are also extensive instructions for how to compile from source in the
+<a href="https://github.com/riscv/riscv-gnu-toolchain/blob/master/README.md">README.md</a>.
+This will provide you with all of the following tools:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+riscv64-unknown-elf-addr2line      riscv64-unknown-elf-elfedit        riscv64-unknown-elf-gcc-ranlib     riscv64-unknown-elf-gprof          riscv64-unknown-elf-ranlib
+riscv64-unknown-elf-ar             riscv64-unknown-elf-g++            riscv64-unknown-elf-gcov           riscv64-unknown-elf-ld             riscv64-unknown-elf-readelf
+riscv64-unknown-elf-as             riscv64-unknown-elf-gcc            riscv64-unknown-elf-gcov-dump      riscv64-unknown-elf-ld.bfd         riscv64-unknown-elf-size
+riscv64-unknown-elf-c++            riscv64-unknown-elf-gcc-8.3.0      riscv64-unknown-elf-gcov-tool      riscv64-unknown-elf-nm             riscv64-unknown-elf-strings
+riscv64-unknown-elf-c++filt        riscv64-unknown-elf-gcc-ar         riscv64-unknown-elf-gdb            riscv64-unknown-elf-objcopy        riscv64-unknown-elf-strip
+riscv64-unknown-elf-cpp            riscv64-unknown-elf-gcc-nm         riscv64-unknown-elf-gdb-add-index  riscv64-unknown-elf-objdump
+
+</code></pre></div><p>So we can now compile and and run a debugger for RISC-V, but we won&rsquo;t be able to
+actually run our programs without emulation. <a href="https://www.qemu.org/">QEMU</a> is
+one of the most popular and widely used emulation platforms in the world. It
+offers full-system and user-mode emulation<sup id="fnref:2"><a href="posts/risc-v-bytes-qemu-gdb/#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup> for a wide variety of platforms,
+including RISC-V. There are instructions for installing on Linux, macOS, and
+Windows on the <a href="https://www.qemu.org/download">downloads page</a>, as well as links
+to source and build instructions. After installing, you should have binaries for
+each of the following platforms:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+qemu-aarch64              qemu-ga                   qemu-microblaze           qemu-mipsn32el            qemu-ppc64le              qemu-sparc                qemu-system-riscv64
+qemu-aarch64_be           qemu-hppa                 qemu-microblazeel         qemu-nbd                  qemu-pr-helper            qemu-sparc32plus          qemu-system-x86_64
+qemu-alpha                qemu-i386                 qemu-mips                 qemu-nios2                qemu-riscv32              qemu-sparc64              qemu-system-x86_64-spice
+qemu-arm                  qemu-img                  qemu-mips64               qemu-or1k                 qemu-riscv64              qemu-storage-daemon       qemu-tilegx
+qemu-armeb                qemu-io                   qemu-mips64el             qemu-ppc                  qemu-s390x                qemu-system-aarch64       qemu-x86_64
+qemu-cris                 qemu-m68k                 qemu-mipsel               qemu-ppc64                qemu-sh4                  qemu-system-arm           qemu-xtensa
+qemu-edid                 qemu-make-debian-root     qemu-mipsn32              qemu-ppc64abi32           qemu-sh4eb                qemu-system-i386          qemu-xtensaeb
+
+</code></pre></div><p>You&rsquo;ll see a few for RISC-V: <code>qemu-riscv32</code>, <code>qemu-riscv64</code>,
+<code>qemu-system-riscv64</code>. The first two are the 32-bit and 64-bit variants for
+user-mode emulation, and the third is the 64-bit variant for full-system
+emulation.</p>
+<h2 id="a-first-example">A First Example</h2>
+<p>Now that we have our tools in place, let&rsquo;s use them! We&rsquo;ll start by compiling a
+very small C program:</p>
+<p><code>sum.c</code></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">
+<span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;stdio.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span><span style="color:#0f0;font-weight:bold"></span>
+<span style="color:#fff;font-weight:bold">int</span> main()
+{
+    <span style="color:#fff;font-weight:bold">int</span> num1 = <span style="color:#ff0;font-weight:bold">1</span>;
+    <span style="color:#fff;font-weight:bold">int</span> num2 = <span style="color:#ff0;font-weight:bold">2</span>;
+    <span style="color:#fff;font-weight:bold">int</span> sum = num1 + num2;
+
+    printf(<span style="color:#0ff;font-weight:bold">&#34;The sum is: %d&#34;</span>, sum);
+    <span style="color:#fff;font-weight:bold">return</span> <span style="color:#ff0;font-weight:bold">0</span>;
+}
+
+</code></pre></div><p>When debugging, it is helpful to compile with additional debugging symbols and
+information. <code>gcc</code> supports a <a href="https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html">variety of
+flags</a> to produce
+debugging information, but if using <code>gdb</code>, the <code>-ggdb</code> flag will produce debug
+information specifically for <code>gdb</code>:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">riscv64-unknown-elf-gcc -ggdb -static -o sum sum.c
+</code></pre></div><p>We now have a <code>sum</code> binary, let&rsquo;s try and run it:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">./sum
+</code></pre></div><p><del>This should not work because our binary is compiled with a RISC-V target.</del>
+Oops! Looks like that worked? Did we use the wrong compiler? Let&rsquo;s check:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+$ file sum
+sum: ELF 64-bit LSB executable, UCB RISC-V, version 1 (SYSV), statically linked, with debug_info, not stripped
+
+</code></pre></div><p>We can see that <code>sum</code> is a 64-bit ELF binary compiled for RISC-V, so what&rsquo;s
+going on here? Without knowing it, you may already have jumped ahead to our
+emulation step. If you are running Linux, the kernel supports a <a href="https://www.kernel.org/doc/html/latest/admin-guide/binfmt-misc.html">feature
+called</a>
+<code>binfmt_misc</code>. This allows for an interpreter to be registered and invoked
+automatically for a specified binary type. When we installed QEMU, it went ahead
+and registered our user-mode emulators:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+$ ls /proc/sys/fs/binfmt_misc/
+jar               qemu-aarch64      qemu-armeb        qemu-m68k         qemu-mips64       qemu-mipsn32      qemu-ppc64        qemu-riscv32      qemu-sh4          qemu-sparc32plus  qemu-xtensaeb
+python2.7         qemu-alpha        qemu-cris         qemu-microblaze   qemu-mips64el     qemu-mipsn32el    qemu-ppc64abi32   qemu-riscv64      qemu-sh4eb        qemu-sparc64      register
+python3.8         qemu-arm          qemu-hppa         qemu-mips         qemu-mipsel       qemu-ppc          qemu-ppc64le      qemu-s390x        qemu-sparc        qemu-xtensa       status
+
+</code></pre></div><p>This is great! However, this isn&rsquo;t going to work when we are debugging, so we
+need to run our RISC-V <code>gdb</code> while pointing at <code>qemu-riscv64</code>. First lets start
+our debugging session:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+$ riscv64-unknown-elf-gdb sum
+(gdb) run
+Don&#39;t know how to run.  Try &#34;help target&#34;.
+(gdb)
+
+</code></pre></div><p>You&rsquo;ll notice that if we try to run, <code>gdb</code> will prompt us to add a
+<a href="https://ftp.gnu.org/old-gnu/Manuals/gdb/html_node/gdb_122.html">target</a>. QEMU
+supports the <code>gdbstub</code> remote connection protocol, and we can start a <code>gdb</code>
+server in user-mode QEMU by passing <code>-g &lt;port&gt;</code>:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">qemu-riscv64 -g 1234 sum
+</code></pre></div><p>This will start QEMU, but wait for <code>gdb</code> to connect, which we can do by setting
+a remote target:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+(gdb) target remote :1234
+Remote debugging using :1234
+0x00000000000100c6 in _start ()
+(gdb)
+
+</code></pre></div><p>Let&rsquo;s verify our <code>main</code> function exists:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+(gdb) disass main
+Dump of assembler code for function main:
+   0x0000000000010158 &lt;+0&gt;:     addi       sp,sp,-32
+   0x000000000001015a &lt;+2&gt;:     sd         ra,24(sp)
+   0x000000000001015c &lt;+4&gt;:     sd         s0,16(sp)
+   0x000000000001015e &lt;+6&gt;:     addi       s0,sp,32
+   0x0000000000010160 &lt;+8&gt;:     li         a5,1
+   0x0000000000010162 &lt;+10&gt;:    sw         a5,-20(s0)
+   0x0000000000010166 &lt;+14&gt;:    li         a5,2
+   0x0000000000010168 &lt;+16&gt;:    sw         a5,-24(s0)
+   0x000000000001016c &lt;+20&gt;:    lw         a4,-20(s0)
+   0x0000000000010170 &lt;+24&gt;:    lw         a5,-24(s0)
+   0x0000000000010174 &lt;+28&gt;:    addw       a5,a5,a4
+   0x0000000000010176 &lt;+30&gt;:    sw         a5,-28(s0)
+   0x000000000001017a &lt;+34&gt;:    lw         a5,-28(s0)
+   0x000000000001017e &lt;+38&gt;:    mv         a1,a5
+   0x0000000000010180 &lt;+40&gt;:    lui        a5,0x1c
+   0x0000000000010182 &lt;+42&gt;:    addi       a0,a5,176 # 0x1c0b0
+   0x0000000000010186 &lt;+46&gt;:    jal        ra,0x10332 &lt;printf&gt;
+   0x000000000001018a &lt;+50&gt;:    li         a5,0
+   0x000000000001018c &lt;+52&gt;:    mv         a0,a5
+   0x000000000001018e &lt;+54&gt;:    ld         ra,24(sp)
+   0x0000000000010190 &lt;+56&gt;:    ld         s0,16(sp)
+   0x0000000000010192 &lt;+58&gt;:    addi       sp,sp,32
+   0x0000000000010194 &lt;+60&gt;:    ret
+End of assembler dump.
+(gdb)
+
+</code></pre></div><p>Nice, now we are ready to get to work! So keep an eye out for the next post :)</p>
+<h2 id="closing-thoughts">Closing Thoughts</h2>
+<p>I&rsquo;m excited to get this series started. My goal is to peel back some of the
+layers of abstraction that we commonly find ourselves interacting with on a
+daily basis, while also demonstrating some of the components and design
+decisions of RISC-V specifically that have a chance to make it the dominant ISA
+of the future. If I can do a better job of helping us achieve that goal, or you
+just have questions of comments, send me a message
+<a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter!</p>
+<section class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1" role="doc-endnote">
+<p>Though if you are, that&rsquo;s awesome! I recently got a <a href="https://wiki.seeedstudio.com/BeagleV-Getting-Started/">BeagleV StarLight</a>, which you will almost certainly be seeing in future posts in this series. <a href="posts/risc-v-bytes-qemu-gdb/#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:2" role="doc-endnote">
+<p>We&rsquo;ll be exploring both of these in future posts. <a href="posts/risc-v-bytes-qemu-gdb/#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+</ol>
+</section>
+
+  </article>
+
+  <br/>
+
+  
+  
+</section>
+
+      </div>
+
+      <footer class="footer">
+  <section class="container">
+     © 2021  
+  </section>
+</footer>
+
+    </main>
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+
+  </body>
+
+</html>
