@@ -249,35 +249,43 @@ that are necessary to conform to calling conventions.</p>
 <p>When we move the stack pointer, we are essentially incrementing or decrementing
 the size of our stack. In RISC-V, the stack grows downwards, so <code>addi sp, sp, -32</code> is increasing the size of our downward growing stack by changing the stack
 pointer to contain an address 32 bytes lower.</p>
-<p>Next we want to push the saved registers onto the stack. Let&rsquo;s pause for a
-moment and think about why we need to do this. If the registers are designated
-as &ldquo;saved&rdquo;, can we not just leave them untouched throughout the body of our
-procedure, keeping them intact when we return to the procedure that called us?
-This is true in some scenarios, but what if we call another procedure in our
-body? For instance, take a look at <code>&lt;+42&gt;</code> where we call <code>printf</code>. Here we are
-specifying that we want to jump to the location of the <code>printf</code> procedure and
-set the contents of register <code>ra</code> to the address of the program counter plus
-four (<code>ra &lt;- PC + 4</code>). This will inform <code>printf</code> to return to the address of the
-next instruction in our <code>main</code> body (<code>&lt;+50&gt;</code>). However, when <code>printf</code> does
-return, we need to know how to return to the procedure that called us
-(<code>_start</code>).</p>
+<h2 id="a-caller-saved-register">A Caller-Saved Register</h2>
+<p>Next we want to store the contents of the saved registers onto the stack. Let&rsquo;s
+pause for a moment and think about why we need to do this. If the registers are
+designated as &ldquo;saved&rdquo;, can we not just leave them untouched throughout the body
+of our procedure, keeping them intact when we return to the procedure that
+called us?</p>
+<p>This is true if we are not going to re-use those registers at any point in our
+procedure we need to make sure we preserve their contents. For instance, take a
+look at <code>&lt;+42&gt;</code> where we call <code>printf</code>. Here we are specifying that we want to
+jump to the location of the <code>printf</code> procedure and set the contents of register
+<code>ra</code> to the address of the program counter plus four (<code>ra &lt;- PC + 4</code>). This will
+inform <code>printf</code> to return to the address of the next instruction in our <code>main</code>
+body (<code>&lt;+50&gt;</code>). However, when <code>printf</code> does return, we need to know how to
+return to the procedure that called us (<code>_start</code>).</p>
 <p>If we hadn&rsquo;t saved the contents of <code>ra</code> in the prologue (<code>&lt;+2&gt;</code>), we would have
-lost that address, but because we pushed it onto the stack, we can pop it back
-off in the epilogue (<code>&lt;+54&gt;</code>) and return to <code>_start</code>. Meanwhile, in the rest of
-the procedure body, we are free to use the register as needed.</p>
-<p>You&rsquo;ll also notice that we are pushing <code>s0</code> onto the stack in the prologue
-(<code>&lt;+4&gt;</code>). Besides being a saved register, <code>s0</code> is <a href="https://github.com/riscv/riscv-elf-psabi-doc/blob/388954fc835e782cbedffcdb502cf816bd978771/riscv-elf.md#integer-register-convention-">used as the <em>frame pointer</em>
-if one
+lost that address, but because we stored it on the stack, we can load it back
+into <code>ra</code> in the epilogue (<code>&lt;+54&gt;</code>) and return to <code>_start</code>. Meanwhile, in the
+rest of the procedure body, we are free to use the register as needed. If we
+look at our table of general purpose registers above, we&rsquo;ll notice that <code>ra</code> is
+designated as <em>caller-saved</em> (i.e. it is <em>not</em> preserved across calls). This
+aligns with the behavior we see as <code>main</code>, as the caller, saves <code>ra</code> before
+calling <code>printf</code> and updating <code>ra</code> with the address of the next instruction.</p>
+<h2 id="a-callee-saved-register">A Callee-Saved Register</h2>
+<p>You&rsquo;ll also notice that we are storing <code>s0</code> on the stack in the prologue
+(<code>&lt;+4&gt;</code>). Besides being designated as a <em>callee-saved</em> register, <code>s0</code> is <a href="https://github.com/riscv/riscv-elf-psabi-doc/blob/388954fc835e782cbedffcdb502cf816bd978771/riscv-elf.md#integer-register-convention-">used
+as the <em>frame pointer</em> if one
 exists</a>.
 The stack frame is the area of the stack reserved for the current procedure and
-it stretches from the <em>frame pointer</em> to the <em>stack pointer</em>. Procedures will
-use the frame pointer with an offset to push values onto the stack, such as a
+it stretches from the <em>frame pointer</em> to the <em>stack pointer</em>. Procedures may use
+the frame pointer with an offset to store values on the stack, such as a
 variable that is only in-scope for that procedure (e.g. <code>&lt;+10&gt;</code>). In this way,
-the frame pointer is a boundary, making sure one procedure does not corrupt the
-stack of another.</p>
-<p>For this reason, it is imperative that the frame pointer is kept intact
-throughout the body of the procedure. Since <code>_start</code> is expecting its frame
-pointer to be unmodified after calling <code>main</code>, we must:</p>
+the frame pointer is a boundary, marking the beginning of the region of the
+stack available for the procedure.</p>
+<p>It is imperative that the frame pointer, or any other <em>callee-saved</em> register
+that is modified in the procedure, is restored prior to returning to the caller.
+Since <code>_start</code> is expecting its frame pointer to be unmodified after calling
+<code>main</code>, we must:</p>
 <ol>
 <li>Store it in the stack frame for <code>main</code> (<code>&lt;+4&gt;</code>).</li>
 <li>Set the new frame pointer for <code>main</code> (<code>&lt;+6&gt;</code>). You&rsquo;ll notice the frame
@@ -285,10 +293,12 @@ pointer now contains the address the stack pointer contained when our
 procedure began.</li>
 <li>Restore it before returning (<code>&lt;+56&gt;</code>).</li>
 </ol>
-<p>Likewise, we will also restore the stack pointer (<code>&lt;+58&gt;</code>), as you&rsquo;ll remember
-it is a callee-saved register as well. Together, these operations ensure that
-the stack frame is consistent throughout the execution of a procedure, no matter
-how many other procedures it calls.</p>
+<p>You&rsquo;ll notice that we will also restore the stack pointer (<code>&lt;+58&gt;</code>), as it is a
+<em>callee-saved</em> register as well. However, unlike <code>ra</code>, we don&rsquo;t have to worry
+about storing the contents of <code>s0</code> or <code>sp</code> on the stack prior to calling
+<code>printf</code> because it will adhere to the same conventions as a callee that <code>main</code>
+does for <code>_start</code>, ensuring that all of our <em>callee-saved</em> registers are
+unmodified when it returns.</p>
 <h2 id="concluding-thoughts">Concluding Thoughts</h2>
 <p>While we have only scratched the surface of the benefits of ABI-compatibility in
 this post, we can already begin to see its value. In future posts, we&rsquo;ll take a
