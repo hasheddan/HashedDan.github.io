@@ -6,10 +6,20 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 01 Jun 2021 01:41:34 -0600</lastBuildDate>
+    <lastBuildDate>Fri, 18 Jun 2021 01:41:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>RISC-V Bytes: Caller and Callee Saved Registers</title>
+      <link>https://danielmangum.com/posts/risc-v-bytes-caller-callee-registers/</link>
+      <pubDate>Fri, 18 Jun 2021 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/risc-v-bytes-caller-callee-registers/</guid>
+      <description>This is part of a new series I am starting on the blog where we’ll explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
+ When looking at the generated assembly for a function, you may have noticed that the first few instructions involve moving values from registers to the stack, then loading those values back into the same registers before returning.</description>
+    </item>
     
     <item>
       <title>RISC-V Bytes: Cross-Platform Debugging with QEMU and GDB</title>

@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="author" content="Daniel Mangum">
+    <meta name="description" content="Daniel Mangum&#39;s personal website">
+    <meta name="keywords" content="blog,developer,personal">
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@hasheddan" />
+    <meta name="twitter:title" content="RISC-V Bytes: Caller and Callee Saved Registers"/>
+    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
+
+    <base href="https://danielmangum.com">
+    <title>
+  RISC-V Bytes: Caller and Callee Saved Registers · Daniel Mangum
+</title>
+
+    <link rel="canonical" href="https://danielmangum.com/posts/risc-v-bytes-caller-callee-registers/">
+
+    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
+    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
+    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
+
+    
+
+    
+
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+    
+
+    <meta name="generator" content="Hugo 0.68.3" />
+  </head>
+
+  <body class="">
+    <main class="wrapper">
+      <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com">
+      Daniel Mangum
+    </a>
+    
+    <ul class="navigation-list  float-right ">
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/posts/">Blog</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/about/">About</a>
+      </li>
+      
+    </ul>
+    
+  </section>
+</nav>
+
+
+      <div class="content">
+        
+  <section class="container post">
+  <article>
+    <header>
+      <h1 class="title">RISC-V Bytes: Caller and Callee Saved Registers</h1>
+      <h2 class="date">June 18, 2021</h2>
+      <style>
+        .twitter-tweet-rendered {
+          display:block;
+          margin-left:auto;
+          margin-right:auto;
+        }
+      </style>
+
+      
+    </header>
+
+    <blockquote>
+<p>This is part of a new series I am starting on the blog where we’ll explore
+<a href="https://riscv.org/">RISC-V</a> by breaking down real programs and explaining how
+they work. You can view all posts in this series on the <a href="https://danielmangum.com/categories/risc-v-bytes">RISC-V Bytes
+page</a>.</p>
+</blockquote>
+<p>When looking at the generated assembly for a function, you may have noticed that
+the first few instructions involve moving values from registers to the stack,
+then loading those values back into the same registers before returning. In this
+post we&rsquo;ll explore why this is happening, why certain registers are used, and
+how behavior guarantees make life easier for compiler authors and enable
+software portability.</p>
+<h2 id="defining-terms">Defining Terms</h2>
+<p>Before we dive into what is happening there, let&rsquo;s define some terms and take a
+look at the 32 general purpose registers supported in the RISC-V instruction
+set.</p>
+<ul>
+<li><strong>Caller</strong>: a procedure that calls one or more more subsequent procedure(s).</li>
+<li><strong>Callee</strong>: a procedure that is called by another.</li>
+<li><strong>Application Binary Interface (ABI)</strong>: a standard for register usage and
+memory layout that allows for programs that are not compiled together to
+interact effectively.</li>
+<li><strong>Calling Conventions</strong>: a subset of an ABI specifically focused on how data
+is passed from one procedure to another.</li>
+</ul>
+<p>Importantly, a procedure may be both a <em>caller</em> and a <em>callee</em>.</p>
+<p>Now let&rsquo;s take a look at the RISC-V registers:</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>ABI Mnemonic</th>
+<th>Calling Convention</th>
+<th>Preserved across calls?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>x0</td>
+<td>zero</td>
+<td>Zero</td>
+<td>n/a</td>
+</tr>
+<tr>
+<td>x1</td>
+<td>ra</td>
+<td>Return address</td>
+<td>No</td>
+</tr>
+<tr>
+<td>x2</td>
+<td>sp</td>
+<td>Stack pointer</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>x3</td>
+<td>gp</td>
+<td>Global pointer</td>
+<td>n/a</td>
+</tr>
+<tr>
+<td>x4</td>
+<td>tp</td>
+<td>Thread pointer</td>
+<td>n/a</td>
+</tr>
+<tr>
+<td>x5-x7</td>
+<td>t0-t2</td>
+<td>Temporary registers</td>
+<td>No</td>
+</tr>
+<tr>
+<td>x8-x9</td>
+<td>s0-s1</td>
+<td>Saved registers</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>x10-x17</td>
+<td>a0-a7</td>
+<td>Argument registers</td>
+<td>No</td>
+</tr>
+<tr>
+<td>x18-x27</td>
+<td>s2-s11</td>
+<td>Saved registers</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>x28-x31</td>
+<td>t3-t6</td>
+<td>Temporary registers</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<p>You&rsquo;ll notice the second column refers to the <em>Application Binary Interface
+(ABI)</em> and the third refers to the <em>Calling Convention</em>, both of which we
+defined earlier. This likely makes intuitive sense: if we all agree to use
+certain registers for specific purposes, we can expect data to be there without
+having to explicitly say that it is.</p>
+<p>The fourth column may be a bit more opaque. While this table uses <em>Preserved
+across calls?</em> as a designation, you will frequently see all of the registers
+with <em>Yes</em> in the column referred to as <strong>callee-saved</strong> and those with <em>No</em> as
+<strong>caller-saved</strong>. This once again is related to how procedures communicate. It
+is great to agree on the purpose of our registers, but we also need to define
+what responsibilites a procedure has when interacting with them. In order for a
+register to be preserved across calls, the callee must make sure its value is
+the same when it returns to the caller as it was when the callee was, well,
+called!</p>
+<h2 id="an-example">An Example</h2>
+<p>The simplest example is the <code>main</code> function. You may be tempted to think that
+<code>main</code> would be an example of a procedure that is only a caller. In reality, it
+is called after some initial setup, which can very greatly depending on the
+language and the compiler. Almost every procedure is a callee, and only <em>leaf
+procedures</em> are not callers.</p>
+<p>We&rsquo;ll be using our program from <a href="https://danielmangum.com/posts/risc-v-bytes-qemu-gdb/">last
+post</a> to show how
+registers are preserved. In this case, <code>main</code> is being called by <code>_start</code> and it
+calls <code>printf</code>.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">(gdb) disass main
+Dump of assembler code for function main:
+   0x0000000000010158 &lt;+0&gt;:     addi       sp,sp,-32
+   0x000000000001015a &lt;+2&gt;:     sd         ra,24(sp)
+   0x000000000001015c &lt;+4&gt;:     sd         s0,16(sp)
+   0x000000000001015e &lt;+6&gt;:     addi       s0,sp,32
+   0x0000000000010160 &lt;+8&gt;:     li         a5,1
+   0x0000000000010162 &lt;+10&gt;:    sw         a5,-20(s0)
+   0x0000000000010166 &lt;+14&gt;:    li         a5,2
+   0x0000000000010168 &lt;+16&gt;:    sw         a5,-24(s0)
+   0x000000000001016c &lt;+20&gt;:    lw         a4,-20(s0)
+   0x0000000000010170 &lt;+24&gt;:    lw         a5,-24(s0)
+   0x0000000000010174 &lt;+28&gt;:    addw       a5,a5,a4
+   0x0000000000010176 &lt;+30&gt;:    sw         a5,-28(s0)
+   0x000000000001017a &lt;+34&gt;:    lw         a5,-28(s0)
+   0x000000000001017e &lt;+38&gt;:    mv         a1,a5
+   0x0000000000010180 &lt;+40&gt;:    lui        a5,0x1c
+   0x0000000000010182 &lt;+42&gt;:    addi       a0,a5,176 # 0x1c0b0
+   0x0000000000010186 &lt;+46&gt;:    jal        ra,0x10332 &lt;printf&gt;
+   0x000000000001018a &lt;+50&gt;:    li         a5,0
+   0x000000000001018c &lt;+52&gt;:    mv         a0,a5
+   0x000000000001018e &lt;+54&gt;:    ld         ra,24(sp)
+   0x0000000000010190 &lt;+56&gt;:    ld         s0,16(sp)
+   0x0000000000010192 &lt;+58&gt;:    addi       sp,sp,32
+   0x0000000000010194 &lt;+60&gt;:    ret
+End of assembler dump.
+</code></pre></div><blockquote>
+<p>You may be thinking to yourself: why do we need so many instructions that just
+store a register into memory, then immediately load it back? Good question! We
+don&rsquo;t! For simplicity here, we are compiling using <code>gcc</code> without any
+optimization. This essentially means that each source line is assembled in a
+vacuum without much consideration of the surrounding context. While this is
+inefficient and leads to a much larger program size, it can be useful for
+learning. Take a look at this program <a href="https://godbolt.org/z/hExE7v6h4">on Compiler
+Explorer</a> and hover over the output to see
+which instructions map to each source line. We&rsquo;ll explore how different
+optimization levels change code generation in a future post.</p>
+</blockquote>
+<p>Let&rsquo;s start from the top. The first thing you&rsquo;ll notice is that we are
+decreasing the value in <code>sp</code>, our stack pointer register. Our first four
+instructions here are commonly referred to as the <em>function prologue</em>. For
+today&rsquo;s post we are going to be primarily focusing on it and the <em>function
+epilogue</em> because these sections are where we perform the bookkeeping operations
+that are necessary to conform to calling conventions.</p>
+<p>When we move the stack pointer, we are essentially incrementing or decrementing
+the size of our stack. In RISC-V, the stack grows downwards, so <code>addi sp, sp, -32</code> is increasing the size of our downward growing stack by changing the stack
+pointer to contain an address 32 bytes lower.</p>
+<p>Next we want to push the saved registers onto the stack. Let&rsquo;s pause for a
+moment and think about why we need to do this. If the registers are designated
+as &ldquo;saved&rdquo;, can we not just leave them untouched throughout the body of our
+procedure, keeping them intact when we return to the procedure that called us?
+This is true in some scenarios, but what if we call another procedure in our
+body? For instance, take a look at <code>&lt;+42&gt;</code> where we call <code>printf</code>. Here we are
+specifying that we want to jump to the location of the <code>printf</code> procedure and
+set the contents of register <code>ra</code> to the address of the program counter plus
+four (<code>ra &lt;- PC + 4</code>). This will inform <code>printf</code> to return to the address of the
+next instruction in our <code>main</code> body (<code>&lt;+50&gt;</code>). However, when <code>printf</code> does
+return, we need to know how to return to the procedure that called us
+(<code>_start</code>).</p>
+<p>If we hadn&rsquo;t saved the contents of <code>ra</code> in the prologue (<code>&lt;+2&gt;</code>), we would have
+lost that address, but because we pushed it onto the stack, we can pop it back
+off in the epilogue (<code>&lt;+54&gt;</code>) and return to <code>_start</code>. Meanwhile, in the rest of
+the procedure body, we are free to use the register as needed.</p>
+<p>You&rsquo;ll also notice that we are pushing <code>s0</code> onto the stack in the prologue
+(<code>&lt;+4&gt;</code>). Besides being a saved register, <code>s0</code> is <a href="https://github.com/riscv/riscv-elf-psabi-doc/blob/388954fc835e782cbedffcdb502cf816bd978771/riscv-elf.md#integer-register-convention-">used as the <em>frame pointer</em>
+if one
+exists</a>.
+The stack frame is the area of the stack reserved for the current procedure and
+it stretches from the <em>frame pointer</em> to the <em>stack pointer</em>. Procedures will
+use the frame pointer with an offset to push values onto the stack, such as a
+variable that is only in-scope for that procedure (e.g. <code>&lt;+10&gt;</code>). In this way,
+the frame pointer is a boundary, making sure one procedure does not corrupt the
+stack of another.</p>
+<p>For this reason, it is imperative that the frame pointer is kept intact
+throughout the body of the procedure. Since <code>_start</code> is expecting its frame
+pointer to be unmodified after calling <code>main</code>, we must:</p>
+<ol>
+<li>Store it in the stack frame for <code>main</code> (<code>&lt;+4&gt;</code>).</li>
+<li>Set the new frame pointer for <code>main</code> (<code>&lt;+6&gt;</code>). You&rsquo;ll notice the frame
+pointer now contains the address the stack pointer contained when our
+procedure began.</li>
+<li>Restore it before returning (<code>&lt;+56&gt;</code>).</li>
+</ol>
+<p>Likewise, we will also restore the stack pointer (<code>&lt;+58&gt;</code>), as you&rsquo;ll remember
+it is a callee-saved register as well. Together, these operations ensure that
+the stack frame is consistent throughout the execution of a procedure, no matter
+how many other procedures it calls.</p>
+<h2 id="concluding-thoughts">Concluding Thoughts</h2>
+<p>While we have only scratched the surface of the benefits of ABI-compatibility in
+this post, we can already begin to see its value. In future posts, we&rsquo;ll take a
+look at how a standardized ABI is even more important when depending on shared
+libraries, as well as examine some more complex examples of passing data between
+procedures. As always, these post are meant to serve as a useful resource for
+folks who are interested in learning more about RISC-V and low-level software in
+general. If I can do a better job of reaching that goal, or you have any
+questions or comments, please feel free to send me a message
+<a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter!</p>
+
+  </article>
+
+  <br/>
+
+  
+  
+</section>
+
+      </div>
+
+      <footer class="footer">
+  <section class="container">
+     © 2021  
+  </section>
+</footer>
+
+    </main>
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+
+  </body>
+
+</html>
