@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="author" content="Daniel Mangum">
+    <meta name="description" content="Daniel Mangum&#39;s personal website">
+    <meta name="keywords" content="blog,developer,personal">
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@hasheddan" />
+    <meta name="twitter:title" content="Stepping Away from Upstream Kubernetes"/>
+    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
+
+    <base href="https://danielmangum.com">
+    <title>
+  Stepping Away from Upstream Kubernetes · Daniel Mangum
+</title>
+
+    <link rel="canonical" href="https://danielmangum.com/posts/stepping-away-upstream-kubernetes/">
+
+    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
+    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
+    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
+
+    
+
+    
+
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+    
+
+    <meta name="generator" content="Hugo 0.68.3" />
+  </head>
+
+  <body class="">
+    <main class="wrapper">
+      <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com">
+      Daniel Mangum
+    </a>
+    
+    <ul class="navigation-list  float-right ">
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/posts/">Blog</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/about/">About</a>
+      </li>
+      
+    </ul>
+    
+  </section>
+</nav>
+
+
+      <div class="content">
+        
+  <section class="container post">
+  <article>
+    <header>
+      <h1 class="title">Stepping Away from Upstream Kubernetes</h1>
+      <h2 class="date">June 22, 2021</h2>
+      <style>
+        .twitter-tweet-rendered {
+          display:block;
+          margin-left:auto;
+          margin-right:auto;
+        }
+      </style>
+
+      
+    </header>
+
+    <blockquote>
+<p>This post is adapted from my message sent to the Kubernetes <a href="https://groups.google.com/g/kubernetes-sig-release/c/tKcnAwtRYx0">SIG Release
+mailing
+list</a>.</p>
+</blockquote>
+<p>I got involved in the Kubernetes community right after finishing school,
+primarily by working on the tooling used to test and release each of the
+components of the project. From the beginning, I was shown a tremendous amount
+of respect and care, and that has remained constant since. That being said, over
+the past two years I have seen my interests evolve rapidly. I have always been
+interested in &ldquo;low-level&rdquo; software, but my view of what that means has changed
+fairly dramatically. When I was in school, I viewed Kubernetes as low-level
+systems software, but the more I have pursued a fundamental understanding of
+computers, that view has shifted to Kubernetes feeling rather high in the
+proverbial &ldquo;stack&rdquo;. As I have sought out opportunities to get &ldquo;closer to the
+metal&rdquo;, the time I had previously reserved for my upstream contributions has
+been more dedicated to projects and learning around topics like processor
+design, FPGAs, and compilers.</p>
+<p>This isn&rsquo;t to say that there isn&rsquo;t plenty of work to do in Kubernetes that
+requires knowledge of lower level concepts. For example, much of the work <a href="https://github.com/kubernetes/community/tree/master/sig-node">SIG
+Node</a> does
+revolves around fairly complex Linux capabilities. I would not be surprised if I
+made an effort to become more involved in those efforts at some point in the
+future. That being said, with a very demanding day job at
+<a href="https://www.upbound.io/">Upbound</a>, a rapidly growing open source community
+around <a href="https://crossplane.io/">Crossplane</a>, and my aforementioned shift in
+interests, <strong>I have made the difficult decision to step down as a SIG Release
+Tech Lead</strong>.</p>
+<p>After seeing so many folks step away from open source communities due to toxic,
+exclusive behavior, I consider myself extremely fortunate to walk away with
+nothing but positive things to say about the folks I have interacted with and
+worked alongside. I want to take a moment to mention a few of those folks and
+the tremendous impact they have had on me.</p>
+<p><a href="https://twitter.com/stephenaugustus">Stephen Augustus</a>, <a href="https://twitter.com/Moinmoinapfel">Lauri
+Apple</a>, <a href="https://twitter.com/saschagrunert">Sascha
+Grunert</a>, and <a href="https://twitter.com/jrrickard">Jeremy
+Rickard</a> (as well as <a href="https://twitter.com/pythomit">Tim
+Pepper</a> and <a href="https://twitter.com/alejandrox135">Jorge
+Alarcon</a>) have been my <a href="https://github.com/kubernetes/sig-release">SIG
+Release</a> family, and I have had the
+tremendous opportunity to learn from and grow alongside each of them. While
+everyone knows it at this point, Stephen is one of the most tremendous human
+beings I have ever encountered. From the day I applied to the Kubernetes Release
+Team, Stephen has been a mentor, a friend, and an inspiration. Sascha and Jeremy
+have had somewhat similar journeys as I have over the past few years (though I
+dare not compare my impact to the tremendous work they have done and continue to
+do). It has been a joy to learn and take on more responsibility as they have
+done the same. Lauri&hellip; words cannot describe what I have learned from Lauri.
+She is one of the most determined, resilient, and caring folks I have ever
+encountered in open source, and she is all about the best outcome for the
+community. She has reshaped much of the processes around how folks work together
+in the Kubernetes community, and I have applied much of the knowledge she has
+shared in other aspects of my professional and personal life.</p>
+<p><a href="https://twitter.com/puerco">Adolfo García Veytia</a> and <a href="https://twitter.com/comedordexis">Carlos
+Panato</a> are a major reason why I am stepping
+away (in a good way!). While I have been a Tech Lead, they have been leading me
+in the time, effort, and care they put into SIG Release and the <a href="https://github.com/kubernetes/sig-release/tree/master/release-engineering">Release
+Engineering</a>
+subproject. I am so grateful to call them my friends, and with their <a href="https://github.com/kubernetes/community/pull/5807">recent
+promotions to Tech Leads</a>, I
+have full confidence that the responsibilities I have carried will be handled
+with even more expertise with them running the show.</p>
+<p>My first role in the Kubernetes community was as a Release Team Shadow on the
+<a href="https://github.com/kubernetes/sig-release/tree/master/release-team/role-handbooks/ci-signal">CI
+Signal</a>
+team. This team will always share a special place in my heart, and is something
+I particularly enjoyed because it requires deep technical knowledge of
+Kubernetes, all of the testing infrastructure, and the organizational structure
+and responsibilities of various groups in the community. I had the privilege to
+shadow <a href="https://twitter.com/alenkacz">Alena Varkockova</a> during my first cycle on
+the team, which undoubtedly led me to continue to pursue more responsibility in
+the community. While I was still learning, Alena empowered me, invested time in
+helping me advance, and generally showed a great deal of kindness. I hope that I
+have reflected at least some of those values towards others in the community who
+have come after me. Another important individual from my work on CI Signal is
+<a href="https://twitter.com/RobKielty">Rob Kielty</a>. Rob got started in the community by
+shadowing me after I had moved into the CI Signal lead role, and immediately
+showed a great deal of interest and investment. Rob then became the CI Signal
+lead himself, and has continued to invest in folks who have held the position in
+subsequent cycles. I am grateful to have been able to work with Rob on those
+teams, as well as livestreams, documentation efforts, and more.</p>
+<p>Lastly, there are a few folks that are leaders in the community outside of SIG
+Release, some of whom I have interacted with more than others, but all of whom
+have been inspirations to me.</p>
+<ul>
+<li><a href="https://twitter.com/spiffxp">Aaron Crickenberger</a></li>
+<li><a href="https://twitter.com/Itsuugo">Anotonio Ojea</a></li>
+<li><a href="https://twitter.com/BenTheElder">Ben Elder</a></li>
+<li><a href="https://twitter.com/dims">Davanum Srinivas</a></li>
+<li><a href="https://twitter.com/ehashdn">Elana Hashman</a></li>
+<li><a href="https://twitter.com/liggitt">Jordan Liggitt</a></li>
+<li><a href="https://twitter.com/zachorsarah">Zachary Sarah</a></li>
+</ul>
+<p>There are countless others who are not mentioned here that have also had a large
+impact on me and the community. Thank you to all of you for making this one of
+the best experiences of my life. I will still be around, but will not be taking
+on any formal positions in the Kubernetes community for the foreseeable future.
+Please feel free to reach out at any time if I can be of help. Onwards and
+upwards!</p>
+<p>Dan</p>
+
+  </article>
+
+  <br/>
+
+  
+  
+</section>
+
+      </div>
+
+      <footer class="footer">
+  <section class="container">
+     © 2021  
+  </section>
+</footer>
+
+    </main>
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+
+  </body>
+
+</html>

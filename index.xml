@@ -6,10 +6,20 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Fri, 18 Jun 2021 01:41:34 -0600</lastBuildDate>
+    <lastBuildDate>Tue, 22 Jun 2021 01:41:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Stepping Away from Upstream Kubernetes</title>
+      <link>https://danielmangum.com/posts/stepping-away-upstream-kubernetes/</link>
+      <pubDate>Tue, 22 Jun 2021 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/stepping-away-upstream-kubernetes/</guid>
+      <description>This post is adapted from my message sent to the Kubernetes SIG Release mailing list.
+ I got involved in the Kubernetes community right after finishing school, primarily by working on the tooling used to test and release each of the components of the project. From the beginning, I was shown a tremendous amount of respect and care, and that has remained constant since. That being said, over the past two years I have seen my interests evolve rapidly.</description>
+    </item>
     
     <item>
       <title>RISC-V Bytes: Caller and Callee Saved Registers</title>
