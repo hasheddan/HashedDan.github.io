@@ -6,10 +6,20 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 22 Jun 2021 01:41:34 -0600</lastBuildDate>
+    <lastBuildDate>Wed, 30 Jun 2021 01:41:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>RISC-V Bytes: Passing on the Stack</title>
+      <link>https://danielmangum.com/posts/risc-v-bytes-passing-on-the-stack/</link>
+      <pubDate>Wed, 30 Jun 2021 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/risc-v-bytes-passing-on-the-stack/</guid>
+      <description>This is part of a series on the blog where we explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
+ I once took a class on compilers where my professor told us that a CPU is like a human brain: it can store important data and access it quickly, but there is a limit to the amount of data that can be stored.</description>
+    </item>
     
     <item>
       <title>Stepping Away from Upstream Kubernetes</title>

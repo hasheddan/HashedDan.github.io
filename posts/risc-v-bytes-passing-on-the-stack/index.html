@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="author" content="Daniel Mangum">
+    <meta name="description" content="Daniel Mangum&#39;s personal website">
+    <meta name="keywords" content="blog,developer,personal">
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@hasheddan" />
+    <meta name="twitter:title" content="RISC-V Bytes: Passing on the Stack"/>
+    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
+
+    <base href="https://danielmangum.com">
+    <title>
+  RISC-V Bytes: Passing on the Stack · Daniel Mangum
+</title>
+
+    <link rel="canonical" href="https://danielmangum.com/posts/risc-v-bytes-passing-on-the-stack/">
+
+    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
+    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
+    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
+
+    
+
+    
+
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+    
+
+    <meta name="generator" content="Hugo 0.68.3" />
+  </head>
+
+  <body class="">
+    <main class="wrapper">
+      <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com">
+      Daniel Mangum
+    </a>
+    
+    <ul class="navigation-list  float-right ">
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/posts/">Blog</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/about/">About</a>
+      </li>
+      
+    </ul>
+    
+  </section>
+</nav>
+
+
+      <div class="content">
+        
+  <section class="container post">
+  <article>
+    <header>
+      <h1 class="title">RISC-V Bytes: Passing on the Stack</h1>
+      <h2 class="date">June 30, 2021</h2>
+      <style>
+        .twitter-tweet-rendered {
+          display:block;
+          margin-left:auto;
+          margin-right:auto;
+        }
+      </style>
+
+      
+    </header>
+
+    <blockquote>
+<p>This is part of a series on the blog where we explore
+<a href="https://riscv.org/">RISC-V</a> by breaking down real programs and explaining how
+they work. You can view all posts in this series on the <a href="https://danielmangum.com/categories/risc-v-bytes">RISC-V Bytes
+page</a>.</p>
+</blockquote>
+<p>I once took a class on compilers where my professor told us that a CPU is like a
+human brain: it can store important data and access it quickly, but there is a
+limit to the amount of data that can be stored. When that limit is reached, it
+must store data elsewhere. For instance, when doing math, most humans find it
+useful to write different steps of the operations down on a piece of paper
+because the larger the computation, the harder it is to keep track of all of its
+components. Likewise, a CPU can store the most critical data in easy to access
+locations, but must eventually move information farther down the <a href="https://en.wikipedia.org/wiki/Memory_hierarchy">memory
+hierarchy</a> when the computation
+becomes sufficiently complex.</p>
+<h2 id="revisiting-our-last-post">Revisiting Our Last Post</h2>
+<p>In our <a href="https://danielmangum.com/posts/risc-v-bytes-caller-callee-registers/">most recent
+post</a>, we
+primarily looked at the easiest to access memory locations: registers. We
+specifically looked at how registers are used to communicate between procedures
+via calling conventions. However, we also saw that <em>callee-saved</em> registers,
+such as the <em>stack pointer</em> (<code>sp</code>) that needed to be re-used within a procedure
+had to have their contents stored on the stack, then loaded back into the
+appropriate register before returning. Storing these registers on the stack is
+an example of moving the data down the memory hierarchy.</p>
+<p>Let&rsquo;s look back at the source for that program:</p>
+<p><code>sum.c</code></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">
+<span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;stdio.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span><span style="color:#0f0;font-weight:bold"></span>
+<span style="color:#fff;font-weight:bold">int</span> main()
+{
+    <span style="color:#fff;font-weight:bold">int</span> num1 = <span style="color:#ff0;font-weight:bold">1</span>;
+    <span style="color:#fff;font-weight:bold">int</span> num2 = <span style="color:#ff0;font-weight:bold">2</span>;
+    <span style="color:#fff;font-weight:bold">int</span> sum = num1 + num2;
+
+    printf(<span style="color:#0ff;font-weight:bold">&#34;The sum is: %d&#34;</span>, sum);
+    <span style="color:#fff;font-weight:bold">return</span> <span style="color:#ff0;font-weight:bold">0</span>;
+}
+
+</code></pre></div><p>This program is needlessly complex: the result of our addition will always be
+constant. However, because we compiled without any
+<a href="https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html">optimization</a>, these
+wasteful operations were preserved in the generated assembly:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+(gdb) disass main
+Dump of assembler code for function main:
+   0x0000000000010158 &lt;+0&gt;:     addi       sp,sp,-32
+   0x000000000001015a &lt;+2&gt;:     sd         ra,24(sp)
+   0x000000000001015c &lt;+4&gt;:     sd         s0,16(sp)
+   0x000000000001015e &lt;+6&gt;:     addi       s0,sp,32
+   0x0000000000010160 &lt;+8&gt;:     li         a5,1
+   0x0000000000010162 &lt;+10&gt;:    sw         a5,-20(s0)
+   0x0000000000010166 &lt;+14&gt;:    li         a5,2
+   0x0000000000010168 &lt;+16&gt;:    sw         a5,-24(s0)
+   0x000000000001016c &lt;+20&gt;:    lw         a4,-20(s0)
+   0x0000000000010170 &lt;+24&gt;:    lw         a5,-24(s0)
+   0x0000000000010174 &lt;+28&gt;:    addw       a5,a5,a4
+   0x0000000000010176 &lt;+30&gt;:    sw         a5,-28(s0)
+   0x000000000001017a &lt;+34&gt;:    lw         a5,-28(s0)
+   0x000000000001017e &lt;+38&gt;:    mv         a1,a5
+   0x0000000000010180 &lt;+40&gt;:    lui        a5,0x1c
+   0x0000000000010182 &lt;+42&gt;:    addi       a0,a5,176 # 0x1c0b0
+   0x0000000000010186 &lt;+46&gt;:    jal        ra,0x10332 &lt;printf&gt;
+   0x000000000001018a &lt;+50&gt;:    li         a5,0
+   0x000000000001018c &lt;+52&gt;:    mv         a0,a5
+   0x000000000001018e &lt;+54&gt;:    ld         ra,24(sp)
+   0x0000000000010190 &lt;+56&gt;:    ld         s0,16(sp)
+   0x0000000000010192 &lt;+58&gt;:    addi       sp,sp,32
+   0x0000000000010194 &lt;+60&gt;:    ret
+End of assembler dump.
+
+</code></pre></div><p><a href="https://godbolt.org/z/Y9f9f311c">View on Compiler Explorer</a></p>
+<blockquote>
+<p>See the <a href="https://danielmangum.com/posts/risc-v-bytes-qemu-gdb/">first post in this
+series</a> for how to set
+up cross-platform compilation and debugging for RISC-V.</p>
+</blockquote>
+<p>In fact, the generated assembly is even more wasteful. Ignoring the function
+prologue and epilogue, the procedure body not only performs all of our
+computations (<code>&lt;+28&gt;</code>), but also does not make use of all available registers,
+forcing us to store all data on the stack. A particularly egregious example is
+when we initialize <code>num1</code> (<code>&lt;+8&gt;</code>) and <code>num2</code> (<code>&lt;+14&gt;</code>), using <code>a5</code>  in both
+cases, forcing each value to be stored on the stack (<code>&lt;+10&gt;</code>, <code>&lt;+16&gt;</code>).</p>
+<p>If we employed full optimization by passing <code>-O3</code> to our compiler, we would get
+a much more sensible output where we skip addition altogether, instead loading
+<code>3</code> as an immediate value, which will always be the result of the operation
+(<code>&lt;+4&gt;</code>).</p>
+<p><code>riscv64-unriscv64-unknown-elf-gcc -O3 sum.c</code></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+(gdb) disass main
+Dump of assembler code for function main:
+   0x00000000000100b0 &lt;+0&gt;:     lui     a0,0x1c
+   0x00000000000100b2 &lt;+2&gt;:     addi    sp,sp,-16
+   0x00000000000100b4 &lt;+4&gt;:     li      a1,3
+   0x00000000000100b6 &lt;+6&gt;:     addi    a0,a0,144 # 0x1c090
+   0x00000000000100ba &lt;+10&gt;:    sd      ra,8(sp)
+   0x00000000000100bc &lt;+12&gt;:    jal     ra,0x1030c &lt;printf&gt;
+   0x00000000000100c0 &lt;+16&gt;:    ld      ra,8(sp)
+   0x00000000000100c2 &lt;+18&gt;:    li      a0,0
+   0x00000000000100c4 &lt;+20&gt;:    addi    sp,sp,16
+   0x00000000000100c6 &lt;+22&gt;:    ret
+End of assembler dump.
+
+</code></pre></div><p><a href="https://godbolt.org/z/jqe6n9PYj">View on Compiler Explorer</a></p>
+<p>What we are illustrating here is efficient use of registers, avoiding moving
+down the memory hierarchy unless we absolutely have to, such as when storing the
+return address of our caller (<code>&lt;+10&gt;</code>).</p>
+<h2 id="sharing-large-data">Sharing &ldquo;Large&rdquo; Data</h2>
+<p>Today we want to look at what happens when we are passing data between
+procedures and we have too much data to store in our argument registers. Let&rsquo;s
+take another look at our general purpose registers in RISC-V:</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>ABI Mnemonic</th>
+<th>Calling Convention</th>
+<th>Preserved across calls?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>x0</td>
+<td>zero</td>
+<td>Zero</td>
+<td>n/a</td>
+</tr>
+<tr>
+<td>x1</td>
+<td>ra</td>
+<td>Return address</td>
+<td>No</td>
+</tr>
+<tr>
+<td>x2</td>
+<td>sp</td>
+<td>Stack pointer</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>x3</td>
+<td>gp</td>
+<td>Global pointer</td>
+<td>n/a</td>
+</tr>
+<tr>
+<td>x4</td>
+<td>tp</td>
+<td>Thread pointer</td>
+<td>n/a</td>
+</tr>
+<tr>
+<td>x5-x7</td>
+<td>t0-t2</td>
+<td>Temporary registers</td>
+<td>No</td>
+</tr>
+<tr>
+<td>x8-x9</td>
+<td>s0-s1</td>
+<td>Saved registers</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>x10-x17</td>
+<td>a0-a7</td>
+<td>Argument registers</td>
+<td>No</td>
+</tr>
+<tr>
+<td>x18-x27</td>
+<td>s2-s11</td>
+<td>Saved registers</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>x28-x31</td>
+<td>t3-t6</td>
+<td>Temporary registers</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<p>The &ldquo;argument registers&rdquo; are where we store data that we want to share with a
+procedure we are calling. When passing minimal data between procedures, this
+isn&rsquo;t a problem:</p>
+<p><code>minimal.c</code></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">
+<span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;stdio.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span><span style="color:#0f0;font-weight:bold"></span>
+<span style="color:#fff;font-weight:bold">int</span> sum(<span style="color:#fff;font-weight:bold">int</span> one, <span style="color:#fff;font-weight:bold">int</span> two) {
+    <span style="color:#fff;font-weight:bold">return</span> one + two;
+}
+
+<span style="color:#fff;font-weight:bold">int</span> main() {
+    printf(<span style="color:#0ff;font-weight:bold">&#34;The sum is: %d</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>, sum(<span style="color:#ff0;font-weight:bold">1</span>, <span style="color:#ff0;font-weight:bold">2</span>));
+    <span style="color:#fff;font-weight:bold">return</span> <span style="color:#ff0;font-weight:bold">0</span>;
+}
+
+</code></pre></div><p><code>riscv64-unknown-elf-gcc -O3 -fno-inline minimal.c</code></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+(gdb) disass main
+Dump of assembler code for function main:
+   0x00000000000100b0 &lt;+0&gt;:     addi    sp,sp,-16
+   0x00000000000100b2 &lt;+2&gt;:     li      a1,2
+   0x00000000000100b4 &lt;+4&gt;:     li      a0,1
+   0x00000000000100b6 &lt;+6&gt;:     sd      ra,8(sp)
+   0x00000000000100b8 &lt;+8&gt;:     jal     ra,0x10178 &lt;sum&gt;
+   0x00000000000100bc &lt;+12&gt;:    mv      a1,a0
+   0x00000000000100be &lt;+14&gt;:    lui     a0,0x1c
+   0x00000000000100c0 &lt;+16&gt;:    addi    a0,a0,160 # 0x1c0a0
+   0x00000000000100c4 &lt;+20&gt;:    jal     ra,0x10318 &lt;printf&gt;
+   0x00000000000100c8 &lt;+24&gt;:    ld      ra,8(sp)
+   0x00000000000100ca &lt;+26&gt;:    li      a0,0
+   0x00000000000100cc &lt;+28&gt;:    addi    sp,sp,16
+   0x00000000000100ce &lt;+30&gt;:    ret
+End of assembler dump.
+(gdb) disass sum
+Dump of assembler code for function sum:
+   0x0000000000010178 &lt;+0&gt;:     addw    a0,a0,a1
+   0x000000000001017a &lt;+2&gt;:     ret
+End of assembler dump.
+
+</code></pre></div><p><a href="https://godbolt.org/z/najsrcG74">View on Compiler Explorer</a></p>
+<blockquote>
+<p>We pass <code>-fno-inline</code> during compilation because we want to preserve the call
+to <code>sum</code> and the passing of data between the procedures. Without it, at any
+optimization level &gt;= 1, GCC will
+<a href="https://en.wikipedia.org/wiki/Inline_expansion">inline</a> the <code>sum</code> function.</p>
+</blockquote>
+<p>We load our arguments into our argument registers (<code>main:&lt;+2&gt;</code>,<code>main:&lt;+4&gt;</code>),
+then perform our addition in <code>sum</code> using those registers. We even re-use <code>a0</code> to
+pass our return value back to <code>main</code> (<code>sum:&lt;+0&gt;</code>), which we are permitted to do
+because argument registers are not <em>callee-saved</em> (<a href="https://github.com/riscv/riscv-elf-psabi-doc/blob/5f33fd95d1892516d2d598ec9149fda85579be89/riscv-elf.md#-integer-calling-convention">RISC-V calling
+conventions</a>
+also specify that that <code>a0</code> and <code>a1</code> are to be used for return values).</p>
+<p>So what happens when we can&rsquo;t fit all of our arguments into the argument
+registers? Similar to how we preserved register contents within a procedure by
+storing them on the stack, we can also pass data between procedures on the
+stack. Let&rsquo;s expand our minimal example with more data:</p>
+<p><code>passonstack.c</code></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">
+<span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;stdio.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span><span style="color:#0f0;font-weight:bold"></span>
+<span style="color:#fff;font-weight:bold">int</span> sum(<span style="color:#fff;font-weight:bold">int</span> one, <span style="color:#fff;font-weight:bold">int</span> two, <span style="color:#fff;font-weight:bold">int</span> three, <span style="color:#fff;font-weight:bold">int</span> four, <span style="color:#fff;font-weight:bold">int</span> five, <span style="color:#fff;font-weight:bold">int</span> six, <span style="color:#fff;font-weight:bold">int</span> seven, <span style="color:#fff;font-weight:bold">int</span> eight, <span style="color:#fff;font-weight:bold">int</span> nine) {
+    <span style="color:#fff;font-weight:bold">return</span> one + two + three + four + five + six + seven + eight + nine;
+}
+
+<span style="color:#fff;font-weight:bold">int</span> main() {
+    printf(<span style="color:#0ff;font-weight:bold">&#34;The sum is: %d</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>, sum(<span style="color:#ff0;font-weight:bold">1</span>, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">3</span>, <span style="color:#ff0;font-weight:bold">4</span>, <span style="color:#ff0;font-weight:bold">5</span>, <span style="color:#ff0;font-weight:bold">6</span>, <span style="color:#ff0;font-weight:bold">7</span>, <span style="color:#ff0;font-weight:bold">8</span>, <span style="color:#ff0;font-weight:bold">9</span>));
+    <span style="color:#fff;font-weight:bold">return</span> <span style="color:#ff0;font-weight:bold">0</span>;
+}
+
+</code></pre></div><p><code>riscv64-unknown-elf-gcc -O3 -fno-inline passonstack.c</code></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+(gdb) disass main
+Dump of assembler code for function main:
+   0x00000000000100b0 &lt;+0&gt;:     addi    sp,sp,-32
+   0x00000000000100b2 &lt;+2&gt;:     li      a1,9
+   0x00000000000100b4 &lt;+4&gt;:     sd      a1,0(sp)
+   0x00000000000100b6 &lt;+6&gt;:     li      a7,8
+   0x00000000000100b8 &lt;+8&gt;:     li      a6,7
+   0x00000000000100ba &lt;+10&gt;:    li      a5,6
+   0x00000000000100bc &lt;+12&gt;:    li      a4,5
+   0x00000000000100be &lt;+14&gt;:    li      a3,4
+   0x00000000000100c0 &lt;+16&gt;:    li      a2,3
+   0x00000000000100c2 &lt;+18&gt;:    li      a1,2
+   0x00000000000100c4 &lt;+20&gt;:    li      a0,1
+   0x00000000000100c6 &lt;+22&gt;:    sd      ra,24(sp)
+   0x00000000000100c8 &lt;+24&gt;:    jal     ra,0x10188 &lt;sum&gt;
+   0x00000000000100cc &lt;+28&gt;:    mv      a1,a0
+   0x00000000000100ce &lt;+30&gt;:    lui     a0,0x1c
+   0x00000000000100d0 &lt;+32&gt;:    addi    a0,a0,192 # 0x1c0c0
+   0x00000000000100d4 &lt;+36&gt;:    jal     ra,0x1033c &lt;printf&gt;
+   0x00000000000100d8 &lt;+40&gt;:    ld      ra,24(sp)
+   0x00000000000100da &lt;+42&gt;:    li      a0,0
+   0x00000000000100dc &lt;+44&gt;:    addi    sp,sp,32
+   0x00000000000100de &lt;+46&gt;:    ret
+End of assembler dump.
+(gdb) disass sum
+Dump of assembler code for function sum:
+   0x0000000000010188 &lt;+0&gt;:     addw    a1,a1,a0
+   0x000000000001018a &lt;+2&gt;:     addw    a1,a1,a2
+   0x000000000001018c &lt;+4&gt;:     addw    a1,a1,a3
+   0x000000000001018e &lt;+6&gt;:     addw    a1,a1,a4
+   0x0000000000010190 &lt;+8&gt;:     addw    a1,a1,a5
+   0x0000000000010192 &lt;+10&gt;:    lw      a0,0(sp)
+   0x0000000000010194 &lt;+12&gt;:    addw    a1,a1,a6
+   0x0000000000010198 &lt;+16&gt;:    addw    a1,a1,a7
+   0x000000000001019c &lt;+20&gt;:    addw    a0,a0,a1
+   0x000000000001019e &lt;+22&gt;:    ret
+End of assembler dump.
+
+</code></pre></div><p><a href="https://godbolt.org/z/Pqod81fod">View on Compiler Explorer</a></p>
+<blockquote>
+<p>The concept of storing data on the stack when we run out of registers is
+commonly referred to as &ldquo;register spilling&rdquo;. Compilers typically want to
+reduce spilling registers as much as possible.</p>
+</blockquote>
+<p>We once again are utilizing our argument registers to pass our arguments to
+<code>sum</code>, but because we are passing nine integers and only have eight argument
+registers, we must store one of our arguments on the stack. How do we know where
+to place our &ldquo;spilled&rdquo; argument on the stack? The <a href="https://github.com/riscv/riscv-elf-psabi-doc/blob/master/riscv-elf.md#-integer-calling-convention">RISC-V calling
+conventions</a>
+specify:</p>
+<blockquote>
+<p>The stack grows downwards (towards lower addresses) and the stack pointer
+shall be aligned to a 128-bit boundary upon procedure entry. The first
+argument passed on the stack is located at offset zero of the stack pointer on
+function entry; following arguments are stored at correspondingly higher
+addresses.</p>
+</blockquote>
+<p>We could test this out by passing a tenth argument and seeing that it is stored
+at an offset of 8 bytes from the stack pointer:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+(gdb) disass sum
+Dump of assembler code for function sum:
+   0x000000000001018c &lt;+0&gt;:     addw    a1,a1,a0
+   0x000000000001018e &lt;+2&gt;:     addw    a1,a1,a2
+   0x0000000000010190 &lt;+4&gt;:     addw    a1,a1,a3
+   0x0000000000010192 &lt;+6&gt;:     addw    a1,a1,a4
+   0x0000000000010194 &lt;+8&gt;:     addw    a1,a1,a5
+   0x0000000000010196 &lt;+10&gt;:    addw    a1,a1,a6
+   0x000000000001019a &lt;+14&gt;:    addw    a1,a1,a7
+   0x000000000001019e &lt;+18&gt;:    lw      a7,0(sp)
+   0x00000000000101a0 &lt;+20&gt;:    lw      a0,8(sp)
+   0x00000000000101a2 &lt;+22&gt;:    addw    a1,a1,a7
+   0x00000000000101a6 &lt;+26&gt;:    addw    a0,a0,a1
+   0x00000000000101a8 &lt;+28&gt;:    ret
+End of assembler dump.
+
+</code></pre></div><p><a href="https://godbolt.org/z/c8ba4WPWE">View on Compiler Explorer</a></p>
+<p>These are clearly contrived examples (exemplified by the fact that we have to
+force the compiler not to eliminate our call to the <code>sum</code> function entirely),
+but serve to get us thinking about how the data we share between procedures
+affects our memory access patterns.</p>
+<h2 id="concluding-thoughts">Concluding Thoughts</h2>
+<p>Understanding the memory hierarchy of a computer and what operations cause it to
+move to a lower (and slower) level in the hierarchy allow us to be more
+effective programmers. While disassembling and examining every function in a
+program is not a feasible option, building up an intuition for how a certain
+operation may impact the performance of an application can lead to better
+designed systems.</p>
+<p>As always, these posts are meant to serve as a useful resource for folks who are
+interested in learning more about RISC-V and low-level software in general. If I
+can do a better job of reaching that goal, or you have any questions or
+comments, please feel free to send me a message
+<a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter!</p>
+
+  </article>
+
+  <br/>
+
+  
+  
+</section>
+
+      </div>
+
+      <footer class="footer">
+  <section class="container">
+     © 2021  
+  </section>
+</footer>
+
+    </main>
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+
+  </body>
+
+</html>
