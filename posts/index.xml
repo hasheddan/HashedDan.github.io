@@ -6,10 +6,20 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Wed, 30 Jun 2021 01:41:34 -0600</lastBuildDate>
+    <lastBuildDate>Fri, 02 Jul 2021 01:41:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Announcing the Research Triangle RISC-V Community Group</title>
+      <link>https://danielmangum.com/posts/research-triangle-risc-v-group/</link>
+      <pubDate>Fri, 02 Jul 2021 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/research-triangle-risc-v-group/</guid>
+      <description>I am excited to announce the launch of the Research Triangle RISC-V Community Group!
+As evidenced by my recent posts and conference talks, I have been spending more and more time learning and working in and around the RISC-V community. While there are numerous commercial benefits of an open source instruction set architecture (ISA), I am particularly excited about the opportunities it provides for folks like myself who do not have formal training in processor design.</description>
+    </item>
     
     <item>
       <title>RISC-V Bytes: Passing on the Stack</title>
