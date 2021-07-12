@@ -6,10 +6,20 @@
     <description>Recent content in RISC-V Bytes on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Wed, 30 Jun 2021 01:41:34 -0600</lastBuildDate>
+    <lastBuildDate>Mon, 12 Jul 2021 00:10:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/categories/risc-v-bytes/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>RISC-V Bytes: Introduction to Instruction Formats</title>
+      <link>https://danielmangum.com/posts/risc-v-bytes-intro-instruction-formats/</link>
+      <pubDate>Mon, 12 Jul 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/risc-v-bytes-intro-instruction-formats/</guid>
+      <description>This is part of a series on the blog where we explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
+ So far in this series, we have been looking at the assembly generated when compiling relatively simple programs. At this point, we have seen instructions that perform a wide variety of operations. Let&amp;rsquo;s take another look at our minimal example from the Passing on the Stack post:</description>
+    </item>
     
     <item>
       <title>RISC-V Bytes: Passing on the Stack</title>
