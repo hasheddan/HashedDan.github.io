@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="author" content="Daniel Mangum">
+    <meta name="description" content="Daniel Mangum&#39;s personal website">
+    <meta name="keywords" content="blog,developer,personal">
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@hasheddan" />
+    <meta name="twitter:title" content="How Kubernetes Validates Custom Resources"/>
+    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
+
+    <base href="https://danielmangum.com">
+    <title>
+  How Kubernetes Validates Custom Resources · Daniel Mangum
+</title>
+
+    <link rel="canonical" href="https://danielmangum.com/posts/how-kubernetes-validates-custom-resources/">
+
+    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
+    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
+    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
+
+    
+
+    
+
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+    
+
+    <meta name="generator" content="Hugo 0.68.3" />
+  </head>
+
+  <body class="">
+    <main class="wrapper">
+      <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com">
+      Daniel Mangum
+    </a>
+    
+    <ul class="navigation-list  float-right ">
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/posts/">Blog</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/about/">About</a>
+      </li>
+      
+    </ul>
+    
+  </section>
+</nav>
+
+
+      <div class="content">
+        
+  <section class="container post">
+  <article>
+    <header>
+      <h1 class="title">How Kubernetes Validates Custom Resources</h1>
+      <h2 class="date">November 8, 2021</h2>
+      <style>
+        .twitter-tweet-rendered {
+          display:block;
+          margin-left:auto;
+          margin-right:auto;
+        }
+      </style>
+
+      
+    </header>
+
+    <blockquote>
+<p>This post references the Kubernetes codebase at commit
+<a href="https://github.com/kubernetes/kubernetes/tree/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7">d92a443ca7</a>
+and <a href="https://github.com/kubernetes/kube-openapi">kube-openapi</a> at commit
+<a href="https://github.com/kubernetes/kube-openapi/tree/ee342a809c29ce286ab48cea8442ef9cd0ab8c1c">ee342a809c</a>,
+but should remain mostly applicable for an extended period of time barring any
+massive refactor to Kubernetes internals. This is also intended to be a very
+active read and a reference to come back to over time. There are <strong>a lot</strong> of
+links to source code that is not embedded because the post would have become
+even more unwieldy than it already is. That being said, I have attempted to
+make it possible to glean most of the information around the main topic
+without needing to leave the page.</p>
+</blockquote>
+<p>A few days ago <a href="https://twitter.com/hasheddan/status/1456349844612784134?s=20">I
+asked</a> if folks
+would find a post about how Kubernetes validates resources against their schemas
+useful. This topic is of particular interest to me because it requires peeling
+back a number of layers of abstraction before we reach the actual logic we care
+about. That being said, not everyone wants, or has time to go through every step
+in the <a href="https://en.wikipedia.org/wiki/Control-flow_graph">control flow graph</a> of
+a program, so while this post includes details about why and how we get to
+validating custom resources, I have provided a few different options for how you
+can go about extracting the exact information you want.</p>
+<p><strong>Options for Reading This Post</strong></p>
+<ul>
+<li><em>&ldquo;Give me all the words!&quot;</em> - Go right ahead to the <a href="https://danielmangum.com/posts/how-kubernetes-validates-custom-resources#a-big-idea">next
+section</a>.
+You have been warned.</li>
+<li><em>&ldquo;I don&rsquo;t care about your life story.&quot;</em> - Harsh, but fair. Skip to <a href="https://danielmangum.com/posts/how-kubernetes-validates-custom-resources#a-starting-point">A Starting
+Point</a>.</li>
+<li><em>&ldquo;If it&rsquo;s not answering the title of this post, I don&rsquo;t want it.&quot;</em> - If you
+are primarily interested in the literal validation, rather than when it is
+invoked, skip to <a href="https://danielmangum.com/posts/how-kubernetes-validates-custom-resources#performing-validation">Performing
+Validation</a>.</li>
+<li><em>&ldquo;I need to validate a custom resource, I don&rsquo;t care how it works.&quot;</em> - If you
+just want to know how you can perform offline validation with the same
+machinery used in upstream Kubernetes, head on over to the <a href="https://github.com/hasheddan/k8s-cr-validator">minimal
+example</a> we use later on in
+this post.</li>
+<li><em>&ldquo;This looks long and boring.&quot;</em> - <a href="https://twitter.com/hasheddan">Send me a
+message</a>! I am more than happy to join your
+livesteam, podcast, or just jump on Zoom call.</li>
+</ul>
+<p><img src="../static/k8s-resource-validation-0.png" alt="k8s-resource-validation-0"></p>
+<h2 id="a-big-idea">A Big Idea</h2>
+<p>This all began because early Kubernetes creators / contributors noticed that
+this system designed for scheduling containerized workloads could support other
+use-cases, and naturally began to theorize about the feasibility of a plugin
+model. Luckily, if you look hard enough, you can find all of these conversations
+and how the design changed over time. This was long before Kubernetes
+Enhancement Proposals (KEPs) were a thing, but when the
+<code>CustomResourceDefinition</code> (CRD) KEP was <a href="https://github.com/kubernetes/enhancements/pull/833">retroactively
+added</a>, Brian Grant
+aggregated some of those <a href="https://github.com/kubernetes/enhancements/pull/833#issuecomment-463909259">initial issues and design
+docs</a>,
+as well as the <a href="https://github.com/kubernetes/kubernetes/pull/11781">first RFC for
+<code>ThirdPartyResources</code></a> (the
+predecessor to <code>CustomResourceDefinitions</code>).</p>
+<p>So what is different about these resources than the rest of the &ldquo;built-in&rdquo; API
+types? Well most importantly, Kubernetes doesn&rsquo;t learn about their existence
+until runtime. That means that the <a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/">API
+Server</a>
+must be informed of the name and structure of the new types, then dynamically
+start serving endpoints that validate and store instances of those types.
+<a href="https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#customresourcedefinitions"><code>CustomResourceDefinition</code></a>
+is the built-in Kubernetes API type that is used to communicate the definition
+of these new types to the API Server. You can think of creating a CRD as
+analogous to defining a new type in your favorite programming language.</p>
+<p>Most folks familiar with Kubernetes use CRDs in some form or fashion, whether it
+be <a href="https://crossplane.io/">to provision infrastructure</a>, <a href="https://cert-manager.io/">manage
+certificates</a>, or a whole host of other operations. At
+this point, they are a critical component of the Kubernetes ecosystem.</p>
+<h2 id="a-startling-realization">A Startling Realization</h2>
+<p>I am typically someone who likes to know <em>exactly</em> how almost everything works.
+I don&rsquo;t mean conceptually how it works; I want to know literally the exact
+operations that are performed in response to any event. Honestly, this is a bit
+of a problem. You don&rsquo;t always have time to investigate the depths of what is
+happening behind every layer of abstraction (though that does sound like some
+sort of nirvana to me), and it is often the correct engineering decision to
+critically evaluate the reliability of a system, then accept the interface that
+it provides as your entry point.</p>
+<p>Sometimes we can&rsquo;t help ourselves though, and this week was one of those weeks
+for me. It was mostly triggered by a few issues we ran into with
+<a href="https://github.com/crossplane/crossplane">Crossplane</a>. The first thing you
+should know is that we <em>really</em> like CRDs in Crossplane. So much so that we
+realized that we might like them even <a href="https://github.com/crossplane/crossplane/issues/2649">more that the API Server can
+handle</a>. Some members of
+the Crossplane community (who also happen to be some of my wonderful coworkers
+at <a href="https://www.upbound.io/">Upbound</a>) have been working on auto-generating
+Providers for all major cloud providers, meaning that we suddenly have packages
+that install 700+ CRDs, and it turns out the API Server can get pretty upset
+about that. Those folks ran through some <a href="https://github.com/kubernetes/kubernetes/issues/105932">fairly extensive
+testing</a> to evaluate
+what was going on here, which resulted in identifying that the bottleneck was
+due to the API Server recomputing the entire merged
+<a href="https://www.openapis.org/">OpenAPI</a> schema on every CRD install. Fortunately,
+there was already work in progress to <a href="https://github.com/kubernetes/kube-openapi/pull/251">make this process
+lazy</a>, which has now been
+merged thanks to some great collaboration with upstream contributors and
+maintainers!</p>
+<p>However, that wasn&rsquo;t the primary thing that piqued my interest as I was not
+extensively involved with that investigation (I am hoping one of the folks who
+was will write up a detailed post about how they tested and identified the
+issue!). I was working on a separate effort that involves offline validation of
+custom resources, so I happened to be navigating the
+<a href="https://github.com/kubernetes/kube-openapi">kube-openapi</a> codebase as well.
+Through doing so, I came to a startling realization: I don&rsquo;t know what is going
+on. Despite dedicating quite a bit of time to contributing to Kubernetes itself,
+and even more time working on Crossplane, which is tightly coupled to much of
+this machinery, if you asked me to describe exactly what goes on when you
+install a CRD and subsequently create custom resource definitions of the type
+that it defines, I would have to get back to you on that.</p>
+<p>Now, this alone is certainly not reason to write this blog post, which is
+already getting fairly long before even getting through the background context.
+A more compelling reason perhaps is that I also discovered that it appears that
+very few other people know <em>exactly</em> what is going on here. And it&rsquo;s for good
+reason! While spelunking my way through the codebase, I discovered <a href="https://github.com/kubernetes/kube-openapi/pull/214">this
+PR</a>, which adds an <code>OWNERS</code>
+file to the kube-openapi <code>validation</code> package, in which
+<a href="https://github.com/sttts">@sttts</a> accurately asserts:</p>
+<blockquote>
+<p>&ldquo;This code is sensitive because it is both reasonable complex and has
+influence on the API. Hence, we add an OWNERS file to restrict the set of
+people as reviewers+approvers who are deeply familiar with the validation
+logic.&rdquo;</p>
+</blockquote>
+<p>Well said. This logic is critical to ensuring that the Kubernetes API actually
+behaves as defined. I found myself needing to understand this, and I believe it
+is a net win for everyone if it more accessible to others as well. So here we
+go&hellip;</p>
+<h2 id="a-starting-point">A Starting Point</h2>
+<p>Before we get into the actual validation logic, we need to understand where it
+is being called from. <code>CustomResourceDefinitions</code> are managed by the <a href="https://github.com/kubernetes/kubernetes/tree/d92a443ca7/staging/src/k8s.io/apiextensions-apiserver">API
+Extensions API
+Server</a>,
+which gets <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7/cmd/kube-apiserver/app/server.go#L201">bundled into the Kube API
+Server</a>
+via chaining. This
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go#L130">server</a>
+is responsible for serving handlers for both <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go#L162"><code>CustomResourceDefinitions</code>
+themselves</a>
+and the <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go#L188">new
+types</a>
+they define.</p>
+<blockquote>
+<p>Chaining of API servers is an incredibly interesting topic in its own right,
+which, out of respect for your time, I will not cover extensively in this
+post. However, I do promise to write a deep dive post on it in the future. In
+the mean time, I encourage you to take a look at the construction of a
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7/staging/src/k8s.io/apiserver/pkg/server/config.go#L567">GenericAPIServer</a>,
+and the
+<a href="https://github.com/kubernetes/kubernetes/tree/d92a443ca7/staging/src/k8s.io/apiserver">apiserver</a>
+project in general. The Kubernetes API server is actually a chain of the <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go#L104">API
+Extensions API
+Server</a>,
+the <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7/pkg/controlplane/instance.go#L235">Kube API
+Server</a>,
+and the <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7/staging/src/k8s.io/kube-aggregator/pkg/apiserver/apiserver.go#L117">Kube Aggregator API
+Server</a>,
+all of which use the generic API server under the hood.</p>
+</blockquote>
+<p>The create / update / delete operations of a CRD itself is of less interest to
+us in this post, but to indulge the curious, the generic API server presents a
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7/staging/src/k8s.io/apiserver/pkg/registry/rest/rest.go#L55"><code>Storage</code>
+interface</a>,
+which is required for any resources that are added as RESTful services. Prior to
+installing the <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go#L162">CRD API
+group</a>,
+we
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go#L152">instantiate</a>
+its <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/registry/customresourcedefinition/etcd.go#L42">implementation of the
+interface</a>,
+then add it to the group&rsquo;s <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go#L157"><code>VersionedResourcesStorageMap</code> for the <code>v1</code>
+version</a>
+(<code>v1</code> is now the only supported as <code>v1beta1</code> was <a href="https://kubernetes.io/docs/reference/using-api/deprecation-guide/#customresourcedefinition-v122">removed in the recent 1.22
+release</a>).
+When we then call <code>InstallAPIGroup()</code>, we eventually get to <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiserver/pkg/server/genericapiserver.go#L548"><code>InstallREST()</code> in
+the generic API
+server</a>,
+which <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiserver/pkg/endpoints/groupversion.go#L110">constructs an
+<code>APIInstaller</code></a>
+that is <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiserver/pkg/endpoints/installer.go#L99">used to
+<code>Install()</code></a>
+a new
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/vendor/github.com/emicklei/go-restful/web_service.go#L17">webservice</a>,
+which uses the underlying <code>Storage</code> implementation to <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiserver/pkg/endpoints/installer.go#L191">register resource
+handlers</a>.</p>
+<p>So, yeah, some things are happening.</p>
+<p>However, what we really want to see is how we are dealing with the custom
+resources that we are defining the schema of using a CRD. Fortunately, the
+generic API server also allows you to register arbitrary additional handlers in
+the chain <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiserver/pkg/server/handler.go#L51">using
+<code>NonGoRestfulMux</code></a>.
+After we <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go#L188">construct our
+<code>CustomResourceDefinitionHandler</code></a>,
+this is <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go#L208">exactly what we
+do</a>.</p>
+<blockquote>
+<p>This post is also not about the API Extensions API Server, though it feels
+wrong to not mention that besides registering REST handlers for CRDs and the
+custom resources they define, it also <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go#L204">runs a few critical
+controllers</a>
+that are responsible for operations such as <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/controller/status/naming_controller.go#L48">reserving
+names</a>
+and <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_discovery_controller.go#L43">populating discovery
+caches</a>.</p>
+</blockquote>
+<h2 id="handling-requests">Handling Requests</h2>
+<p><a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L95">The
+<code>CustomResourceDefinitionHandler</code></a>
+is really where all of the interesting logic around dealing with custom
+resources resides. If you have ever worked with HTTP servers using Go, you are
+likely familiar with the <a href="https://pkg.go.dev/net/http#HandlerFunc.ServeHTTP"><code>ServeHTTP</code> method
+signature</a>, which allows a
+type to act as <a href="https://pkg.go.dev/net/http#HandlerFunc">a <code>HandlerFunc</code></a>. In
+the <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L234">CRD handler <code>ServeHTTP</code>
+method</a>,
+we start off by <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L236">parsing the
+request</a>
+and <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L244">evaluating whether it is a resource
+request</a>.
+If it is not, we either pass it along to <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_discovery.go#L28">the
+<code>versionDiscoverHandler</code></a>,
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L252">the
+<code>groupDiscoverHandler</code></a>,
+or, if it does not match paths for either one of those handlers, we pass it
+along to the delegate API server.</p>
+<p>Source:
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L242"><code>apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L242</code></a></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">    <span style="color:#fff;font-weight:bold">if</span> !requestInfo.IsResourceRequest {
+        pathParts := splitPath(requestInfo.Path)
+        <span style="color:#007f7f">// only match /apis/&lt;group&gt;/&lt;version&gt;
+</span><span style="color:#007f7f"></span>        <span style="color:#007f7f">// only registered under /apis
+</span><span style="color:#007f7f"></span>        <span style="color:#fff;font-weight:bold">if</span> <span style="color:#fff;font-weight:bold">len</span>(pathParts) == <span style="color:#ff0;font-weight:bold">3</span> {
+            <span style="color:#fff;font-weight:bold">if</span> !r.hasSynced() {
+                responsewriters.ErrorNegotiated(serverStartingError(), Codecs, schema.GroupVersion{Group: requestInfo.APIGroup, Version: requestInfo.APIVersion}, w, req)
+                <span style="color:#fff;font-weight:bold">return</span>
+            }
+            r.versionDiscoveryHandler.ServeHTTP(w, req)
+            <span style="color:#fff;font-weight:bold">return</span>
+        }
+        <span style="color:#007f7f">// only match /apis/&lt;group&gt;
+</span><span style="color:#007f7f"></span>        <span style="color:#fff;font-weight:bold">if</span> <span style="color:#fff;font-weight:bold">len</span>(pathParts) == <span style="color:#ff0;font-weight:bold">2</span> {
+            <span style="color:#fff;font-weight:bold">if</span> !r.hasSynced() {
+                responsewriters.ErrorNegotiated(serverStartingError(), Codecs, schema.GroupVersion{Group: requestInfo.APIGroup, Version: requestInfo.APIVersion}, w, req)
+                <span style="color:#fff;font-weight:bold">return</span>
+            }
+            r.groupDiscoveryHandler.ServeHTTP(w, req)
+            <span style="color:#fff;font-weight:bold">return</span>
+        }
+
+        r.delegate.ServeHTTP(w, req)
+        <span style="color:#fff;font-weight:bold">return</span>
+    }
+</code></pre></div><p>You&rsquo;ll see this pattern of passing along to the delegate across servers that use
+the generic API server. This is what allows the server chaining we discussed
+earlier, though with the API Extensions API Server being last in the chain, its
+delegate is just the <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/cmd/kube-apiserver/app/server.go#L200"><code>notFound</code>
+handler</a>.</p>
+<p>Next up, we need to get the CRD for the type of custom resource we are handling.
+This accomplished by passing the name to <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L106">the
+<code>crdLister</code></a>,
+which is backed by <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions/apiextensions/v1/customresourcedefinition.go#L37">the
+<code>CustomResourceDefinitionInformer</code></a>.
+We constructed this informer in the API Extensions API Server instantiation and
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go#L184">passed
+it</a>
+to the CRD handler. An interesting point to note here is that most folks are
+familiar <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/client-go/tools/cache/shared_informer.go#L34">with
+<code>SharedInformers</code></a>
+from building some sort of client that interacts with Kubernetes (e.g. an
+external controller or CLI tool). However, in this case we are the server, so
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/clientset.go#L40">the
+<code>clientset</code></a>
+we use is backed by <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go#L166">a
+<code>LoopbackClientConfig</code></a>
+provided by the generic API server.</p>
+<p>Next, we perform a <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L277">variety of
+checks</a>
+to ensure that the request is valid:</p>
+<p>Source:
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L275"><code>apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L275</code></a></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">    <span style="color:#007f7f">// if the scope in the CRD and the scope in request differ (with exception of the verbs in possiblyAcrossAllNamespacesVerbs
+</span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// for namespaced resources), pass request to the delegate, which is supposed to lead to a 404.
+</span><span style="color:#007f7f"></span>    namespacedCRD, namespacedReq := crd.Spec.Scope == apiextensionsv1.NamespaceScoped, <span style="color:#fff;font-weight:bold">len</span>(requestInfo.Namespace) &gt; <span style="color:#ff0;font-weight:bold">0</span>
+    <span style="color:#fff;font-weight:bold">if</span> !namespacedCRD &amp;&amp; namespacedReq {
+        r.delegate.ServeHTTP(w, req)
+        <span style="color:#fff;font-weight:bold">return</span>
+    }
+    <span style="color:#fff;font-weight:bold">if</span> namespacedCRD &amp;&amp; !namespacedReq &amp;&amp; !possiblyAcrossAllNamespacesVerbs.Has(requestInfo.Verb) {
+        r.delegate.ServeHTTP(w, req)
+        <span style="color:#fff;font-weight:bold">return</span>
+    }
+
+    <span style="color:#fff;font-weight:bold">if</span> !apiextensionshelpers.HasServedCRDVersion(crd, requestInfo.APIVersion) {
+        r.delegate.ServeHTTP(w, req)
+        <span style="color:#fff;font-weight:bold">return</span>
+    }
+
+    <span style="color:#007f7f">// There is a small chance that a CRD is being served because NamesAccepted condition is true,
+</span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// but it becomes &#34;unserved&#34; because another names update leads to a conflict
+</span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// and EstablishingController wasn&#39;t fast enough to put the CRD into the Established condition.
+</span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// We accept this as the problem is small and self-healing.
+</span><span style="color:#007f7f"></span>    <span style="color:#fff;font-weight:bold">if</span> !apiextensionshelpers.IsCRDConditionTrue(crd, apiextensionsv1.NamesAccepted) &amp;&amp;
+        !apiextensionshelpers.IsCRDConditionTrue(crd, apiextensionsv1.Established) {
+        r.delegate.ServeHTTP(w, req)
+        <span style="color:#fff;font-weight:bold">return</span>
+    }
+</code></pre></div><p>Assuming the request is valid, we now have to <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L304">fetch the serving information for
+the
+CRD</a>
+that defines the custom resource type. This
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L599">method</a>
+accesses the handler&rsquo;s CRD storage map, which holds a <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L140">cache of serving
+information for each
+CRD</a>.</p>
+<blockquote>
+<p>The <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L104"><code>customStorage</code>
+map</a>
+is implemented as <a href="https://pkg.go.dev/sync/atomic#Value">an <code>atomic.Value</code></a>,
+which has <a href="https://gist.github.com/dim/152e6bf80e1384ea72e17ac717a5000a">performance
+advantages</a> over
+a traditional <a href="https://pkg.go.dev/sync#RWMutex"><code>RWMutex</code> approach</a> in
+read-heavy situations.</p>
+</blockquote>
+<p>In the event that the CRD storage is present in the map, it is returned and we
+proceed. However, if it is not, we have to first <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L605">acquire a write lock on the
+map</a>,
+then construct all of the necessary information for the given CRD. There is a
+lot that is going on here, but I want to particularly focus in on <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L733">constructing
+the <code>validator</code> for each
+version</a>:</p>
+<p>Source:
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L733"><code>apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L733</code></a></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">        <span style="color:#fff;font-weight:bold">var</span> internalValidationSchema *apiextensionsinternal.CustomResourceValidation
+        <span style="color:#fff;font-weight:bold">if</span> validationSchema != <span style="color:#fff;font-weight:bold">nil</span> {
+            internalValidationSchema = &amp;apiextensionsinternal.CustomResourceValidation{}
+            <span style="color:#fff;font-weight:bold">if</span> err := apiextensionsv1.Convert_v1_CustomResourceValidation_To_apiextensions_CustomResourceValidation(validationSchema, internalValidationSchema, <span style="color:#fff;font-weight:bold">nil</span>); err != <span style="color:#fff;font-weight:bold">nil</span> {
+                <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>, fmt.Errorf(<span style="color:#0ff;font-weight:bold">&#34;failed to convert CRD validation to internal version: %v&#34;</span>, err)
+            }
+        }
+        validator, _, err := apiservervalidation.NewSchemaValidator(internalValidationSchema)
+        <span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+            <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>, err
+        }
+</code></pre></div><p>This <code>validator</code> is what will be used to ensure that all custom resources that
+are created conform to the <code>openAPIV3Schema</code> defined in the CRD. It is <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L793">passed
+to
+<code>NewStrategy()</code></a>,
+which is then <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L789">passed to
+<code>NewStorage()</code></a>,
+which then constructs an implementation of the <code>Storage</code> interface provided by
+the generic API server, similarly to what we saw with installing the
+<code>CustomResourceDefinition</code> API group earlier. There are a number of levels of
+indirection here before the actual calling of the <code>validator</code>, but let&rsquo;s finish
+out the handler before we get to that.</p>
+<p>Now that we have the serving information for the CRD, we can <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L349">evaluate what type
+of request is being
+made</a>:</p>
+<p>Source:
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L349"><code>apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L349</code></a></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">    <span style="color:#fff;font-weight:bold">switch</span> {
+    <span style="color:#fff;font-weight:bold">case</span> subresource == <span style="color:#0ff;font-weight:bold">&#34;status&#34;</span> &amp;&amp; subresources != <span style="color:#fff;font-weight:bold">nil</span> &amp;&amp; subresources.Status != <span style="color:#fff;font-weight:bold">nil</span>:
+        handlerFunc = r.serveStatus(w, req, requestInfo, crdInfo, terminating, supportedTypes)
+    <span style="color:#fff;font-weight:bold">case</span> subresource == <span style="color:#0ff;font-weight:bold">&#34;scale&#34;</span> &amp;&amp; subresources != <span style="color:#fff;font-weight:bold">nil</span> &amp;&amp; subresources.Scale != <span style="color:#fff;font-weight:bold">nil</span>:
+        handlerFunc = r.serveScale(w, req, requestInfo, crdInfo, terminating, supportedTypes)
+    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#fff;font-weight:bold">len</span>(subresource) == <span style="color:#ff0;font-weight:bold">0</span>:
+        handlerFunc = r.serveResource(w, req, requestInfo, crdInfo, crd, terminating, supportedTypes)
+    <span style="color:#fff;font-weight:bold">default</span>:
+        responsewriters.ErrorNegotiated(
+            apierrors.NewNotFound(schema.GroupResource{Group: requestInfo.APIGroup, Resource: requestInfo.Resource}, requestInfo.Name),
+            Codecs, schema.GroupVersion{Group: requestInfo.APIGroup, Version: requestInfo.APIVersion}, w, req,
+        )
+    }
+</code></pre></div><p>We are primarily interested in the main resource as opposed to any subresources.
+In the <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L371"><code>serveResource</code>
+method</a>,
+we use the <code>crdInfo</code> to acquire the storage for the relevant CRD version, then
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L375">match to a
+handler</a>
+based on the request verb:</p>
+<p>Source:
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L375"><code>apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L375</code></a></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">    <span style="color:#fff;font-weight:bold">switch</span> requestInfo.Verb {
+    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;get&#34;</span>:
+        <span style="color:#fff;font-weight:bold">return</span> handlers.GetResource(storage, requestScope)
+    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;list&#34;</span>:
+        forceWatch := <span style="color:#fff;font-weight:bold">false</span>
+        <span style="color:#fff;font-weight:bold">return</span> handlers.ListResource(storage, storage, requestScope, forceWatch, r.minRequestTimeout)
+    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;watch&#34;</span>:
+        forceWatch := <span style="color:#fff;font-weight:bold">true</span>
+        <span style="color:#fff;font-weight:bold">return</span> handlers.ListResource(storage, storage, requestScope, forceWatch, r.minRequestTimeout)
+    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;create&#34;</span>:
+        <span style="color:#007f7f">// we want to track recently created CRDs so that in HA environments we don&#39;t have server A allow a create and server B
+</span><span style="color:#007f7f"></span>        <span style="color:#007f7f">// not have observed the established, so a followup get,update,delete results in a 404. We&#39;ve observed about 800ms
+</span><span style="color:#007f7f"></span>        <span style="color:#007f7f">// delay in some CI environments.  Two seconds looks long enough and reasonably short for hot retriers.
+</span><span style="color:#007f7f"></span>        justCreated := time.Since(apiextensionshelpers.FindCRDCondition(crd, apiextensionsv1.Established).LastTransitionTime.Time) &lt; <span style="color:#ff0;font-weight:bold">2</span>*time.Second
+        <span style="color:#fff;font-weight:bold">if</span> justCreated {
+            time.Sleep(<span style="color:#ff0;font-weight:bold">2</span> * time.Second)
+        }
+        <span style="color:#fff;font-weight:bold">if</span> terminating {
+            err := apierrors.NewMethodNotSupported(schema.GroupResource{Group: requestInfo.APIGroup, Resource: requestInfo.Resource}, requestInfo.Verb)
+            err.ErrStatus.Message = fmt.Sprintf(<span style="color:#0ff;font-weight:bold">&#34;%v not allowed while custom resource definition is terminating&#34;</span>, requestInfo.Verb)
+            responsewriters.ErrorNegotiated(err, Codecs, schema.GroupVersion{Group: requestInfo.APIGroup, Version: requestInfo.APIVersion}, w, req)
+            <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>
+        }
+        <span style="color:#fff;font-weight:bold">return</span> handlers.CreateResource(storage, requestScope, r.admission)
+    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;update&#34;</span>:
+        <span style="color:#fff;font-weight:bold">return</span> handlers.UpdateResource(storage, requestScope, r.admission)
+    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;patch&#34;</span>:
+        <span style="color:#fff;font-weight:bold">return</span> handlers.PatchResource(storage, requestScope, r.admission, supportedTypes)
+    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;delete&#34;</span>:
+        allowsOptions := <span style="color:#fff;font-weight:bold">true</span>
+        <span style="color:#fff;font-weight:bold">return</span> handlers.DeleteResource(storage, allowsOptions, requestScope, r.admission)
+    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;deletecollection&#34;</span>:
+        checkBody := <span style="color:#fff;font-weight:bold">true</span>
+        <span style="color:#fff;font-weight:bold">return</span> handlers.DeleteCollection(storage, checkBody, requestScope, r.admission)
+    <span style="color:#fff;font-weight:bold">default</span>:
+        responsewriters.ErrorNegotiated(
+            apierrors.NewMethodNotSupported(schema.GroupResource{Group: requestInfo.APIGroup, Resource: requestInfo.Resource}, requestInfo.Verb),
+            Codecs, schema.GroupVersion{Group: requestInfo.APIGroup, Version: requestInfo.APIVersion}, w, req,
+        )
+        <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>
+    }
+</code></pre></div><p>Upon matching to the correct verb, we invoke the generic verb handler, which is
+provided by the generic API server, with the CRD version&rsquo;s storage
+implementation, along with other relevant information, such as admission
+criteria. The <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go#L51"><code>CreateResource()</code>
+handler</a>
+performs some generic option validation and conversion, before eventually
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go#L153">invoking
+<code>r.Create()</code></a>,
+which is a method on the wrapped <code>storage</code> we passed to the handler.</p>
+<p>Source:
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go#L153"><code>apiserver/pkg/endpoints/handlers/create.go#L153</code></a></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">        requestFunc := <span style="color:#fff;font-weight:bold">func</span>() (runtime.Object, <span style="color:#fff;font-weight:bold">error</span>) {
+            <span style="color:#fff;font-weight:bold">return</span> r.Create(
+                ctx,
+                name,
+                obj,
+                rest.AdmissionToValidateObjectFunc(admit, admissionAttributes, scope),
+                options,
+            )
+        }
+        <span style="color:#007f7f">// Dedup owner references before updating managed fields
+</span><span style="color:#007f7f"></span>        dedupOwnerReferencesAndAddWarning(obj, req.Context(), <span style="color:#fff;font-weight:bold">false</span>)
+        result, err := finisher.FinishRequest(ctx, <span style="color:#fff;font-weight:bold">func</span>() (runtime.Object, <span style="color:#fff;font-weight:bold">error</span>) {
+            <span style="color:#fff;font-weight:bold">if</span> scope.FieldManager != <span style="color:#fff;font-weight:bold">nil</span> {
+                liveObj, err := scope.Creater.New(scope.Kind)
+                <span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+                    <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>, fmt.Errorf(<span style="color:#0ff;font-weight:bold">&#34;failed to create new object (Create for %v): %v&#34;</span>, scope.Kind, err)
+                }
+                obj = scope.FieldManager.UpdateNoErrors(liveObj, obj, managerOrUserAgent(options.FieldManager, req.UserAgent()))
+                admit = fieldmanager.NewManagedFieldsValidatingAdmissionController(admit)
+            }
+            <span style="color:#fff;font-weight:bold">if</span> mutatingAdmission, ok := admit.(admission.MutationInterface); ok &amp;&amp; mutatingAdmission.Handles(admission.Create) {
+                <span style="color:#fff;font-weight:bold">if</span> err := mutatingAdmission.Admit(ctx, admissionAttributes, scope); err != <span style="color:#fff;font-weight:bold">nil</span> {
+                    <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>, err
+                }
+            }
+            <span style="color:#007f7f">// Dedup owner references again after mutating admission happens
+</span><span style="color:#007f7f"></span>            dedupOwnerReferencesAndAddWarning(obj, req.Context(), <span style="color:#fff;font-weight:bold">true</span>)
+            result, err := requestFunc()
+            <span style="color:#007f7f">// If the object wasn&#39;t committed to storage because it&#39;s serialized size was too large,
+</span><span style="color:#007f7f"></span>            <span style="color:#007f7f">// it is safe to remove managedFields (which can be large) and try again.
+</span><span style="color:#007f7f"></span>            <span style="color:#fff;font-weight:bold">if</span> isTooLargeError(err) {
+                <span style="color:#fff;font-weight:bold">if</span> accessor, accessorErr := meta.Accessor(obj); accessorErr == <span style="color:#fff;font-weight:bold">nil</span> {
+                    accessor.SetManagedFields(<span style="color:#fff;font-weight:bold">nil</span>)
+                    result, err = requestFunc()
+                }
+            }
+            <span style="color:#fff;font-weight:bold">return</span> result, err
+        })
+</code></pre></div><p>So where does our validation against the CRD schema happen? If we go back to
+when we called <code>NewStrategy()</code>, you&rsquo;ll see that <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/registry/customresource/strategy.go#L43">the <code>customResourceStrategy</code> we
+create</a>
+has a <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/registry/customresource/strategy.go#L148"><code>Validate()</code>
+method</a>,
+which calls the underlying <code>validator</code> we passed.</p>
+<p>Source:
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/registry/customresource/strategy.go#L148"><code>apiextensions-apiserver/pkg/registry/customresource/strategy.go#L148</code></a></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#007f7f">// Validate validates a new CustomResource.
+</span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">func</span> (a customResourceStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+    <span style="color:#fff;font-weight:bold">var</span> errs field.ErrorList
+    errs = <span style="color:#fff;font-weight:bold">append</span>(errs, a.validator.Validate(ctx, obj, a.scale)...)
+
+    <span style="color:#007f7f">// validate embedded resources
+</span><span style="color:#007f7f"></span>    <span style="color:#fff;font-weight:bold">if</span> u, ok := obj.(*unstructured.Unstructured); ok {
+        v := obj.GetObjectKind().GroupVersionKind().Version
+        errs = <span style="color:#fff;font-weight:bold">append</span>(errs, schemaobjectmeta.Validate(<span style="color:#fff;font-weight:bold">nil</span>, u.Object, a.structuralSchemas[v], <span style="color:#fff;font-weight:bold">false</span>)...)
+
+        <span style="color:#007f7f">// validate x-kubernetes-list-type &#34;map&#34; and &#34;set&#34; invariant
+</span><span style="color:#007f7f"></span>        errs = <span style="color:#fff;font-weight:bold">append</span>(errs, structurallisttype.ValidateListSetsAndMaps(<span style="color:#fff;font-weight:bold">nil</span>, a.structuralSchemas[v], u.Object)...)
+    }
+
+    <span style="color:#fff;font-weight:bold">return</span> errs
+}
+</code></pre></div><p>This <code>customResourceStrategy</code> is passed to <code>NewStorage()</code>, where we can see that
+a <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/registry/customresource/etcd.go#L46"><code>REST</code> instance is
+constructed</a>,
+which <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/registry/customresource/etcd.go#L83">wraps the strategy in a
+<code>genericregistry.Store</code></a>
+from the generic API server.</p>
+<p>Source:
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/registry/customresource/etcd.go#L83"><code>apiextensions-apiserver/pkg/registry/customresource/etcd.go#L83</code></a></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">    store := &amp;genericregistry.Store{
+        NewFunc: <span style="color:#fff;font-weight:bold">func</span>() runtime.Object {
+            <span style="color:#007f7f">// set the expected group/version/kind in the new object as a signal to the versioning decoder
+</span><span style="color:#007f7f"></span>            ret := &amp;unstructured.Unstructured{}
+            ret.SetGroupVersionKind(kind)
+            <span style="color:#fff;font-weight:bold">return</span> ret
+        },
+        NewListFunc: <span style="color:#fff;font-weight:bold">func</span>() runtime.Object {
+            <span style="color:#007f7f">// lists are never stored, only manufactured, so stomp in the right kind
+</span><span style="color:#007f7f"></span>            ret := &amp;unstructured.UnstructuredList{}
+            ret.SetGroupVersionKind(listKind)
+            <span style="color:#fff;font-weight:bold">return</span> ret
+        },
+        PredicateFunc:            strategy.MatchCustomResourceDefinitionStorage,
+        DefaultQualifiedResource: resource,
+
+        CreateStrategy:      strategy,
+        UpdateStrategy:      strategy,
+        DeleteStrategy:      strategy,
+        ResetFieldsStrategy: strategy,
+
+        TableConvertor: tableConvertor,
+    }
+</code></pre></div><p>The generic store is what <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go#L366">implements the <code>r.Create()</code>
+method</a>,
+and it <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go#L380">calls the <code>rest.BeforeCreate()</code>
+method</a>
+with the <code>CreateStrategy</code> that is set to our <code>customResourceStrategy</code> in the
+code snippet above. The <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiserver/pkg/registry/rest/create.go#L93">docstring on
+<code>BeforeCreate()</code></a>
+confirms that this is where we call the strategy&rsquo;s <code>Validate()</code>:</p>
+<blockquote>
+<p>BeforeCreate ensures that common operations for all resources are performed on
+creation. It only returns errors that can be converted to api.Status. It
+invokes PrepareForCreate, then GenerateName, then Validate. It returns nil if
+the object should be created.</p>
+</blockquote>
+<p>If we look in the function body, we&rsquo;ll find that it does in fact <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiserver/pkg/registry/rest/create.go#L128">call our
+strategy&rsquo;s <code>Validate()</code>
+method</a>:</p>
+<p>Source:
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiserver/pkg/registry/rest/create.go#L128"><code>apiserver/pkg/registry/rest/create.go#L128</code></a></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">    <span style="color:#fff;font-weight:bold">if</span> errs := strategy.Validate(ctx, obj); <span style="color:#fff;font-weight:bold">len</span>(errs) &gt; <span style="color:#ff0;font-weight:bold">0</span> {
+        <span style="color:#fff;font-weight:bold">return</span> errors.NewInvalid(kind.GroupKind(), objectMeta.GetName(), errs)
+    }
+</code></pre></div><h2 id="performing-validation">Performing Validation</h2>
+<p>Well, it&rsquo;s been a wild ride, what do you say we actually move to the main topic
+of this post? Once we get to the point where we call <code>Validate()</code>, what happens?
+To understand, we&rsquo;ll need to go back to where we <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L740">constructed the
+<code>validator</code></a>
+with <code>apiservervalidation.NewSchemaValidator()</code> for each version of the CRD we
+were adding to the <code>CustomResourceDefinitionHandler</code> CRD storage map. This
+function takes the internal <code>CustomResourceValidation</code> and <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go#L33">converts it into an
+OpenAPI
+schema</a>
+then <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go#L42">constructs a
+<code>validate.SchemaValidator</code></a>:</p>
+<p>Source:
+<a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go#L42"><code>apiextensions-apiserver/pkg/apiserver/validation/validation.go#L42</code></a></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#007f7f">// NewSchemaValidator creates an openapi schema validator for the given CRD validation.
+</span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">func</span> NewSchemaValidator(customResourceValidation *apiextensions.CustomResourceValidation) (*validate.SchemaValidator, *spec.Schema, <span style="color:#fff;font-weight:bold">error</span>) {
+    <span style="color:#007f7f">// Convert CRD schema to openapi schema
+</span><span style="color:#007f7f"></span>    openapiSchema := &amp;spec.Schema{}
+    <span style="color:#fff;font-weight:bold">if</span> customResourceValidation != <span style="color:#fff;font-weight:bold">nil</span> {
+        <span style="color:#007f7f">// TODO: replace with NewStructural(...).ToGoOpenAPI
+</span><span style="color:#007f7f"></span>        <span style="color:#fff;font-weight:bold">if</span> err := ConvertJSONSchemaPropsWithPostProcess(customResourceValidation.OpenAPIV3Schema, openapiSchema, StripUnsupportedFormatsPostProcess); err != <span style="color:#fff;font-weight:bold">nil</span> {
+            <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>, <span style="color:#fff;font-weight:bold">nil</span>, err
+        }
+    }
+    <span style="color:#fff;font-weight:bold">return</span> validate.NewSchemaValidator(openapiSchema, <span style="color:#fff;font-weight:bold">nil</span>, <span style="color:#0ff;font-weight:bold">&#34;&#34;</span>, strfmt.Default), openapiSchema, <span style="color:#fff;font-weight:bold">nil</span>
+}
+</code></pre></div><p>The schema and validator are both being consumed from the <a href="https://github.com/kubernetes/kube-openapi/tree/master/pkg/validation/validate"><code>validate</code>
+package</a>
+in <a href="https://github.com/kubernetes/kube-openapi">kube-openapi</a> (remember when we
+were talking about that ages ago!?). This codebase is interesting as a large
+portion of it was <a href="https://github.com/kubernetes/kube-openapi/pull/211">forked</a>
+from <a href="https://github.com/go-openapi">go-openapi</a> repositories to <a href="https://github.com/kubernetes/kubernetes/issues/95922">avoid breaking
+changes</a> and improve
+<a href="https://github.com/kubernetes/kubernetes/issues/90128">velocity of bugfixes</a>
+that could impact how the Kubernetes API is interpreted. Most of the code we are
+looking at in the <code>validate</code> package is originally from
+<a href="https://github.com/go-openapi/validate">go-openapi/validate</a>.</p>
+<p>Resource validation against a schema is performed recursively using a set of
+validators. The top-level validator, the one we instantiate in the API
+Extensions API Server for each CRD version, <a href="https://github.com/kubernetes/kube-openapi/blob/ee342a809c29ce286ab48cea8442ef9cd0ab8c1c/pkg/validation/validate/schema.go#L58">is a
+<code>SchemaValidator</code></a>.
+A <code>SchemaValidator</code> instance itself contains:</p>
+<ul>
+<li><code>typeValidator</code></li>
+<li><code>schemaPropsValidator</code></li>
+<li><code>stringValidator</code></li>
+<li><code>formatValidator</code></li>
+<li><code>numberValidator</code></li>
+<li><code>sliceValidator</code></li>
+<li><code>commonValidator</code></li>
+<li><code>objectValidator</code></li>
+</ul>
+<p>Source:
+<a href="https://github.com/kubernetes/kube-openapi/blob/ee342a809c29ce286ab48cea8442ef9cd0ab8c1c/pkg/validation/validate/schema.go#L58"><code>kube-openapi/pkg/validation/validate/schema.go#L58</code></a></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#fff;font-weight:bold">func</span> NewSchemaValidator(schema *spec.Schema, rootSchema <span style="color:#fff;font-weight:bold">interface</span>{}, root <span style="color:#fff;font-weight:bold">string</span>, formats strfmt.Registry, options ...Option) *SchemaValidator {
+    <span style="color:#fff;font-weight:bold">if</span> schema == <span style="color:#fff;font-weight:bold">nil</span> {
+        <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>
+    }
+
+    <span style="color:#fff;font-weight:bold">if</span> rootSchema == <span style="color:#fff;font-weight:bold">nil</span> {
+        rootSchema = schema
+    }
+
+    <span style="color:#fff;font-weight:bold">if</span> ref := schema.Ref.String(); ref != <span style="color:#0ff;font-weight:bold">&#34;&#34;</span> {
+        <span style="color:#fff;font-weight:bold">panic</span>(fmt.Sprintf(<span style="color:#0ff;font-weight:bold">&#34;schema references not supported: %s&#34;</span>, ref))
+    }
+
+    s := SchemaValidator{
+        Path:         root,
+        in:           <span style="color:#0ff;font-weight:bold">&#34;body&#34;</span>,
+        Schema:       schema,
+        Root:         rootSchema,
+        KnownFormats: formats,
+        Options:      SchemaValidatorOptions{}}
+    <span style="color:#fff;font-weight:bold">for</span> _, o := <span style="color:#fff;font-weight:bold">range</span> options {
+        o(&amp;s.Options)
+    }
+    s.validators = []valueValidator{
+        s.typeValidator(),
+        s.schemaPropsValidator(),
+        s.stringValidator(),
+        s.formatValidator(),
+        s.numberValidator(),
+        s.sliceValidator(),
+        s.commonValidator(),
+        s.objectValidator(),
+    }
+    <span style="color:#fff;font-weight:bold">return</span> &amp;s
+}
+</code></pre></div><p>Each of these validators implements the <a href="https://github.com/kubernetes/kube-openapi/blob/ee342a809c29ce286ab48cea8442ef9cd0ab8c1c/pkg/validation/validate/validator.go#L25"><code>validator</code>
+interface</a>
+(including <code>SchemaValidator</code>):</p>
+<p>Source:
+<a href="https://github.com/kubernetes/kube-openapi/blob/ee342a809c29ce286ab48cea8442ef9cd0ab8c1c/pkg/validation/validate/validator.go#L25"><code>kube-openapi/pkg/validation/validate/validator.go#L25</code></a></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#fff;font-weight:bold">type</span> valueValidator <span style="color:#fff;font-weight:bold">interface</span> {
+    <span style="color:#007f7f">// SetPath sets the exact path of the validator prior to calling Validate.
+</span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// The exact path contains the map keys and array indices to locate the
+</span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// value to be validated from the root data element.
+</span><span style="color:#007f7f"></span>    SetPath(path <span style="color:#fff;font-weight:bold">string</span>)
+    <span style="color:#007f7f">// Applies returns true if the validator applies to the valueKind
+</span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// from source. Validate will be called if and only if Applies returns true.
+</span><span style="color:#007f7f"></span>    Applies(source <span style="color:#fff;font-weight:bold">interface</span>{}, valueKind reflect.Kind) <span style="color:#fff;font-weight:bold">bool</span>
+    <span style="color:#007f7f">// Validate validates the value.
+</span><span style="color:#007f7f"></span>    Validate(value <span style="color:#fff;font-weight:bold">interface</span>{}) *Result
+}
+</code></pre></div><p>Without even looking at the algorithm implementation, you can likely guess what
+we are going to be doing here: check if a validator applies to a given value
+and, if it does, run its validation. This is not wildly complex, but it can
+start to get more confusing once we realize that some of these underlying
+validators themselves create new <code>SchemaValidators</code>, namely
+<a href="https://github.com/kubernetes/kube-openapi/blob/1a6458611d189dc17e98a0824dc92536365efedf/pkg/validation/validate/schema_props.go#L25"><code>schemaPropsValidator</code></a>,
+<a href="https://github.com/kubernetes/kube-openapi/blob/1a6458611d189dc17e98a0824dc92536365efedf/pkg/validation/validate/slice_validator.go#L25"><code>sliceValidator</code></a>,
+and
+<a href="https://github.com/kubernetes/kube-openapi/blob/1a6458611d189dc17e98a0824dc92536365efedf/pkg/validation/validate/object_validator.go#L27"><code>objectValidator</code></a>.</p>
+<p>The easiest way to understand how this works is to step through an example. I&rsquo;ve
+put together a small <a href="https://github.com/hasheddan/k8s-cr-validator">validator</a>
+that you can clone to walk through the following steps. All we are doing here is
+reading in some CRDs, creating schema validators for them, then running a custom
+resource through the appropriate validator for its <code>GroupVersionKind</code>. The
+custom resource we are using (<code>cr.yaml</code>) is <a href="https://doc.crds.dev/github.com/crossplane/crossplane/pkg.crossplane.io/Composition/v1@v1.5.0">a Crossplane
+<code>Composition</code></a>
+that has two invalid fields:</p>
+<ul>
+<li><code>spec.resources[0].patches.transforms.type</code> is a required value and we have
+commented it out
+(<a href="https://doc.crds.dev/github.com/crossplane/crossplane/apiextensions.crossplane.io/Composition/v1@v1.5.0#spec-resources-patches-transforms-type">schema</a>
+/
+<a href="https://github.com/hasheddan/k8s-cr-validator/blob/ec2034199f200f5c678d0952b5a6ced472c317f1/cr.yaml#L38">field</a>)</li>
+<li><code>spec.resources[0].connectionDetails[1].fromConnectionSecretKey</code> must be a
+string and we have provided an integer
+(<a href="https://doc.crds.dev/github.com/crossplane/crossplane/apiextensions.crossplane.io/Composition/v1@v1.5.0#spec-resources-connectionDetails-fromConnectionSecretKey">schema</a>
+/
+<a href="https://github.com/hasheddan/k8s-cr-validator/blob/ec2034199f200f5c678d0952b5a6ced472c317f1/cr.yaml#L44">field</a>)</li>
+</ul>
+<p>If we execute <code>go run main.go</code>, we see that these two violations are reported.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">$ go run main.go 
+Validation Error 0 (apiextensions.crossplane.io/v1, Kind=Composition)(xpostgresqlinstances.gcp.database.example.org): spec.resources.patches.transforms.type in body is required
+Validation Error 1 (apiextensions.crossplane.io/v1, Kind=Composition)(xpostgresqlinstances.gcp.database.example.org): spec.resources.connectionDetails.fromConnectionSecretKey in body must be of type string: &#34;number&#34;
+</code></pre></div><blockquote>
+<p>You might notice a small bug here, more on this in a bit.</p>
+</blockquote>
+<p>It works! This is a fairly complex resource in terms of nested schema, which
+makes it a great example to evaluate. Let&rsquo;s start by setting some breakpoints in
+the <a href="https://github.com/kubernetes/kube-openapi/blob/ee342a809c29ce286ab48cea8442ef9cd0ab8c1c/pkg/validation/validate/schema.go#L106"><code>SchemaValidator.Validate()</code>
+method</a>:</p>
+<p><img src="../static/k8s-resource-validation-1.png" alt="k8s-resource-validation-1"></p>
+<p>This will stop us on every call to the underlying validators&rsquo; <code>Applies()</code> and
+<code>Validate()</code> methods, which we can step into to get a deeper understanding of
+what is going on. One thing we have skipped over is the <a href="https://github.com/kubernetes/kube-openapi/blob/ee342a809c29ce286ab48cea8442ef9cd0ab8c1c/pkg/validation/validate/schema.go#L118">reflection performed
+earlier in the validation
+body</a>
+to ascertain the underlying Go type of the data that is passed as an <a href="https://flaviocopes.com/go-empty-interface/">empty
+interface</a>. Most <code>Applies()</code>
+implementations are going to make a decision on whether validation should be run
+based on both the source type from the schema, and the Go type of the data.</p>
+<p>When we start our debug session, we&rsquo;ll break on the first call to <code>v.Applies()</code>
+in the top-level <code>SchemaValidator</code>. There are a few interesting things to take
+in already:</p>
+<ul>
+<li><code>s.Path</code> of our schema validator is set to <code>&quot;&quot;</code>, which is expected since we
+are at the top level.</li>
+<li>Our <code>kind</code> is a struct, which we <a href="https://github.com/kubernetes/kube-openapi/blob/ee342a809c29ce286ab48cea8442ef9cd0ab8c1c/pkg/validation/validate/schema.go#L120">learned via
+reflection</a>
+and aligns with the knowledge that we passed <code>*unstructured.Unstructured</code>.
+However, our <code>data</code> and <code>d</code> are not the same type. <code>d</code> has been converted to a
+<code>map[string]interface{}</code> via the <a href="https://github.com/kubernetes/kube-openapi/blob/ee342a809c29ce286ab48cea8442ef9cd0ab8c1c/pkg/validation/validate/schema.go#L131">call to
+<code>swag.ToDynamicJSON()</code></a>
+earlier in the function body.</li>
+<li><code>v</code>, the current validator, is a <code>typeValidator</code>, which aligns with the fact
+that it was the first that was <a href="https://github.com/kubernetes/kube-openapi/blob/ee342a809c29ce286ab48cea8442ef9cd0ab8c1c/pkg/validation/validate/schema.go#L82">added to the
+slice</a>
+in the call to <code>NewSchemaValidator()</code>.</li>
+</ul>
+<p><img src="../static/k8s-resource-validation-2.png" alt="k8s-resource-validation-2"></p>
+<p>Let&rsquo;s step into this call. Here the <code>typeValidator</code> is specifying that it only
+applies to schema types when <code>Type</code> or <code>Format</code> are specified. Though <code>Type</code> is
+<em>technically</em> <a href="https://github.com/OAI/OpenAPI-Specification/issues/1657">not required in the OpenAPI
+schema</a>, it is
+required in Kubernetes CRDs, and we are always passing a <code>spec.Schema</code>, so type
+validation <em>always</em> applies.</p>
+<blockquote>
+<p>This is also an example of where <code>kube-openapi</code> differs from
+<code>go-openapi/validate</code>. There is no concept of <code>Parameters</code> or <code>Headers</code> in
+Kubernetes CRD schemas, so <a href="https://github.com/kubernetes/kube-openapi/commit/cc84d3c9a377a5afe1dc49d11b010df2d50251d6#diff-19572f2128e110bae75ab7726f7bdb8564c80d6feb10bb66a5e6beef00cf0b3dL132">those type checks were
+stripped</a>
+from <code>kube-openapi</code>, but <a href="https://github.com/go-openapi/validate/blob/1bf2a53c9bf94e3e40bbca170946fbaae77c3c8b/type.go#L132">still
+exist</a>
+in <code>go-openapi/validate</code>.</p>
+</blockquote>
+<p><img src="../static/k8s-resource-validation-3.png" alt="k8s-resource-validation-3"></p>
+<p>We won&rsquo;t go into extensive detail on the validation logic for the
+<code>typeValidator</code> (though feel free to walk through it yourself) because we are
+primarily interested in how we get into validating nested schemas, and the
+<code>typeValidator</code> will never trigger recursive validation. Let&rsquo;s continue until we
+get to the <code>objectValidator</code>. This validator does take into account the kind of
+data passed, only reporting that it applies when the type is a struct or map.
+Our top-level data is in fact a struct, so we will run object validation.</p>
+<p><img src="../static/k8s-resource-validation-4.png" alt="k8s-resource-validation-4"></p>
+<p>Once we reach validation, we run a few check on the number of properties, but
+eventually get to the point where we are iterating through each of the
+properties defined for the object, at which point we extract the path name and
+schema for the property, then call <code>NewSchemaValidator()</code> with those values.</p>
+<p><img src="../static/k8s-resource-validation-5.png" alt="k8s-resource-validation-5"></p>
+<p>Knowing that we don&rsquo;t have any validation errors in our <code>metadata</code> block, let&rsquo;s
+continue until we reach <code>spec</code>. We&rsquo;ll set a breakpoint on the call to
+<code>NewSchemaValidator()</code> so that we make sure to break there after the previous
+schema validators return. When we get there, our path will be updated to <code>spec</code>
+and the data we pass for validation is a map of the fields nested beneath the
+<code>spec</code>. Now we&rsquo;ll step into the new schema validator.</p>
+<p><img src="../static/k8s-resource-validation-6.png" alt="k8s-resource-validation-6"></p>
+<p>When we hit the validation loop inside the nested schema validator, we can see
+the updated path, as well as the nested data, which is now being passed to each
+of the child validators. We have three nested fields within this <code>spec</code>, each of
+a different type:</p>
+<ul>
+<li><code>compositeTypeRef</code> -&gt; <code>map[string]interface{}</code></li>
+<li><code>resources</code> -&gt; <code>[]interface{}</code></li>
+<li><code>writeConnectionSecretsToNamespace</code> -&gt; <code>string</code></li>
+</ul>
+<p>As you may have guessed, when we get to iterating through the properties in the
+child object validator of the <code>spec</code> schema validator, we will once again create
+new nested schema validators for each (and in turn for each of their properties,
+and so on). We can view recursion depth by taking a look at our call stack.</p>
+<p><img src="../static/k8s-resource-validation-7.png" alt="k8s-resource-validation-7"></p>
+<p>Once again, we&rsquo;ll continue until we get to <code>resources</code>, as we know that is where
+our validation errors exist. This will be the first schema validator for which
+the slice validator applies, meaning that we will need to create a new schema
+validator for each item in the set of <code>resources</code>. Each item adheres to the same
+schema, so we create one schema validator, then repeatedly update the path with
+the index of the item in the slice and call <code>Validate()</code> on its data.</p>
+<p><img src="../static/k8s-resource-validation-8.png" alt="k8s-resource-validation-8"></p>
+<hr>
+<hr>
+<p><em>A Brief Aside</em></p>
+<p>Though it makes sense to construct a single validator then set the path for each
+item, I noticed a bug in this implementation while investigating why I wasn&rsquo;t
+seeing the index in the path returned from validation errors (you may have
+noticed this when we ran the simple validation example earlier). The reason for
+this is that calling <code>SetPath()</code> on the schema validator after it has been
+constructed does not update the path in each of its child validators, which had
+their paths set when they were constructed. I wrote up <a href="https://github.com/kubernetes/kube-openapi/issues/262">an
+issue</a> describing this
+behavior in detail, and though not the most elegant solution, this can be
+mitigated by updating the schema validator&rsquo;s <code>SetPath()</code> implementation to also
+call <code>SetPath()</code> on each of its child validators.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">--- a/pkg/validation/validate/schema.<span style="color:#fff;font-weight:bold">go</span>
++++ b/pkg/validation/validate/schema.<span style="color:#fff;font-weight:bold">go</span>
+<span style="color:#f00">@@</span> -<span style="color:#ff0;font-weight:bold">99</span>,<span style="color:#ff0;font-weight:bold">6</span> +<span style="color:#ff0;font-weight:bold">99</span>,<span style="color:#ff0;font-weight:bold">9</span> <span style="color:#f00">@@</span> <span style="color:#fff;font-weight:bold">func</span> NewSchemaValidator(schema *spec.Schema, rootSchema <span style="color:#fff;font-weight:bold">interface</span>{}, root <span style="color:#fff;font-weight:bold">string</span>
+ <span style="color:#007f7f">// SetPath sets the path for this schema validator
+</span><span style="color:#007f7f"></span> <span style="color:#fff;font-weight:bold">func</span> (s *SchemaValidator) SetPath(path <span style="color:#fff;font-weight:bold">string</span>) {
+        s.Path = path
++       <span style="color:#fff;font-weight:bold">for</span> _, v := <span style="color:#fff;font-weight:bold">range</span> s.validators {
++               v.SetPath(path)
++       }
+ }
+</code></pre></div><p>You can observe this bug in the API server today by installing a CRD and then
+creating an invalid custom resource with <code>kubectl create -f cr.yaml --validate=false</code>, which disables client-side validation.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">$ kubectl create -f cr.yaml --validate=false
+The Composition &#34;xpostgresqlinstances.gcp.database.example.org&#34; is invalid: 
+* spec.resources.connectionDetails.fromConnectionSecretKey: Invalid value: &#34;integer&#34;: spec.resources.connectionDetails.fromConnectionSecretKey in body must be of type string: &#34;integer&#34;
+* spec.resources.patches.transforms.type: Required value
+</code></pre></div><p>Anyway, back to your regularly scheduled programming&hellip;</p>
+<hr>
+<hr>
+<p>Both of our validation errors occur in slices nested within this item in the
+<code>resources</code> slice. We can speed up how long it takes to get to them by
+temporarily disabling all breakpoints except for the one in the slice validator
+(it will have to be called to create our nested schema validators). I personally
+happened to hit <code>connectionDetails</code> first, but mileage will vary given that
+these fields are keys in a map, which has <a href="https://go.dev/blog/maps#iteration-order">unspecified ordering in
+Go</a>. Here you&rsquo;ll see the
+aforementioned bug, as the parent schema validator path contains the index, but
+the child does not, meaning that all subsequent children also will not.</p>
+<p><img src="../static/k8s-resource-validation-9.png" alt="k8s-resource-validation-9"></p>
+<p>Eventually we&rsquo;ll reach the type validator for
+<code>spec.resources[0].connectionDetails[1].fromConnectionSecretKey</code>, which as we
+saw before, is responsible for ensuring that values are of the correct type. In
+this case our value is a <code>float64</code> when a <code>string</code> was required, so we return an
+<code>InvalidType</code> error, which gets added to list of validation errors that
+eventually is returned all the way up to our top-level schema validator.</p>
+<p><img src="../static/k8s-resource-validation-10.png" alt="k8s-resource-validation-10"></p>
+<p>Those errors are then passed back to the <code>create</code> handler we saw in the generic
+API server and, just like that&hellip; we&rsquo;ve discovered how Kubernetes validates your
+custom resources!</p>
+<h2 id="concluding-thoughts">Concluding Thoughts</h2>
+<p>We covered <em>a lot</em> in this post, and, to be abundantly clear, it is certainly
+not a requirement to know what is going on behind the scenes in every area of
+Kubernetes to be a high-level user, or even high-level contributor for that
+matter! However, as important projects and ecosystems grow larger and larger, I
+think it is vitally important to have some folks in each area that care about
+understanding the system at an intimate level, and communicating it to others.</p>
+<p>I hope that this post (and all the others I write) can help serve that purpose.
+If I can do a better job of reaching that goal, or you have any questions or
+comments, please feel free to send me a message
+<a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter!</p>
+
+  </article>
+
+  <br/>
+
+  
+  
+</section>
+
+      </div>
+
+      <footer class="footer">
+  <section class="container">
+     © 2021  
+  </section>
+</footer>
+
+    </main>
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+
+  </body>
+
+</html>
