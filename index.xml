@@ -6,10 +6,280 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 08 Nov 2021 01:41:34 -0600</lastBuildDate>
+    <lastBuildDate>Sun, 12 Dec 2021 00:10:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Access and Privilege in CSR Addresses</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-12-12-access-privilege-csr-addresses/</link>
+      <pubDate>Sun, 12 Dec 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-12-12-access-privilege-csr-addresses/</guid>
+      <description>Today’s @risc_v Tip:
+The address of a Control and Status Register (CSR) encodes access and privilege level in the top 4 bits. CSRs are accessible at their privilege level + all higher privilege levels. The Use bits further segment address space into Standard and Custom CSRs.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>OpenTitan Assembly Style Guide</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-12-11-opentitan-assembly-style-guide/</link>
+      <pubDate>Sat, 11 Dec 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-12-11-opentitan-assembly-style-guide/</guid>
+      <description>Today’s @risc_v Tip:
+Today’s tip comes courtesy of the OpenTitan (a @lowRISC project) RISC-V assembly style guide. Using n(reg) offset syntax (even if n=0) when interacting with registers that are storing pointers makes it visually clear that the contents are a memory address.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>xv6 Teaching Operating System</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-12-10-xv6-teaching-os/</link>
+      <pubDate>Fri, 10 Dec 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-12-10-xv6-teaching-os/</guid>
+      <description>Tonight’s @risc_v Tip:
+MIT’s xv6 teaching OS is a great introduction to RISC-V. For example, start() contains most of the logic required to jump from Machine (M) mode to Supervisor (S) mode.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Interrupt Controllers</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-12-09-interrupt-controllers/</link>
+      <pubDate>Thu, 09 Dec 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-12-09-interrupt-controllers/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+RISC-V contains a few interrupt controller specs, each providing additional functionality over basic privilege-based preemption:
+ Core-Local Interrupt Controller (CLIC) Platform-Level Interrupt Controller (PLIC) Advanced Interrupt Architecture (AIA)  The Advanced Interrupt Architecture (AIA) spec encompasses two different interrupt controllers:
+ Advanced Platform-Level Interrupt Controller (APLIC) Incoming Message-Signaled Interrupt Controller (IMSIC)  Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>The Hypervisor Extension</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-12-08-hypervisor-extension/</link>
+      <pubDate>Wed, 08 Dec 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-12-08-hypervisor-extension/</guid>
+      <description>Today&amp;rsquo;s @risc_v Tip:
+The RISC-V Hypervisor extension recently reached v1.0 and was ratified. Hypervisor (HS) mode extends Supervisor (S) mode with additional CSRs and instructions, allowing for two additional privilege levels: Virtual Supervisor (VS) and Virtual User (VU).
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Open Hardware for the Open Cloud</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-12-02-open-hardware-for-the-open-cloud/</link>
+      <pubDate>Thu, 02 Dec 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-12-02-open-hardware-for-the-open-cloud/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+Come join me (virtually or in person) on Monday to kick off #RISCVSummit! We’ll be talking about @crossplane_io and how open hardware fits into the open cloud 🏗
+Schedule
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Supervisor Trap Base Address Register</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-12-01-supervisor-trap-base-address/</link>
+      <pubDate>Wed, 01 Dec 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-12-01-supervisor-trap-base-address/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+The Supervisor Trap Base Address CSR (stvec) indicates the location of the Supervisor (S) trap handler(s). The BASE address may be virtual or physical, and two modes are supported, with &amp;ldquo;Vectored&amp;rdquo; allowing for different handlers for each interrupt type.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Supervisor Memory Management Fence Instruction</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-11-30-supervisor-mm-fence/</link>
+      <pubDate>Tue, 30 Nov 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-11-30-supervisor-mm-fence/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+Supervisor (S) mode has a dedicated memory-management (mm) fence instruction (SFENCE.VMA) that ensures visible stores are ordered before subsequent implicit references to mm data structures. The values of registers in rs1 and rs2 dictate behavior.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Sv32 Megapages</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-11-29-sv-32-megapages/</link>
+      <pubDate>Mon, 29 Nov 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-11-29-sv-32-megapages/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+Sv32 supports a 2-level page table, but any Page Table Entry (PTE) may be a leaf. Page tables are the size of a page, so a leaf level 1 PTE corresponds to a &amp;ldquo;megapage&amp;rdquo; (4 MiB).
+1 Page = 4 KiB
+1 PTE -&amp;gt; 1 Page
+1 Page Table -&amp;gt; 1024 PTE
+4 KiB * 1024 = 4 MiB
+ Errata: Small correction to diagram: VPN[0] is used to populate PPN[0], while PPN[1] is populated with PPN in the Level 1 leaf PTE.</description>
+    </item>
+    
+    <item>
+      <title>Sv32 Two-Level Address Translation</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-11-27-sv-32-address-translation/</link>
+      <pubDate>Sat, 27 Nov 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-11-27-sv-32-address-translation/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+Sv32 uses a two-level page table to enable virtual memory. A virtual address contains two Virtual Page Numbers (VPN) and an offset. The Physical Page Number (PPN) of the leaf Page Table Entry (PTE) is combined with the offset to form the physical address.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>SUM bit in Supervisor Status Register</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-11-25-sum-bit-supervisor-status/</link>
+      <pubDate>Thu, 25 Nov 2021 00:11:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-11-25-sum-bit-supervisor-status/</guid>
+      <description>Bonus Holiday @risc_v Tip:
+If the SUM bit in the sstatus CSR is 0, a PTE with U=1 means the page is not accessible from Supervisor (S) mode. If SUM=1, supervisor access is permitted. A supervisor may never execute code from a page accessible from User (U) mode.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Sv32 Page Table Entry Permissions</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-11-25-sv-32-pte-permissions/</link>
+      <pubDate>Thu, 25 Nov 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-11-25-sv-32-pte-permissions/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+A 32-bit Page Table Entry (PTE) in Sv32 virtual memory mode contains four bits that indicate access permissions. The R, W, X bits correspond to Read, Write, and Execute access respectively. The U bit indicates whether the page is accessible in User (U) mode.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Virtual Memory Addressing Modes</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-11-21-virtual-memory-addressing-modes/</link>
+      <pubDate>Sun, 21 Nov 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-11-21-virtual-memory-addressing-modes/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+The satp CSR configures Supervisor (S) mode address translation and protection. RV32 and RV64 support different sets of virtual addressing schemes, which can be configured by writing MODE bits. Writing an unsupported scheme is ignored (WARL).
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>PMP Addressing: Top of Range</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-11-20-pmp-top-of-range/</link>
+      <pubDate>Sat, 20 Nov 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-11-20-pmp-top-of-range/</guid>
+      <description>Today&amp;rsquo;s @risc_v Tip:
+Our last PMP addressing mode is Top of Range (TOR). A TOR entry forms an address range from the preceding entry&amp;rsquo;s pmpaddr (inclusive) to its pmpaddr. If a TOR entry is in the first pmpconfig CSR, the bottom bound of its address range is 0.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>PMP and Virtual Memory</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-11-19-pmp-and-virtual-memory/</link>
+      <pubDate>Fri, 19 Nov 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-11-19-pmp-and-virtual-memory/</guid>
+      <description>Tonight’s @risc_v Tip:
+Physical Memory Protection (PMP) and page-based virtual memory are designed to work together. Accessing virtual memory sometimes results in physical memory accesses. In those situations, the physical memory accesses are checked against PMP entries.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>PMP Addressing: Naturally Aligned Powers of Two</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-11-18-pmp-naturally-aligned-powers-of-two/</link>
+      <pubDate>Thu, 18 Nov 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-11-18-pmp-naturally-aligned-powers-of-two/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+Looking again at Physical Memory Protection (PMP) address matching modes, Naturally Aligned Powers of Two (NAPOT) addressing allows you to specify ranges with four-byte granularity by encoding the size in the low-order bits of the pmpaddr CSRs.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Physical Memory Protection Address Matching Modes</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-11-17-pmp-address-matching/</link>
+      <pubDate>Wed, 17 Nov 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-11-17-pmp-address-matching/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+Yesterday we talked about the Physical Memory Protection (PMP) unit. PMP entries are defined with separate config and address CSRs. The 8-bit config CSR for an entry dedicates 2 bits (A) to defining the matching mode of its address CSR.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Physical Memory Protection</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-11-16-physical-memory-protection/</link>
+      <pubDate>Tue, 16 Nov 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-11-16-physical-memory-protection/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+An optional Physical Memory Protection (PMP) unit is defined that enables memory access control for software on a given hart. This is accomplished through a set of configuration and address CSRs, and applies to all accesses with effective mode of S or U.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Machine Exception Delegation Register</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-11-15-machine-exception-delegation-register/</link>
+      <pubDate>Mon, 15 Nov 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-11-15-machine-exception-delegation-register/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+You might assume some exceptions, such as an ecall from User mode (U), are handled in Supervisor mode (S), but all traps are handled in Machine mode (M) by default. However, the medeleg CSR can be used to delegate some traps to a lower privilege level..
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Identifying Debug Triggers</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-11-14-identifying-debug-triggers/</link>
+      <pubDate>Sun, 14 Nov 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-11-14-identifying-debug-triggers/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+Continuing with the Trigger Module (TM), the RISC-V debug spec provides access to triggers via the tselect and tdata1 / tdata2 / tdata3 CSRs. A list of supported triggers for a hart can be obtained by a sequence of write / read back operations.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Debug Spec Architecture</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-11-13-debug-spec-architecture/</link>
+      <pubDate>Sat, 13 Nov 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-11-13-debug-spec-architecture/</guid>
+      <description>Today&amp;rsquo;s @risc_v Tip:
+RISC-V has a separate debug spec that defines a Debug Module (DM), Debug Module Interface (DMI), Debug Transport Module (DTM), and Trigger Module (TM). The TM can be implemented independently of a DM, and adds support for setting native hardware breakpoints.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Exceptions, Interrupts, and Traps</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-11-11-exceptions-interrupts-traps/</link>
+      <pubDate>Thu, 11 Nov 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-11-11-exceptions-interrupts-traps/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+If you have ever worked with low-level programming, you may be familiar with the ambiguity of the terms exception / interrupt / trap. RISC-V clearly defines each in the unprivileged spec (S 1.6), with the definitions adhering to the IEEE-754 standard.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>GNU Assembler RISC-V Directives</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-11-10-gnu-assembler-directives/</link>
+      <pubDate>Wed, 10 Nov 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-11-10-gnu-assembler-directives/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+The GNU assembler (gas) supports a few specific RISC-V directives, including .option, which allows you to modify assembler options inline. A common use case: temporarily disabling relaxation to perform initial global pointer load into gp register.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Golang Compare and Swap Usage</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-11-09-golang-compare-and-swap/</link>
+      <pubDate>Tue, 09 Nov 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-11-09-golang-compare-and-swap/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip (feat. @golang):
+Go uses a compare and swap (CAS) implementation similar to the example provided in the RISC-V unprivileged spec. The Go assembler always uses acquire access (aq=1) to align with the language&amp;rsquo;s memory requirements.
+   Original Tweet</description>
+    </item>
     
     <item>
       <title>How Kubernetes Validates Custom Resources</title>
@@ -21,6 +291,41 @@
     </item>
     
     <item>
+      <title>Loading an Address into a CSR</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-11-02-load-address-csr/</link>
+      <pubDate>Tue, 02 Nov 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-11-02-load-address-csr/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+You can use two convenient pseudo-instructions to load the address of a symbol into a CSR.
+la t1, main =&amp;gt; auipc t1, main[31:12]; addi t1, t1, main[11:0]
+csrw mepc, t1 =&amp;gt; csrrw x0, mepc, t1
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>View All Harts in GDB and mhartid</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-10-30-all-harts-gdb-and-mhartid/</link>
+      <pubDate>Sat, 30 Oct 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-10-30-all-harts-gdb-and-mhartid/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+You can list all the harts on the platform you are debugging with gdb using info threads. Switching to another hart can be done with thread &amp;lt;id&amp;gt;. A quick way to check the current hart is to display the contents of the mhartid CSR.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Machine and Supervisor Cause CSRs</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-10-23-machine-and-supervisor-cause-csrs/</link>
+      <pubDate>Sat, 23 Oct 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-10-23-machine-and-supervisor-cause-csrs/</guid>
+      <description>Today’s @risc_v Tip:
+The mcause (M) / scause (S) CSRs indicate what type of exception caused a trap to the respective privilege level. A single instruction could cause multiple synchronous exceptions, in which case the register indicates event with the following priority:
+Original Tweet</description>
+    </item>
+    
+    <item>
       <title>Infrastructure in Your Software Packages</title>
       <link>https://danielmangum.com/posts/infrastructure-in-your-software-packages/</link>
       <pubDate>Tue, 19 Oct 2021 01:41:34 -0600</pubDate>
@@ -28,6 +333,96 @@
       <guid>https://danielmangum.com/posts/infrastructure-in-your-software-packages/</guid>
       <description>This post explores what a future of shipping infrastructure alongside software may look like by detailing where we are today, and evaluating how the delivery of software has evolved over time. If you just want the big ideas, skip to the final section: A New Kind of Software Marketplace.
  Almost all software depends on infrastructure. Installation documentation typically has a section detailing how to run with your favorite cloud provider managed services, and, if you&amp;rsquo;re lucky, may even include a script to provision that infrastructure for you.</description>
+    </item>
+    
+    <item>
+      <title>Supervisor Previous Privilege</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-10-17-supervisor-previous-privilege/</link>
+      <pubDate>Sun, 17 Oct 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-10-17-supervisor-previous-privilege/</guid>
+      <description>Today’s @risc_v Tip:
+The 8th bit in the Supervisor (S) Status (sstatus) CSR is called the SPP bit and indicates the hart’s privilege level before entering S mode. 0 indicates User (U) mode, and 1 indicates other. An sret instruction changes mode to U if SPP is 0 and S if 1.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>HPM: Hardware Performance Monitoring</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-10-16-hpm-hardware-performance-monitoring/</link>
+      <pubDate>Sat, 16 Oct 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-10-16-hpm-hardware-performance-monitoring/</guid>
+      <description>Today’s @risc_v Tip:
+Machine (M) mode supports hardware performance monitoring (HPM) with the following CSRs:
+ mcycle: number of clock cycles executed minstret: number of instructions retired mhpmcounter[3-31]: event counters mhpmevent[3-31]: event selectors  Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Supervisor Address Translation and Protection</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-10-12-supervisor-address-translation-and-protection/</link>
+      <pubDate>Tue, 12 Oct 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-10-12-supervisor-address-translation-and-protection/</guid>
+      <description>Today’s @risc_v Tip:
+The satp (Supervisor Address Translation and Protection) CSR contains virtual memory translation information, including MODE. Valid modes for RV32 &amp;amp; RV64 include:
+ RV32: Bare / Sv32 RV64: Bare / Sv39 / Sv48  Bare indicates no translation or protection.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Three Main Privilege Levels</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-10-09-three-main-privilege-levels/</link>
+      <pubDate>Sat, 09 Oct 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-10-09-three-main-privilege-levels/</guid>
+      <description>Today&amp;rsquo;s @risc_v Tip:
+RISC-V systems may support 3 main privilege levels:
+ Machine (M) (Req.) Supervisor (S) (Opt.) User (U) (Opt.)  Execution context changes via traps. A trap that moves to a higher privilege level is a vertical trap, one that does not is a horizontal trap.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>CSR Field Behaviors</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-10-03-csr-field-behaviors/</link>
+      <pubDate>Sun, 03 Oct 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-10-03-csr-field-behaviors/</guid>
+      <description>Today’s @risc_v Tip:
+Fields of CSRs adhere to one of the following behaviors:
+ WIRI: Reserved Writes Ignored, Reads Ignore Values WPRI: Reserved Writes Preserve Values, Reads Ignore Values WLRL: Write/Read Only Legal Values WARL: Write Any Values, Reads Legal Values  Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>HSM means Hart State Management</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-09-26-hart-state-management/</link>
+      <pubDate>Sun, 26 Sep 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-09-26-hart-state-management/</guid>
+      <description>Today&amp;rsquo;s @risc_v Tip:
+You likely think &amp;ldquo;Hardware Security Module&amp;rdquo; when you see &amp;ldquo;HSM&amp;rdquo;. When working with RISC-V systems you&amp;rsquo;ll frequently see the term &amp;ldquo;Hart&amp;rdquo;, which is a &amp;ldquo;Hardware Thread&amp;rdquo;, and in related contexts &amp;ldquo;HSM&amp;rdquo; will typically refer to &amp;ldquo;Hart State Management&amp;rdquo;.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Specifying BIOS in QEMU with OpenSBI</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-09-22-qemu-bios-opensbi/</link>
+      <pubDate>Wed, 22 Sep 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-09-22-qemu-bios-opensbi/</guid>
+      <description>QEMU @risc_v Tip of the Night:
+Running without -bios specified or with -bios default will automatically load the OpenSBI binary.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Viewing Registers in GDB</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-09-10-view-registers-gdb/</link>
+      <pubDate>Sun, 19 Sep 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-09-10-view-registers-gdb/</guid>
+      <description>GDB tip of the day:
+info registers will show you the contents of general purpose registers, but info all-registers will expand the output to floating point registers and CSRs.
+Original Tweet</description>
     </item>
     
     <item>

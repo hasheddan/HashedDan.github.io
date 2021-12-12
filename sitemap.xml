@@ -3,8 +3,133 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-12-12-access-privilege-csr-addresses/</loc>
+    <lastmod>2021-12-12T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://danielmangum.com/</loc>
-    <lastmod>2021-11-08T01:41:34-06:00</lastmod>
+    <lastmod>2021-12-12T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/</loc>
+    <lastmod>2021-12-12T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-12-11-opentitan-assembly-style-guide/</loc>
+    <lastmod>2021-12-11T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-12-10-xv6-teaching-os/</loc>
+    <lastmod>2021-12-10T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-12-09-interrupt-controllers/</loc>
+    <lastmod>2021-12-09T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-12-08-hypervisor-extension/</loc>
+    <lastmod>2021-12-08T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-12-02-open-hardware-for-the-open-cloud/</loc>
+    <lastmod>2021-12-02T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-12-01-supervisor-trap-base-address/</loc>
+    <lastmod>2021-12-01T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-11-30-supervisor-mm-fence/</loc>
+    <lastmod>2021-11-30T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-11-29-sv-32-megapages/</loc>
+    <lastmod>2021-11-29T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-11-27-sv-32-address-translation/</loc>
+    <lastmod>2021-11-27T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-11-25-sum-bit-supervisor-status/</loc>
+    <lastmod>2021-11-25T00:11:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-11-25-sv-32-pte-permissions/</loc>
+    <lastmod>2021-11-25T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-11-21-virtual-memory-addressing-modes/</loc>
+    <lastmod>2021-11-21T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-11-20-pmp-top-of-range/</loc>
+    <lastmod>2021-11-20T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-11-19-pmp-and-virtual-memory/</loc>
+    <lastmod>2021-11-19T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-11-18-pmp-naturally-aligned-powers-of-two/</loc>
+    <lastmod>2021-11-18T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-11-17-pmp-address-matching/</loc>
+    <lastmod>2021-11-17T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-11-16-physical-memory-protection/</loc>
+    <lastmod>2021-11-16T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-11-15-machine-exception-delegation-register/</loc>
+    <lastmod>2021-11-15T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-11-14-identifying-debug-triggers/</loc>
+    <lastmod>2021-11-14T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-11-13-debug-spec-architecture/</loc>
+    <lastmod>2021-11-13T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-11-11-exceptions-interrupts-traps/</loc>
+    <lastmod>2021-11-11T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-11-10-gnu-assembler-directives/</loc>
+    <lastmod>2021-11-10T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-11-09-golang-compare-and-swap/</loc>
+    <lastmod>2021-11-09T00:10:34-06:00</lastmod>
   </url>
   
   <url>
@@ -18,8 +143,63 @@
   </url>
   
   <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-11-02-load-address-csr/</loc>
+    <lastmod>2021-11-02T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-10-30-all-harts-gdb-and-mhartid/</loc>
+    <lastmod>2021-10-30T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-10-23-machine-and-supervisor-cause-csrs/</loc>
+    <lastmod>2021-10-23T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://danielmangum.com/posts/infrastructure-in-your-software-packages/</loc>
     <lastmod>2021-10-19T01:41:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-10-17-supervisor-previous-privilege/</loc>
+    <lastmod>2021-10-17T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-10-16-hpm-hardware-performance-monitoring/</loc>
+    <lastmod>2021-10-16T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-10-12-supervisor-address-translation-and-protection/</loc>
+    <lastmod>2021-10-12T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-10-09-three-main-privilege-levels/</loc>
+    <lastmod>2021-10-09T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-10-03-csr-field-behaviors/</loc>
+    <lastmod>2021-10-03T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-09-26-hart-state-management/</loc>
+    <lastmod>2021-09-26T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-09-22-qemu-bios-opensbi/</loc>
+    <lastmod>2021-09-22T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-09-10-view-registers-gdb/</loc>
+    <lastmod>2021-09-19T00:10:34-06:00</lastmod>
   </url>
   
   <url>

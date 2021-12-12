@@ -48,11 +48,19 @@
     <ul class="navigation-list  float-right ">
       
       <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/posts/">Blog</a>
+        <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
       </li>
       
       <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/about/">About</a>
+        <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
       </li>
       
     </ul>
@@ -86,7 +94,7 @@ they work. You can view all posts in this series on the <a href="https://danielm
 page</a>.</p>
 </blockquote>
 <p>To start of the series, we are just going to get setup to do some exploration. I
-am going to assume you will not primarily be using a RISC-V machine<sup id="fnref:1"><a href="posts/risc-v-bytes-qemu-gdb/#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>, so we
+am going to assume you will not primarily be using a RISC-V machine<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>, so we
 need to configure our local development environment for cross-platform
 compiling, emulation, and debugging.</p>
 <h2 id="installing-tools">Installing Tools</h2>
@@ -111,7 +119,7 @@ riscv64-unknown-elf-cpp            riscv64-unknown-elf-gcc-nm         riscv64-un
 </code></pre></div><p>So we can now compile and and run a debugger for RISC-V, but we won&rsquo;t be able to
 actually run our programs without emulation. <a href="https://www.qemu.org/">QEMU</a> is
 one of the most popular and widely used emulation platforms in the world. It
-offers full-system and user-mode emulation<sup id="fnref:2"><a href="posts/risc-v-bytes-qemu-gdb/#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup> for a wide variety of platforms,
+offers full-system and user-mode emulation<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup> for a wide variety of platforms,
 including RISC-V. There are instructions for installing on Linux, macOS, and
 Windows on the <a href="https://www.qemu.org/download">downloads page</a>, as well as links
 to source and build instructions. After installing, you should have binaries for
@@ -238,10 +246,10 @@ just have questions of comments, send me a message
 <hr>
 <ol>
 <li id="fn:1" role="doc-endnote">
-<p>Though if you are, that&rsquo;s awesome! I recently got a <a href="https://wiki.seeedstudio.com/BeagleV-Getting-Started/">BeagleV StarLight</a>, which you will almost certainly be seeing in future posts in this series. <a href="posts/risc-v-bytes-qemu-gdb/#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>Though if you are, that&rsquo;s awesome! I recently got a <a href="https://wiki.seeedstudio.com/BeagleV-Getting-Started/">BeagleV StarLight</a>, which you will almost certainly be seeing in future posts in this series. <a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 <li id="fn:2" role="doc-endnote">
-<p>We&rsquo;ll be exploring both of these in future posts. <a href="posts/risc-v-bytes-qemu-gdb/#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<p>We&rsquo;ll be exploring both of these in future posts. <a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 </ol>
 </section>

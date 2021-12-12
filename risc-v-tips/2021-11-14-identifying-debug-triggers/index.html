@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="author" content="Daniel Mangum">
+    <meta name="description" content="Daniel Mangum&#39;s personal website">
+    <meta name="keywords" content="blog,developer,personal">
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@hasheddan" />
+    <meta name="twitter:title" content="Identifying Debug Triggers"/>
+    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
+
+    <base href="https://danielmangum.com">
+    <title>
+  Identifying Debug Triggers · Daniel Mangum
+</title>
+
+    <link rel="canonical" href="https://danielmangum.com/risc-v-tips/2021-11-14-identifying-debug-triggers/">
+
+    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
+    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
+    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
+
+    
+
+    
+
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+    
+
+    <meta name="generator" content="Hugo 0.68.3" />
+  </head>
+
+  <body class="">
+    <main class="wrapper">
+      <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com">
+      Daniel Mangum
+    </a>
+    
+    <ul class="navigation-list  float-right ">
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+      </li>
+      
+    </ul>
+    
+  </section>
+</nav>
+
+
+      <div class="content">
+        
+  <section class="container page">
+  <article>
+    <header>
+      <h1>Identifying Debug Triggers</h1>
+    </header>
+
+    <p>Tonight&rsquo;s @risc_v Tip:</p>
+<p>Continuing with the Trigger Module (TM), the RISC-V debug spec provides access to triggers via the <code>tselect</code> and <code>tdata1</code> / <code>tdata2</code> / <code>tdata3</code> CSRs. A list of supported triggers for a hart can be obtained by a sequence of write / read back operations.</p>
+<p><img src="../static/risc-v-tips/21-11-14.jpeg" alt="21-11-14"></p>
+<p><a href="https://twitter.com/hasheddan/status/1460031599580487681?s=20">Original Tweet</a></p>
+
+  </article>
+</section>
+
+
+      </div>
+
+      <footer class="footer">
+  <section class="container">
+     © 2021  
+  </section>
+</footer>
+
+    </main>
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+
+  </body>
+
+</html>
