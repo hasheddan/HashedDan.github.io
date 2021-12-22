@@ -3,17 +3,42 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
-    <loc>https://danielmangum.com/risc-v-tips/2021-12-12-access-privilege-csr-addresses/</loc>
-    <lastmod>2021-12-12T00:10:34-06:00</lastmod>
+    <loc>https://danielmangum.com/</loc>
+    <lastmod>2021-12-22T00:10:34-06:00</lastmod>
   </url>
   
   <url>
-    <loc>https://danielmangum.com/</loc>
-    <lastmod>2021-12-12T00:10:34-06:00</lastmod>
+    <loc>https://danielmangum.com/risc-v-tips/2021-12-22-trap-precision/</loc>
+    <lastmod>2021-12-22T00:10:34-06:00</lastmod>
   </url>
   
   <url>
     <loc>https://danielmangum.com/risc-v-tips/</loc>
+    <lastmod>2021-12-22T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-12-20-sifive-p650/</loc>
+    <lastmod>2021-12-20T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-12-18-instruction-format-regularity/</loc>
+    <lastmod>2021-12-18T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-12-14-atomicity-pmas/</loc>
+    <lastmod>2021-12-14T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-12-12-physical-memory-attributes/</loc>
+    <lastmod>2021-12-13T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-12-12-access-privilege-csr-addresses/</loc>
     <lastmod>2021-12-12T00:10:34-06:00</lastmod>
   </url>
   

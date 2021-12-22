@@ -6,10 +6,65 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 12 Dec 2021 00:10:34 -0600</lastBuildDate>
+    <lastBuildDate>Wed, 22 Dec 2021 00:10:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Pipelined Trap Precision</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-12-22-trap-precision/</link>
+      <pubDate>Wed, 22 Dec 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-12-22-trap-precision/</guid>
+      <description>Today&amp;rsquo;s @risc_v Tip:
+Traps become more complicated in a pipelined implementation if exceptions occur after subsequent instructions have been issued. The sepc CSR holds the address of the offending instruction, but an implementation may choose whether it is precise or not.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>SiFive P650</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-12-20-sifive-p650/</link>
+      <pubDate>Mon, 20 Dec 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-12-20-sifive-p650/</guid>
+      <description>Tonight&amp;rsquo;s @risc_vTip:
+Understanding marketing material for processors can be confusing. @SiFive recently released its highest performance RISC-V processor: P650. Let&amp;rsquo;s break down what it broadly means to be a &amp;ldquo;thirteen-stage, four-issue, out-of-order processor&amp;rdquo;.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Instruction Format Regularity</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-12-18-instruction-format-regularity/</link>
+      <pubDate>Sat, 18 Dec 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-12-18-instruction-format-regularity/</guid>
+      <description>Today&amp;rsquo;s @risc_v Tip:
+Regularity is a key design principle of RISC-V and has a large impact on implementation complexity. Fields always reside in the same location when present in an instruction, meaning that generic decode can be performed regardless of the eventual operation.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Atomicity PMAs</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-12-14-atomicity-pmas/</link>
+      <pubDate>Tue, 14 Dec 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-12-14-atomicity-pmas/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+Atomicity Physical Memory Attributes (PMAs) specify support for atomic instructions described in the A extension in the Unprivileged Spec for a given range. There are two types:
+ Atomic Memory Operations (AMO) Load Reserved / Store Conditional (LR/SC)  Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Physical Memory Attributes (PMAs)</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-12-12-physical-memory-attributes/</link>
+      <pubDate>Mon, 13 Dec 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-12-12-physical-memory-attributes/</guid>
+      <description>Tonight’s @risc_v Tip:
+Physical Memory Attributes (PMAs) define the capabilities of a given address range. A range may be mapped to main memory, I/O devices, or may be empty. PMAs include:
+ Access Type Atomicity Memory-Ordering Coherence / Cacheability Idempotency  Original Tweet</description>
+    </item>
     
     <item>
       <title>Access and Privilege in CSR Addresses</title>
