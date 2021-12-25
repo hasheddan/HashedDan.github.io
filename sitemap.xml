@@ -4,16 +4,21 @@
   
   <url>
     <loc>https://danielmangum.com/</loc>
-    <lastmod>2021-12-22T00:10:34-06:00</lastmod>
+    <lastmod>2021-12-23T00:10:34-06:00</lastmod>
   </url>
   
   <url>
-    <loc>https://danielmangum.com/risc-v-tips/2021-12-22-trap-precision/</loc>
-    <lastmod>2021-12-22T00:10:34-06:00</lastmod>
+    <loc>https://danielmangum.com/risc-v-tips/2021-12-23-ld-default-entry-point/</loc>
+    <lastmod>2021-12-23T00:10:34-06:00</lastmod>
   </url>
   
   <url>
     <loc>https://danielmangum.com/risc-v-tips/</loc>
+    <lastmod>2021-12-23T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-12-22-trap-precision/</loc>
     <lastmod>2021-12-22T00:10:34-06:00</lastmod>
   </url>
   

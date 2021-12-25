@@ -6,10 +6,21 @@
     <description>Recent content in Risc-v-tips on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Wed, 22 Dec 2021 00:10:34 -0600</lastBuildDate>
+    <lastBuildDate>Thu, 23 Dec 2021 00:10:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/risc-v-tips/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>ld Default Entry Point</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-12-23-ld-default-entry-point/</link>
+      <pubDate>Thu, 23 Dec 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-12-23-ld-default-entry-point/</guid>
+      <description>Today&amp;rsquo;s @risc_v Tip:
+If using ld as your linker, a global symbol defined as start will take precedence over earlier symbols in your .text section for program entry point when explicit ENTRY is not defined in your script or via -e flag on the command line.
+Original Tweet</description>
+    </item>
     
     <item>
       <title>Pipelined Trap Precision</title>
