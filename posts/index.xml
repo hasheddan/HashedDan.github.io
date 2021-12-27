@@ -6,10 +6,20 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 08 Nov 2021 01:41:34 -0600</lastBuildDate>
+    <lastBuildDate>Mon, 27 Dec 2021 00:10:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>RISC-V Bytes: Privilege Levels</title>
+      <link>https://danielmangum.com/posts/risc-v-bytes-privilege-levels/</link>
+      <pubDate>Mon, 27 Dec 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/risc-v-bytes-privilege-levels/</guid>
+      <description>This is part of a series on the blog where we explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
+ It has been a bit since our last post, but today we are going to begin our journey into some of the more interesting areas of RISC-V systems. In the first post in the series, we installed our RISC-V toolchain, which included QEMU.</description>
+    </item>
     
     <item>
       <title>How Kubernetes Validates Custom Resources</title>
