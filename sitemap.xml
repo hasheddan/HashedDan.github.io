@@ -28,12 +28,17 @@
   </url>
   
   <url>
-    <loc>https://danielmangum.com/risc-v-tips/2021-12-25-csr-clear-set-bits/</loc>
-    <lastmod>2021-12-25T00:10:34-06:00</lastmod>
+    <loc>https://danielmangum.com/risc-v-tips/2021-12-26-non-maskable-interrupts/</loc>
+    <lastmod>2021-12-26T00:10:34-06:00</lastmod>
   </url>
   
   <url>
     <loc>https://danielmangum.com/risc-v-tips/</loc>
+    <lastmod>2021-12-26T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/2021-12-25-csr-clear-set-bits/</loc>
     <lastmod>2021-12-25T00:10:34-06:00</lastmod>
   </url>
   

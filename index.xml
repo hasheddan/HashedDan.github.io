@@ -22,6 +22,17 @@
     </item>
     
     <item>
+      <title>Non-Maskable Interrupts</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-12-26-non-maskable-interrupts/</link>
+      <pubDate>Sun, 26 Dec 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-12-26-non-maskable-interrupts/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+Implementations may define an arbitrary number of Non-Maskable Interrupts (NMIs). NMIs cannot be disabled and must only be used to represent hardware errors. The mcause CSR may be updated to specify a dedicated interrupt code, or otherwise must be 0.
+Original Tweet</description>
+    </item>
+    
+    <item>
       <title>CSR Clear and Set Bits Instructions</title>
       <link>https://danielmangum.com/risc-v-tips/2021-12-25-csr-clear-set-bits/</link>
       <pubDate>Sat, 25 Dec 2021 00:10:34 -0600</pubDate>

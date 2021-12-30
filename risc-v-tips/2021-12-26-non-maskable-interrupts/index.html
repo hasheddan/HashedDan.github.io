@@ -11,15 +11,15 @@
 
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:site" content="@hasheddan" />
-    <meta name="twitter:title" content="Risc-v-tips"/>
+    <meta name="twitter:title" content="Non-Maskable Interrupts"/>
     <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
 
     <base href="https://danielmangum.com">
     <title>
-  Risc-v-tips · Daniel Mangum
+  Non-Maskable Interrupts · Daniel Mangum
 </title>
 
-    <link rel="canonical" href="https://danielmangum.com/risc-v-tips/">
+    <link rel="canonical" href="https://danielmangum.com/risc-v-tips/2021-12-26-non-maskable-interrupts/">
 
     <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
     <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
@@ -32,9 +32,6 @@
     <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
     <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
 
-    
-      <link href="https://danielmangum.com/risc-v-tips/index.xml" rel="alternate" type="application/rss+xml" title="Daniel Mangum" />
-      <link href="https://danielmangum.com/risc-v-tips/index.xml" rel="feed" type="application/rss+xml" title="Daniel Mangum" />
     
 
     <meta name="generator" content="Hugo 0.68.3" />
@@ -74,75 +71,17 @@
 
       <div class="content">
         
-  <section class="container list">
-  <h1 class="title">Risc-v-tips</h1>
-  <ul>
-    
-    <li>
-      <span>October 3, 2021</span><a href="https://danielmangum.com/risc-v-tips/2021-10-03-csr-field-behaviors/">CSR Field Behaviors</a>
-    </li>
-    
-    <li>
-      <span>September 26, 2021</span><a href="https://danielmangum.com/risc-v-tips/2021-09-26-hart-state-management/">HSM means Hart State Management</a>
-    </li>
-    
-    <li>
-      <span>September 22, 2021</span><a href="https://danielmangum.com/risc-v-tips/2021-09-22-qemu-bios-opensbi/">Specifying BIOS in QEMU with OpenSBI</a>
-    </li>
-    
-    <li>
-      <span>September 19, 2021</span><a href="https://danielmangum.com/risc-v-tips/2021-09-10-view-registers-gdb/">Viewing Registers in GDB</a>
-    </li>
-    
-  </ul>
-  
+  <section class="container page">
+  <article>
+    <header>
+      <h1>Non-Maskable Interrupts</h1>
+    </header>
 
+    <p>Tonight&rsquo;s @risc_v Tip:</p>
+<p>Implementations may define an arbitrary number of Non-Maskable Interrupts (NMIs). NMIs cannot be disabled and must only be used to represent hardware errors. The <code>mcause</code> CSR may be updated to specify a dedicated interrupt code, or otherwise must be <code>0</code>.</p>
+<p><a href="https://twitter.com/hasheddan/status/1475280102892183560?s=20">Original Tweet</a></p>
 
-
-
-
-<ul class="pagination">
-  
-    
-    <li><a href="https://danielmangum.com/risc-v-tips/">&laquo;</a></li>
-    
-    <li class="hidden"><a href="https://danielmangum.com/risc-v-tips/page/2/">&lsaquo;</a></li>
-  
-  
-    
-    
-      
-    
-    
-      
-      <li><a href="https://danielmangum.com/risc-v-tips/">1</a></li>
-      
-    
-  
-    
-    
-      
-    
-    
-      
-      <li><a href="https://danielmangum.com/risc-v-tips/page/2/">2</a></li>
-      
-    
-  
-    
-    
-      
-    
-    
-      
-      <li>3</li>
-      
-    
-  
-  
-</ul>
-
-
+  </article>
 </section>
 
 
