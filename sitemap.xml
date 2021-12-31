@@ -3,12 +3,22 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
-    <loc>https://danielmangum.com/categories/</loc>
-    <lastmod>2021-12-27T00:10:34-06:00</lastmod>
+    <loc>https://danielmangum.com/</loc>
+    <lastmod>2021-12-28T00:10:34-06:00</lastmod>
   </url>
   
   <url>
-    <loc>https://danielmangum.com/</loc>
+    <loc>https://danielmangum.com/risc-v-tips/2021-12-28-memory-ordering-fence/</loc>
+    <lastmod>2021-12-28T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/risc-v-tips/</loc>
+    <lastmod>2021-12-28T00:10:34-06:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://danielmangum.com/categories/</loc>
     <lastmod>2021-12-27T00:10:34-06:00</lastmod>
   </url>
   
@@ -29,11 +39,6 @@
   
   <url>
     <loc>https://danielmangum.com/risc-v-tips/2021-12-26-non-maskable-interrupts/</loc>
-    <lastmod>2021-12-26T00:10:34-06:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://danielmangum.com/risc-v-tips/</loc>
     <lastmod>2021-12-26T00:10:34-06:00</lastmod>
   </url>
   

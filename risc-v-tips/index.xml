@@ -6,10 +6,21 @@
     <description>Recent content in Risc-v-tips on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 26 Dec 2021 00:10:34 -0600</lastBuildDate>
+    <lastBuildDate>Tue, 28 Dec 2021 00:10:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/risc-v-tips/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Memory Ordering Instructions: FENCE</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-12-28-memory-ordering-fence/</link>
+      <pubDate>Tue, 28 Dec 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-12-28-memory-ordering-fence/</guid>
+      <description>Today&amp;rsquo;s @risc_v Tip:
+The FENCE instruction is defined as part of the base ISA and allows for explicit ordering of instructions prior to (&amp;ldquo;predecessor set&amp;rdquo;) and following (&amp;ldquo;successor set&amp;rdquo;). Types of instructions to be ordered are specified in each set using the P and S bits.
+Note that it is common to just see a plain fence in RISC-V assembly, which is actually a pseudoinstruction that maps to fence iorw, iorw.</description>
+    </item>
     
     <item>
       <title>Non-Maskable Interrupts</title>
