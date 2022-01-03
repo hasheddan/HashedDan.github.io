@@ -6,10 +6,54 @@
     <description>Recent content in Risc-v-tips on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Wed, 29 Dec 2021 00:10:34 -0600</lastBuildDate>
+    <lastBuildDate>Sun, 02 Jan 2022 00:10:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/risc-v-tips/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Instruction-Address-Misaligned Exceptions</title>
+      <link>https://danielmangum.com/risc-v-tips/2022-01-02-instruction-address-misaligned-exceptions/</link>
+      <pubDate>Sun, 02 Jan 2022 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2022-01-02-instruction-address-misaligned-exceptions/</guid>
+      <description>Today&amp;rsquo;s @risc_v Tip:
+Instruction-Address-Misaligned exceptions can occur when a control transfer instruction (e.g. branch / jump) provides a misaligned target. The base ISA specifies 4 byte alignment (IALIGN=32), but extensions (such as C) may relax to 2 bytes (IALIGN=16).
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Fine-Grained Address-Translation Cache Invalidation (Svinval)</title>
+      <link>https://danielmangum.com/risc-v-tips/2022-01-01-fine-grained-address-translation-cache-invalidation/</link>
+      <pubDate>Sat, 01 Jan 2022 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2022-01-01-fine-grained-address-translation-cache-invalidation/</guid>
+      <description>First @risc_v Tip of 2022!
+The final new extension added in the v1.12 Privileged Spec is &amp;ldquo;Fine-Grained Address-Translation Cache Invalidation&amp;rdquo; (Svinval). It breaks SFENCE.VMA into three distinct instructions, allowing for its operations to be more efficiently pipelined.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>NAPOT Translation Continuity (Svnapot)</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-12-31-napot-translation-continuity/</link>
+      <pubDate>Fri, 31 Dec 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-12-31-napot-translation-continuity/</guid>
+      <description>Today&amp;rsquo;s @risc_v Tip:
+Another new extension in the v1.12 Privileged Spec is &amp;ldquo;NAPOT Translation Continuity&amp;rdquo; (Svnapot), which allows a PTE to indicate a 64 KiB range with consistent &amp;ldquo;flags&amp;rdquo; (bits [5:0]). The lower bits of the VPN are used to replace indicator bits in PPN on read.
+Original Tweet</description>
+    </item>
+    
+    <item>
+      <title>Page-Based Memory Types (Svpbmt)</title>
+      <link>https://danielmangum.com/risc-v-tips/2021-12-30-page-based-memory-types/</link>
+      <pubDate>Thu, 30 Dec 2021 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2021-12-30-page-based-memory-types/</guid>
+      <description>Today&amp;rsquo;s @risc_v Tip:
+A new version of the RISC-V Privileged Architecture (v1.12) was released on Dec 3rd. One of the larger changes is the addition of the &amp;ldquo;Page-Based Memory Types&amp;rdquo; extension (Svpbmt). It is configured in leaf PTE bits [62:61] in Sv39, Sv48, and the new Sv57.
+Original Tweet</description>
+    </item>
     
     <item>
       <title>Memory Ordering Instructions: FENCE.I</title>
