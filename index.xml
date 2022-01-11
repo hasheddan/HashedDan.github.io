@@ -6,10 +6,21 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 04 Jan 2022 00:10:34 -0600</lastBuildDate>
+    <lastBuildDate>Wed, 05 Jan 2022 00:10:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>RISC-V Weak Memory Ordering</title>
+      <link>https://danielmangum.com/risc-v-tips/2022-01-05-rvwmo/</link>
+      <pubDate>Wed, 05 Jan 2022 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2022-01-05-rvwmo/</guid>
+      <description>Today&amp;rsquo;s @risc_v Tip:
+RISC-V defines its memory model (RVWMO) in the context of 3 orderings:
+ Program Order: order of ops performed by a single hart Global Memory Order: order of ops performed by all harts Preserved Program Order: subset of program order respected globally  This diagram is an abstract example, but the key points are illustrated: memory operations appear to perform sequentially in the context of a single hart, but may not be observed in the same order globally.</description>
+    </item>
     
     <item>
       <title>The Zmmul Extension</title>
