@@ -6,10 +6,21 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Wed, 05 Jan 2022 00:10:34 -0600</lastBuildDate>
+    <lastBuildDate>Thu, 06 Jan 2022 00:10:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>RVWMO Preserved Program Order Rule 1</title>
+      <link>https://danielmangum.com/risc-v-tips/2022-01-06-rvwmo-ppo-rule-1/</link>
+      <pubDate>Thu, 06 Jan 2022 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2022-01-06-rvwmo-ppo-rule-1/</guid>
+      <description>Tonight&amp;rsquo;s @risc_v Tip:
+The first rule in RVWMO Preserved Program Order falls under the Overlapping-Address Orderings category and ensures that any loads or stores to a memory address are ordered before a subsequent store to an overlapping memory address.
+Original Tweet</description>
+    </item>
     
     <item>
       <title>RISC-V Weak Memory Ordering</title>
