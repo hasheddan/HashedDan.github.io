@@ -6,10 +6,21 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Thu, 06 Jan 2022 00:10:34 -0600</lastBuildDate>
+    <lastBuildDate>Sun, 09 Jan 2022 00:10:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>RVWMO Preserved Program Order Rule 2</title>
+      <link>https://danielmangum.com/risc-v-tips/2022-01-09-rvwmo-ppo-rule-2/</link>
+      <pubDate>Sun, 09 Jan 2022 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2022-01-09-rvwmo-ppo-rule-2/</guid>
+      <description>Today&amp;rsquo;s @risc_v Tip:
+The second PPO rule defines &amp;ldquo;Same-Address Load-Load&amp;rdquo; ordering. This rule serves to preserve &amp;ldquo;Coherence for Read-Read pairs&amp;rdquo; (CoRR), specifying that instructions in same hart reading same byte preserve order if return values were written by different mem ops.
+Original Tweet</description>
+    </item>
     
     <item>
       <title>RVWMO Preserved Program Order Rule 1</title>
