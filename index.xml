@@ -6,10 +6,19 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 30 Jan 2022 00:10:34 -0600</lastBuildDate>
+    <lastBuildDate>Mon, 07 Feb 2022 00:10:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>The Missing Kubernetes Type System</title>
+      <link>https://danielmangum.com/posts/the-missing-kubernetes-type-system/</link>
+      <pubDate>Mon, 07 Feb 2022 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/the-missing-kubernetes-type-system/</guid>
+      <description>Sometimes I hear folks in the Crossplane community ask if they can just use Helm instead of opting into our package manager. The technical answer to this question is &amp;ldquo;yes&amp;rdquo;, but it typically represents a misinterpretation of what Crossplane is providing in a Kubernetes cluster. That being said, I completely understand why someone would ask this question, and quite frankly, I think the confusion is our fault. In Crossplane and across the Kubernetes community we lean in heavily to the idea that everything is &amp;ldquo;just an object&amp;rdquo;.</description>
+    </item>
     
     <item>
       <title>RISC-V Bytes: Rust Cross-Compilation</title>
