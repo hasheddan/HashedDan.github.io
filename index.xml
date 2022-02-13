@@ -6,10 +6,20 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 07 Feb 2022 00:10:34 -0600</lastBuildDate>
+    <lastBuildDate>Sun, 13 Feb 2022 00:10:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Graceful Shutdown of Responsibilities in a Growing Organization</title>
+      <link>https://danielmangum.com/posts/graceful-shutdown-responsibilities-organization/</link>
+      <pubDate>Sun, 13 Feb 2022 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/graceful-shutdown-responsibilities-organization/</guid>
+      <description>I usually write about deep technical topics, frequently going into extreme detail about how systems work. I love a good technical challenge, but recently the most challenging thing I have been working on at my day job has not been technical.
+Achieving Outsized Impact I joined Upbound essentially straight out of college after working on the open source Crossplane project on nights and weekends. The team was quite small and quite senior at that point, making me a bit of an anomaly in the organization.</description>
+    </item>
     
     <item>
       <title>The Missing Kubernetes Type System</title>
