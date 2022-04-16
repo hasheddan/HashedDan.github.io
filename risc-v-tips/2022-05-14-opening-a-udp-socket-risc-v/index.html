@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="author" content="Daniel Mangum">
+    <meta name="description" content="Daniel Mangum&#39;s personal website">
+    <meta name="keywords" content="blog,developer,personal">
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@hasheddan" />
+    <meta name="twitter:title" content="Opening a UDP Socket in RISC-V Assembly"/>
+    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
+
+    <base href="https://danielmangum.com">
+    <title>
+  Opening a UDP Socket in RISC-V Assembly · Daniel Mangum
+</title>
+
+    <link rel="canonical" href="https://danielmangum.com/risc-v-tips/2022-05-14-opening-a-udp-socket-risc-v/">
+
+    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
+    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
+    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
+
+    
+
+    
+      <link rel="stylesheet" href="https://danielmangum.com/css/custom.css">
+    
+
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+    
+
+    <meta name="generator" content="Hugo 0.68.3" />
+  </head>
+
+  <body class="">
+    <main class="wrapper">
+      <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com">
+      Daniel Mangum
+    </a>
+    
+    <ul class="navigation-list  float-right ">
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+      </li>
+      
+    </ul>
+    
+  </section>
+</nav>
+
+
+      <div class="content">
+        
+  <section class="container page">
+  <article>
+    <header>
+      <h1>Opening a UDP Socket in RISC-V Assembly</h1>
+    </header>
+
+    <blockquote>
+<p>The following is an aggregation of a <a href="https://twitter.com/hasheddan/status/1514581031092899843">Twitter
+thread</a> I posted on
+April 14th, 2022.</p>
+</blockquote>
+<p>Ever wondered how to open a UDP socket in <a href="https://twitter.com/risc_v">@risc_v</a>
+assembly? Wonder no more!</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+li    a0, 2
+li    a1, 2
+li    a2, 0
+li    a7, 198
+ecall
+
+</code></pre></div><p>Let&rsquo;s walk through it! 👇🏼🧵</p>
+<hr>
+<p>The first thing to understand is that we are just a &ldquo;normal&rdquo; program running in
+user space. We don&rsquo;t have special privileges in the system, and opening a socket
+is a privileged operation. In order to accomplish this, we&rsquo;ll need to &ldquo;ask&rdquo; the
+kernel to do something on our behalf.</p>
+<hr>
+<p>Programs in user space can talk to the kernel via system calls.
+<a href="https://twitter.com/risc_v">@risc_v</a> provides the <code>ecall</code> instruction to
+communicate from a lower privilege level to a higher one. In this case, we are
+communicating from &ldquo;user mode&rdquo; to &ldquo;supervisor mode&rdquo;. Read more
+<a href="https://danielmangum.com/posts/risc-v-bytes-privilege-levels/">here</a>.</p>
+<hr>
+<p>Issuing an <code>ecall</code> instruction causes a <a href="https://danielmangum.com/risc-v-tips/2021-12-22-trap-precision/">&ldquo;precise
+trap&rdquo;</a>. The
+kernel registers &ldquo;trap handlers&rdquo; to respond to different events that cause
+traps. In this case, we need to tell the kernel what we need it to do for us.</p>
+<hr>
+<p>The kernel supports different
+<a href="https://man7.org/linux/man-pages/man2/syscall.2.html">syscall</a> &ldquo;calling
+conventions&rdquo; for different architectures. These can be found in the Linux man
+pages, but here is a summary:</p>
+<p><img src="../static/risc-v-tips/22-05-14_1.png" alt="22-05-14_1"></p>
+<hr>
+<p>We can see for <a href="https://twitter.com/risc_v">@risc_v</a> that the system call
+(syscall) number needs to be present in argument register 7 (<code>a7</code>). Walking
+backwards up our sequence of instructions, you can see we are using the <a href="https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#load-immediate">load
+immediate
+pseudo-instruction</a>
+(<code>li</code>) to load <code>198</code> into <code>a7</code>.</p>
+<hr>
+<p>So how do we know to use <code>198</code>? We need to look in the kernel! Syscall numbers
+are defined in various locations for different architectures; for
+<a href="https://twitter.com/risc_v">@risc_v</a> we can follow include directives from
+<code>unistd.h</code>:</p>
+<ul>
+<li><a href="https://github.com/torvalds/linux/blob/master/arch/riscv/include/asm/unistd.h"><code>arch/riscv/include/asm/unistd.h</code></a></li>
+<li><a href="https://github.com/torvalds/linux/blob/master/arch/riscv/include/uapi/asm/unistd.h"><code>arch/riscv/include/uapi/asm/unistd.h</code></a></li>
+<li><a href="https://github.com/torvalds/linux/blob/a19944809fe9942e6a96292490717904d0690c21/include/uapi/asm-generic/unistd.h#L588"><code>include/uapi/asm-generic/unistd.h</code></a></li>
+</ul>
+<hr>
+<p>If you don&rsquo;t want to look in kernel source to find the syscall number for a
+given architecture, you can use this wonderful page from
+<a href="https://twitter.com/haerwu">@haerwu</a> that lists syscall numbers for all
+architectures:
+<a href="https://marcin.juszkiewicz.com.pl/download/tables/syscalls.html">link</a>.</p>
+<hr>
+<p>Okay, now that we know that 198 corresponds to the <code>socket</code> syscall, we need to
+determine what arguments it requires to inform the type of socket (UDP) we want
+to open. Back to the <a href="https://man7.org/linux/man-pages/man2/socket.2.html">man
+pages</a> we go!</p>
+<p><img src="../static/risc-v-tips/22-05-14_2.png" alt="22-05-14_2"></p>
+<hr>
+<p>So we need to provide <code>domain</code>, <code>type</code>, and <code>protocol</code>. Luckily the man page
+also defines the options available to us, but we need to map those to the
+correct integer values. Specifically we want:</p>
+<ul>
+<li>Domain: <code>AF_INET</code></li>
+<li>Type: <code>SOCK_DGRAM</code></li>
+<li>Protocol: <code>0</code> (default)</li>
+</ul>
+<p><img src="../static/risc-v-tips/22-05-14_3.png" alt="22-05-14_3"></p>
+<hr>
+<p><code>AF_INET</code> and <code>SOCK_DGRAM</code> are both defined in <code>socket.h</code> in glibc:</p>
+<ul>
+<li><a href="https://github.com/bminor/glibc/blob/d275970ab56f8ba6a3ca598aba75db4daabe5924/bits/socket.h#L111"><code>AF_INET</code></a></li>
+<li><a href="https://github.com/bminor/glibc/blob/d275970ab56f8ba6a3ca598aba75db4daabe5924/bits/socket.h#L45"><code>SOCK_DGRAM</code></a></li>
+</ul>
+<p>Conveniently, both are defined with the integer <code>2</code>.</p>
+<hr>
+<p>Issuing a syscall is not so different from calling a function in your program as
+it requires passing arguments according to a calling convention. We follow the
+<a href="https://twitter.com/risc_v">@risc_v</a> <a href="https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc">psABI calling
+convention</a>
+and pass our arguments in the <code>a0</code>, <code>a1</code>, and <code>a2</code> registers.</p>
+<hr>
+<p>Lastly, we need to issue our <code>ecall</code> command. This will cause the hart to jump
+to the address defined in the <a href="https://danielmangum.com/risc-v-tips/2021-12-01-supervisor-trap-base-address/">Supervisor Trap Vector
+register</a>
+(<code>stvec</code>), which is where the kernel has placed the logic to handle different
+types of traps.</p>
+<hr>
+<p>The kernel will handle our request and return either the file descriptor for the
+socket, or -1 indicating a failed operation. That&rsquo;s all for today though! If
+folks enjoy threads like this, I&rsquo;ll continue posting as I work on my
+<a href="https://twitter.com/risc_v">@risc_v</a> assembly implementation of
+<a href="https://twitter.com/quicwg">@quicwg</a> :)</p>
+
+  </article>
+</section>
+
+
+      </div>
+
+      <footer class="footer">
+  <section class="container">
+     © 2022  
+  </section>
+</footer>
+
+    </main>
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+
+  </body>
+
+</html>

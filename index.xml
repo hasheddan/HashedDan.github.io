@@ -6,10 +6,22 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 13 Feb 2022 00:10:34 -0600</lastBuildDate>
+    <lastBuildDate>Thu, 14 Apr 2022 00:10:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Opening a UDP Socket in RISC-V Assembly</title>
+      <link>https://danielmangum.com/risc-v-tips/2022-05-14-opening-a-udp-socket-risc-v/</link>
+      <pubDate>Thu, 14 Apr 2022 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2022-05-14-opening-a-udp-socket-risc-v/</guid>
+      <description>The following is an aggregation of a Twitter thread I posted on April 14th, 2022.
+ Ever wondered how to open a UDP socket in @risc_v assembly? Wonder no more!
+li a0, 2 li a1, 2 li a2, 0 li a7, 198 ecall Let&amp;rsquo;s walk through it! 👇🏼🧵
+ The first thing to understand is that we are just a &amp;ldquo;normal&amp;rdquo; program running in user space. We don&amp;rsquo;t have special privileges in the system, and opening a socket is a privileged operation.</description>
+    </item>
     
     <item>
       <title>Graceful Shutdown of Responsibilities in a Growing Organization</title>
