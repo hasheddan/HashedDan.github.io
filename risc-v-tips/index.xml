@@ -6,10 +6,21 @@
     <description>Recent content in Risc-v-tips on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Thu, 14 Apr 2022 00:10:34 -0600</lastBuildDate>
+    <lastBuildDate>Sun, 03 Jul 2022 00:10:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/risc-v-tips/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Dynamically Linked Programs with Binfmt_misc</title>
+      <link>https://danielmangum.com/risc-v-tips/2022-07-03-dynamically-linked-binfmt-misc/</link>
+      <pubDate>Sun, 03 Jul 2022 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/risc-v-tips/2022-07-03-dynamically-linked-binfmt-misc/</guid>
+      <description>Today&amp;rsquo;s @risc_v Tip:
+If cross-compiling a dynamically linked program, then executing using binfmt_misc, you&amp;rsquo;ll need to both:
+ Inform the OS where the dynamic linker resides (or invoke directly) Inform dynamic linker where other shared libraries reside (LD_LIBRARY_PATH)  Original Tweet</description>
+    </item>
     
     <item>
       <title>Opening a UDP Socket in RISC-V Assembly</title>
