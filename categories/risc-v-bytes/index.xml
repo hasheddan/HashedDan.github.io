@@ -6,10 +6,19 @@
     <description>Recent content in RISC-V Bytes on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 30 Jan 2022 00:10:34 -0600</lastBuildDate>
+    <lastBuildDate>Mon, 01 Aug 2022 00:10:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/categories/risc-v-bytes/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>RISC-V Bytes: Stack Use After Return in C, Go, and Rust</title>
+      <link>https://danielmangum.com/posts/risc-v-bytes-stack-use-after-return/</link>
+      <pubDate>Mon, 01 Aug 2022 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/risc-v-bytes-stack-use-after-return/</guid>
+      <description>If you write any code that deals with manual memory management, you are likely familiar with the concept of a &amp;ldquo;use after free&amp;rdquo; bug. These bugs can be the source of, at best, program crashes, and at worst serious vulnerabilities. A lesser discussed counterpart to use after free, is &amp;ldquo;use after return&amp;rdquo;. In some cases, the latter can be even more troublesome, due to the operations that are performed when one procedure calls another.</description>
+    </item>
     
     <item>
       <title>RISC-V Bytes: Rust Cross-Compilation</title>

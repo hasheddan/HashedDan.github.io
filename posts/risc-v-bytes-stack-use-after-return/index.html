@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="author" content="Daniel Mangum">
+    <meta name="description" content="Daniel Mangum&#39;s personal website">
+    <meta name="keywords" content="blog,developer,personal">
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@hasheddan" />
+    <meta name="twitter:title" content="RISC-V Bytes: Stack Use After Return in C, Go, and Rust"/>
+    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
+
+    <base href="https://danielmangum.com">
+    <title>
+  RISC-V Bytes: Stack Use After Return in C, Go, and Rust · Daniel Mangum
+</title>
+
+    <link rel="canonical" href="https://danielmangum.com/posts/risc-v-bytes-stack-use-after-return/">
+
+    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
+    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
+    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
+
+    
+
+    
+      <link rel="stylesheet" href="https://danielmangum.com/css/custom.css">
+    
+
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+    
+
+    <meta name="generator" content="Hugo 0.68.3" />
+  </head>
+
+  <body class="">
+    <main class="wrapper">
+      <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com">
+      Daniel Mangum
+    </a>
+    
+    <ul class="navigation-list  float-right ">
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+      </li>
+      
+    </ul>
+    
+  </section>
+</nav>
+
+
+      <div class="content">
+        
+  <section class="container post">
+  <article>
+    <header>
+      <h1 class="title">RISC-V Bytes: Stack Use After Return in C, Go, and Rust</h1>
+      <h2 class="date">August 1, 2022</h2>
+      <style>
+        .twitter-tweet-rendered {
+          display:block;
+          margin-left:auto;
+          margin-right:auto;
+        }
+      </style>
+
+      
+    </header>
+
+    <p>If you write any code that deals with manual memory management, you are likely
+familiar with the concept of a &ldquo;use after free&rdquo; bug. These bugs can be the
+source of, at best, program crashes, and at worst serious vulnerabilities. A
+lesser discussed counterpart to use after free, is &ldquo;use after return&rdquo;. In some
+cases, the latter can be even more troublesome, due to the <a href="https://danielmangum.com/posts/risc-v-bytes-caller-callee-registers/">operations that are
+performed when one procedure calls
+another</a>.
+In this post, we&rsquo;ll take a look at what happens under the hood when a RISC-V
+program includes a use after return bug, as well as how &ldquo;higher-level&rdquo;
+programming languages can guard against this behavior, at varying levels of cost
+to the programmer.</p>
+<blockquote>
+<p>If you aren&rsquo;t familiar with the <a href="https://danielmangum.com/categories/risc-v-bytes/">RISC-V Bytes
+series</a>, it may be worth
+giving our first post, <a href="https://danielmangum.com/posts/risc-v-bytes-qemu-gdb/">Cross-Platform Debugging with QEMU and
+GDB</a>, a quick read to
+get the necessary tools installed to follow along.</p>
+</blockquote>
+<h2 id="a-small-c-program">A Small C Program</h2>
+<p>Let&rsquo;s start off by taking a look at a small C program:</p>
+<p><code>main.c</code></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">
+<span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;stdio.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span><span style="color:#0f0;font-weight:bold"></span>
+<span style="color:#fff;font-weight:bold">int</span> *g;
+
+<span style="color:#fff;font-weight:bold">void</span> first()
+{
+  <span style="color:#fff;font-weight:bold">int</span> a = <span style="color:#ff0;font-weight:bold">1</span>;
+  g = &amp;a;
+}
+
+<span style="color:#fff;font-weight:bold">void</span> second()
+{
+  <span style="color:#fff;font-weight:bold">int</span> b = <span style="color:#ff0;font-weight:bold">2</span>;
+}
+
+<span style="color:#fff;font-weight:bold">int</span> main(<span style="color:#fff;font-weight:bold">int</span> argc, <span style="color:#fff;font-weight:bold">char</span> **argv)
+{
+  first();
+  second();
+  printf(<span style="color:#0ff;font-weight:bold">&#34;%d</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>, *g);
+  <span style="color:#fff;font-weight:bold">return</span> <span style="color:#ff0;font-weight:bold">0</span>;
+}
+
+</code></pre></div><p>This program is meant to run in userspace (<a href="https://danielmangum.com/posts/risc-v-bytes-privilege-levels/">U mode in RISC-V
+vernacular</a>),
+meaning that it depends on some initialization that runs before <code>main()</code> (via
+<a href="https://en.wikipedia.org/wiki/Crt0"><code>crt0</code></a>), as well as system libraries and
+functionality offered by the operating system, such as the ability to print to
+<a href="https://en.wikipedia.org/wiki/Standard_streams"><code>stdout</code></a>. We have one global
+variable, <code>g</code>, which is a pointer to a 32-bit integer (the default in C for our
+64-bit machine), and we call two procedures, <code>first()</code> then <code>second()</code>, before
+printing the contents of the address pointed to by <code>g</code>, then exiting.</p>
+<p>You may be able to guess what the output of this program will be, but let&rsquo;s
+compile it, then run it and see. We&rsquo;ll use an unoptimized build to get a
+simplified, albeit somewhat unrealistic, picture of what is going on.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+$ riscv64-unknown-linux-gnu-gcc -static  main.c
+
+</code></pre></div><blockquote>
+<p>GCC Version: 11.1.0</p>
+</blockquote>
+<blockquote>
+<p>Note: <code>gcc</code> compiles <a href="https://en.wikipedia.org/wiki/Library_(computing)#Dynamic_linking">dynamically linked
+executables</a>
+by default, but we opt to pass the <code>-static</code> flag here to compile a
+<a href="https://en.wikipedia.org/wiki/Library_(computing)#Static_libraries">statically linked
+executable</a>.
+This makes it a bit easier to run on a different host architecture <a href="https://en.wikipedia.org/wiki/Binfmt_misc">via
+<code>binfmt_misc</code></a> because we don&rsquo;t
+have to invoke our RISC-V dynamic linker at runtime.</p>
+</blockquote>
+<p>Let&rsquo;s run our program and check the output:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+$ ./a.out
+2
+
+</code></pre></div><p>Interesting! Despite only ever assigning the address of <code>a</code>, which contains the
+32-bit integer <code>1</code>, to <code>g</code>, the contents of that address contain the value <code>2</code>
+when we print. We do assign <code>2</code> to the variable <code>b</code> in <code>second()</code>, but how does
+that end up as the value at the address in <code>g</code>? The crux of the issue is that we
+are using variables together that have different <em>lifetimes</em>. While <code>g</code> is
+defined at the global scope, and thus exists for the entire lifetime of the
+program, <code>a</code> is defined only in the scope of <code>first()</code>, meaning that the program
+has no concept of <code>a</code> once the function returns.</p>
+<p>But we still haven&rsquo;t explained why the value stored in <code>b</code>, which has a lifetime
+scoped to <code>second()</code> has ended up at the address stored in <code>g</code>. Let&rsquo;s take a
+look at what is happening in the generated machine code.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">$ riscv64-unknown-linux-gnu-objdump -D a.out | less
+</code></pre></div><blockquote>
+<p>Note: there are many ways to explore the disassembled content of an
+executable. A pattern that I have found useful is piping <code>objdump -D</code> into
+<code>less</code>, then searching for the symbol I&rsquo;m looking for, in this case using
+<code>/main</code>. You can step forward through the matches using <code>n</code>, and step backward
+using <code>Shift+N</code>.</p>
+</blockquote>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-asm" data-lang="asm">
+<span style="color:#f00">00000000000105</span>d2 <span style="color:#f00">&lt;</span>first<span style="color:#f00">&gt;</span>:
+   <span style="color:#f00">105</span>d2:       <span style="color:#f00">1101</span>                    addi    sp,sp,-<span style="color:#ff0;font-weight:bold">32</span>
+   <span style="color:#f00">105</span>d4:       ec22                    sd      s0,<span style="color:#ff0;font-weight:bold">24</span>(sp)
+   <span style="color:#f00">105</span>d6:       <span style="color:#f00">1000</span>                    addi    s0,sp,<span style="color:#ff0;font-weight:bold">32</span>
+   <span style="color:#f00">105</span>d8:       <span style="color:#f00">4785</span>                    li      a5,<span style="color:#ff0;font-weight:bold">1</span>
+   <span style="color:#f00">105</span>da:       fef42623                sw      a5,-<span style="color:#ff0;font-weight:bold">20</span>(s0)
+   <span style="color:#f00">105</span>de:       fec40713                addi    a4,s0,-<span style="color:#ff0;font-weight:bold">20</span>
+   <span style="color:#f00">105</span>e2:       <span style="color:#f00">9</span>ae1b823                sd      a4,-<span style="color:#ff0;font-weight:bold">1616</span>(gp) <span style="color:#007f7f"># 70a78 &lt;g&gt;
+</span><span style="color:#007f7f"></span>   <span style="color:#ff0;font-weight:bold">105</span>e6:       <span style="color:#ff0;font-weight:bold">0001</span>                    nop
+   <span style="color:#f00">105</span>e8:       <span style="color:#f00">6462</span>                    ld      s0,<span style="color:#ff0;font-weight:bold">24</span>(sp)
+   <span style="color:#f00">105</span>ea:       <span style="color:#f00">6105</span>                    addi    sp,sp,<span style="color:#ff0;font-weight:bold">32</span>
+   <span style="color:#f00">105</span>ec:       <span style="color:#f00">8082</span>                    ret
+
+<span style="color:#f00">00000000000105</span>ee <span style="color:#f00">&lt;</span>second<span style="color:#f00">&gt;</span>:
+   <span style="color:#f00">105</span>ee:       <span style="color:#f00">1101</span>                    addi    sp,sp,-<span style="color:#ff0;font-weight:bold">32</span>
+   <span style="color:#f00">105</span>f0:       ec22                    sd      s0,<span style="color:#ff0;font-weight:bold">24</span>(sp)
+   <span style="color:#f00">105</span>f2:       <span style="color:#f00">1000</span>                    addi    s0,sp,<span style="color:#ff0;font-weight:bold">32</span>
+   <span style="color:#f00">105</span>f4:       <span style="color:#f00">4789</span>                    li      a5,<span style="color:#ff0;font-weight:bold">2</span>
+   <span style="color:#f00">105</span>f6:       fef42623                sw      a5,-<span style="color:#ff0;font-weight:bold">20</span>(s0)
+   <span style="color:#f00">105</span>fa:       <span style="color:#f00">0001</span>                    nop
+   <span style="color:#f00">105</span>fc:       <span style="color:#f00">6462</span>                    ld      s0,<span style="color:#ff0;font-weight:bold">24</span>(sp)
+   <span style="color:#f00">105</span>fe:       <span style="color:#f00">6105</span>                    addi    sp,sp,<span style="color:#ff0;font-weight:bold">32</span>
+   <span style="color:#f00">10600:</span>       <span style="color:#f00">8082</span>                    ret
+
+<span style="color:#f00">0000000000010602</span> <span style="color:#f00">&lt;</span>main<span style="color:#f00">&gt;</span>:
+   <span style="color:#f00">10602:</span>       <span style="color:#f00">1101</span>                    addi    sp,sp,-<span style="color:#ff0;font-weight:bold">32</span>
+   <span style="color:#f00">10604:</span>       ec06                    sd      ra,<span style="color:#ff0;font-weight:bold">24</span>(sp)
+   <span style="color:#f00">10606:</span>       e822                    sd      s0,<span style="color:#ff0;font-weight:bold">16</span>(sp)
+   <span style="color:#f00">10608:</span>       <span style="color:#f00">1000</span>                    addi    s0,sp,<span style="color:#ff0;font-weight:bold">32</span>
+   <span style="color:#f00">1060</span>a:       <span style="color:#f00">87</span>aa                    mv      a5,a0
+   <span style="color:#f00">1060</span>c:       feb43023                sd      a1,-<span style="color:#ff0;font-weight:bold">32</span>(s0)
+   <span style="color:#f00">10610:</span>       fef42623                sw      a5,-<span style="color:#ff0;font-weight:bold">20</span>(s0)
+   <span style="color:#f00">10614:</span>       fbfff0ef                jal     ra,<span style="color:#ff0;font-weight:bold">105d2</span> &lt;first&gt;
+   <span style="color:#f00">10618:</span>       fd7ff0ef                jal     ra,<span style="color:#ff0;font-weight:bold">105ee</span> &lt;second&gt;
+   <span style="color:#f00">1061</span>c:       <span style="color:#f00">9</span>b01b783                ld      a5,-<span style="color:#ff0;font-weight:bold">1616</span>(gp) <span style="color:#007f7f"># 70a78 &lt;g&gt;
+</span><span style="color:#007f7f"></span>   <span style="color:#ff0;font-weight:bold">10620</span>:       <span style="color:#ff0;font-weight:bold">439</span>c                    lw      a5,<span style="color:#ff0;font-weight:bold">0</span>(a5)
+   <span style="color:#f00">10622:</span>       <span style="color:#f00">85</span>be                    mv      a1,a5
+   <span style="color:#f00">10624:</span>       <span style="color:#f00">0004</span>c7b7                lui     a5,<span style="color:#ff0;font-weight:bold">0x4c</span>
+   <span style="color:#f00">10628:</span>       <span style="color:#f00">26078513</span>                addi    a0,a5,<span style="color:#ff0;font-weight:bold">608</span> <span style="color:#007f7f"># 4c260 &lt;free_mem+0xc4&gt;
+</span><span style="color:#007f7f"></span>   <span style="color:#ff0;font-weight:bold">1062</span>c:       <span style="color:#ff0;font-weight:bold">5</span>cc040ef                jal     ra,<span style="color:#ff0;font-weight:bold">14bf8</span> &lt;_IO_printf&gt;
+   <span style="color:#f00">10630:</span>       <span style="color:#f00">4781</span>                    li      a5,<span style="color:#ff0;font-weight:bold">0</span>
+   <span style="color:#f00">10632:</span>       <span style="color:#f00">853</span>e                    mv      a0,a5
+   <span style="color:#f00">10634:</span>       <span style="color:#f00">60</span>e2                    ld      ra,<span style="color:#ff0;font-weight:bold">24</span>(sp)
+   <span style="color:#f00">10636:</span>       <span style="color:#f00">6442</span>                    ld      s0,<span style="color:#ff0;font-weight:bold">16</span>(sp)
+   <span style="color:#f00">10638:</span>       <span style="color:#f00">6105</span>                    addi    sp,sp,<span style="color:#ff0;font-weight:bold">32</span>
+   <span style="color:#f00">1063</span>a:       <span style="color:#f00">8082</span>                    ret
+
+</code></pre></div><blockquote>
+<p>Check yourself: why is the difference in address from one instruction to
+another sometimes <code>2</code> (<code>2</code> bytes == <code>16</code> bits) (example: <code>10604 - 10602 = 2</code>)
+and sometimes <code>4</code> (<code>4</code> bytes == <code>32</code> bits) (example: <code>10614 - 10610 = 4</code>)? Our
+64-bit RISC-V GCC install is using <code>-march=rv64imafdc</code>. The final extension,
+<code>c</code>, corresponds to &ldquo;Compressed&rdquo;, which allows the compiler to compress some
+instructions to reduce code size. Every instruction in RISC-V is <code>32</code> bits,
+but when the compressed extension is enabled, some instructions can be
+represented in just <code>16</code> bites.</p>
+</blockquote>
+<p>Starting with <code>main</code>, we see our typical <em>function prologue</em>, where the stack is
+being grown by <code>32</code> bytes (<code>10602</code>), the return address (<code>ra</code>) is being stored
+at the top of the stack frame (<code>10604</code>), and the previous frame pointer (<code>s0</code>)
+is being stored just below it (<code>10606</code>) before eventually updating the frame
+pointer to point to the top of <code>main</code>'s <code>32</code> byte stack frame (<code>10608</code>). The
+next three instructions are not consequential for our investigation today, and
+are only present here due to the fact that we are compiling with no
+optimization, but for completeness, we are taking the arguments passed to
+<code>main()</code> and storing them in its stack frame. <code>a0</code>, which gets moved to <code>a5</code>
+(<code>1060a</code>), contains <code>argc</code>, a 32-bit integer specifying the number of arguments
+passed. Because we are targeting a <code>64</code> bit machine, <em>word</em> size is <code>32</code> bits,
+so we can use <code>sw</code> (&ldquo;store word&rdquo;) to store <code>argc</code> in <code>main</code>'s stack frame close
+to the bottom (<code>10610</code>). Similarly, <code>a1</code>, which contains <code>argc</code>, a pointer (or
+more specifically, a pointer to a pointer) to the arguments passed to the
+program, gets put at the very bottom of the stack frame (<code>1060c</code>).</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../static/risc_v_stack_uar_1.png"
+    alt="risc-v-stack-uar-1"
+  />
+</div>
+<blockquote>
+<p>Description: visualization of function prologue for <code>main()</code>. Note that the
+<code>mv a5,a0</code> instruction is omitted from numbered operations on the stack.</p>
+</blockquote>
+<p>Now we are ready to jump to <code>first()</code>. We see a similar function prologue,
+before storing <code>1</code> into the <code>a5</code> register (<code>105d8</code>), subsequently storing the
+value on the stack (<code>105da</code>), then finally storing the stack address into <code>a4</code>
+(<code>105de</code>). Lastly, we update <code>g</code> with the stack address from <code>a4</code>, such that it
+now points to a memory location where the value <code>1</code> is stored. Though we haven&rsquo;t
+reached where <code>g</code> eventually points to <code>2</code>, we have already made the mistake
+that can lead to a &ldquo;use after return&rdquo; vulnerability. If we step through our
+program with <a href="https://sourceware.org/gdb/">GDB</a>, we can identify the exact
+address in <code>g</code> after <code>first()</code>.</p>
+<p>In one terminal start QEMU, but wait for GDB to attach on port <code>1234</code>:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">$ qemu-riscv64 -g 1234 a.out
+</code></pre></div><p>And in another start GDB by attaching to QEMU and setting a break point at
+<code>first()</code>:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+$ riscv64-unknown-linux-gnu-gdb a.out -ex &#34;target remote :1234&#34; -ex &#34;break first&#34;
+(gdb) c
+Continuing.
+
+Breakpoint 1, 0x00000000000105d8 in first ()
+(gdb) x/8i $pc
+=&gt; 0x105d8 &lt;first+6&gt;:	li	a5,1
+   0x105da &lt;first+8&gt;:	sw	a5,-20(s0)
+   0x105de &lt;first+12&gt;:	addi	a4,s0,-20
+   0x105e2 &lt;first+16&gt;:	sd	a4,-1616(gp)
+   0x105e6 &lt;first+20&gt;:	nop
+   0x105e8 &lt;first+22&gt;:	ld	s0,24(sp)
+   0x105ea &lt;first+24&gt;:	addi	sp,sp,32
+   0x105ec &lt;first+26&gt;:	ret
+
+</code></pre></div><p>After continuing to <code>first()</code> (GDB will frequently skip the function prologue by
+default), we see the same function body that we dumped above. We are interested
+in the address that is stored in <code>a4</code> by the <code>addi</code> instruction at address
+<code>0x105de</code> (<code>&lt;first+12&gt;</code>). It is a location in <code>first</code>'s stack frame calculated
+using an offset of <code>-20</code> from the frame pointer <code>s0</code>.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+(gdb) i r s0 a4 sp
+s0             0x40007ffd90        0x40007ffd90
+a4             0x40007ffd7c	       274886294908
+sp             0x40007ffd70	       0x40007ffd70
+
+</code></pre></div><p>Printing <code>s0</code>, <code>a4</code>, and <code>sp</code> shows us that the address stored in <code>a4</code> is in
+fact <code>20</code> bytes below the frame pointer (<code>0x40007ffd90 - 0x40007ffd7c = 0x14 = 20</code>) and <code>12</code> bytes above the stack pointer (<code>0x40007ffd7c - 0x40007ffd70 = 0xc = 12</code>). This is fine as long as we are within <code>first</code>'s body, but as soon as we
+return our stack frame changes. We can see this happening in the function
+epilogue:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+(gdb) x/4i $pc
+=&gt; 0x105e6 &lt;first+20&gt;:	nop
+   0x105e8 &lt;first+22&gt;:	ld	s0,24(sp)
+   0x105ea &lt;first+24&gt;:	addi	sp,sp,32
+   0x105ec &lt;first+26&gt;:	ret
+
+</code></pre></div><p>We restore the previous frame pointer in <code>0x105e8</code> (<code>&lt;first+22&gt;</code>), then restore
+the stack pointer in <code>0x105ea</code> (<code>&lt;first+24&gt;</code>). By the time we return to <code>main</code>
+the address in <code>a4</code> is outside of the frame (i.e. below the stack pointer):</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+(gdb) si
+0x00000000000105e8 in first ()
+(gdb) si
+0x00000000000105ea in first ()
+(gdb) si
+0x00000000000105ec in first ()
+(gdb) si
+0x0000000000010618 in main ()
+(gdb) i r s0 a4 sp
+s0             0x40007ffdb0        0x40007ffdb0
+a4             0x40007ffd7c	       274886294908
+sp             0x40007ffd90	       0x40007ffd90
+
+</code></pre></div><p>More importantly, <code>g</code> is now a <a href="https://en.wikipedia.org/wiki/Dangling_pointer">dangling
+pointer</a>.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../static/risc_v_stack_uar_2.png"
+    alt="risc-v-stack-uar-2"
+  />
+</div>
+<blockquote>
+<p>Description: visualization of steps in <code>first()</code>, which includes: growing the
+stack, storing <code>1</code> on the stack, updating <code>g</code> to point to the location of <code>1</code>
+on the stack, then shrinking the stack.</p>
+</blockquote>
+<p>Our next instruction is a jump (<code>jal</code> - &ldquo;jump and link&rdquo;) to <code>second()</code>, where we
+are again setting up a <code>32</code> byte stack frame, then storing a value in it:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+(gdb) si
+0x00000000000105ee in second ()
+(gdb) x/8i $pc
+=&gt; 0x105ee &lt;second&gt;:	addi	sp,sp,-32
+   0x105f0 &lt;second+2&gt;:	sd	s0,24(sp)
+   0x105f2 &lt;second+4&gt;:	addi	s0,sp,32
+   0x105f4 &lt;second+6&gt;:	li	a5,2
+   0x105f6 &lt;second+8&gt;:	sw	a5,-20(s0)
+   0x105fa &lt;second+12&gt;:	nop
+   0x105fc &lt;second+14&gt;:	ld	s0,24(sp)
+   0x105fe &lt;second+16&gt;:	addi	sp,sp,32
+
+</code></pre></div><p>You&rsquo;ll notice that the instruction at address <code>0x105f6</code> (<code>&lt;second+8&gt;</code>) is the
+same instruction we saw in <code>first()</code> at <code>0x105da</code> (<code>&lt;first+8&gt;</code>). Let&rsquo;s step to
+that instruction, and look at the contents of <code>g</code> before and after.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">(gdb) si
+0x00000000000105f0 in second ()
+(gdb) si
+0x00000000000105f2 in second ()
+(gdb) si
+0x00000000000105f4 in second ()
+(gdb) si
+0x00000000000105f6 in second ()
+(gdb) p /s (int*)g
+$4 = (int *) 0x40007ffd7c
+(gdb) x/d 0x40007ffd7c
+0x40007ffd7c:	1
+(gdb) si
+0x00000000000105fa in second ()
+(gdb) p /s (int*)g
+$5 = (int *) 0x40007ffd7c
+(gdb) x/d 0x40007ffd7c
+0x40007ffd7c:	2
+
+</code></pre></div><p>While <code>g</code> continues to point at the same address (<code>0x40007ffd7c</code>), that address
+is now part of <code>second</code>'s stack frame, meaning that it is free to allocate local
+variables in the range. Without explicitly assigning to <code>g</code>, we have implicitly
+changed its value. This is a fairly trivial example, but in more extreme cases
+this type of implicit assignment could allow a user to manipulate the output, or
+worse, the control flow, of the program just by supplying certain inputs.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../static/risc_v_stack_uar_3.png"
+    alt="risc-v-stack-uar-3"
+  />
+</div>
+<blockquote>
+<p>Description: visualization of steps in <code>second()</code>, which includes: growing the
+stack to include the address in <code>g</code> (which currently contains <code>1</code>),
+overwriting the value to <code>2</code>, then shrinking the stack again.</p>
+</blockquote>
+<h3 id="how-does-go-handle-this">How Does Go Handle This?</h3>
+<p>One of the reasons why folks reach for &ldquo;memory safe&rdquo; languages these days is to
+avoid accidentally introducing vulnerabilities with mistakes like the one
+described above. One way &ldquo;memory safe&rdquo; languages handle this is via a built-in
+runtime and garbage collector. Go is a popular language that takes this
+approach. Let&rsquo;s look at a sibling program to the one we have already been
+exploring.</p>
+<p><code>main.go</code></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">
+<span style="color:#fff;font-weight:bold">package</span> main
+
+<span style="color:#fff;font-weight:bold">import</span> <span style="color:#0ff;font-weight:bold">&#34;fmt&#34;</span>
+
+<span style="color:#fff;font-weight:bold">var</span> g *<span style="color:#fff;font-weight:bold">int</span>
+
+<span style="color:#fff;font-weight:bold">func</span> first() {
+	a := <span style="color:#ff0;font-weight:bold">1</span>
+	g = &amp;a
+}
+
+<span style="color:#fff;font-weight:bold">func</span> second() {
+	b := <span style="color:#ff0;font-weight:bold">2</span>
+   <span style="color:#007f7f">// Assign to blank identifier to satisfy compiler.
+</span><span style="color:#007f7f"></span>	_ = b
+}
+
+<span style="color:#fff;font-weight:bold">func</span> main() {
+	first()
+	second()
+	fmt.Println(*g)
+}
+
+</code></pre></div><p>This is almost identical to the C program we saw before. However, when we
+compile we&rsquo;ll see the generated machine code is quite different. As before,
+we&rsquo;ll disable optimization using the following Go compiler flags:</p>
+<ul>
+<li><code>-N</code>: disable optimizations</li>
+<li><code>-l</code>: disable inlining</li>
+<li><code>-m</code>: print optimization decisions</li>
+</ul>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+$ GOOS=linux GOARCH=riscv64 go build -gcflags &#39;-N -l -m&#39; main.go
+# command-line-arguments
+./main.go:8:2: moved to heap: a
+./main.go:21:13: ... argument does not escape
+./main.go:21:14: *g escapes to heap
+
+</code></pre></div><blockquote>
+<p>Go Version: 1.18.4</p>
+</blockquote>
+<p>If we run the program, we&rsquo;ll see we that, unlike our C program, we get the
+expected value of <code>1</code>.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+$ ./main 
+1
+
+</code></pre></div><p>Without even examining the machine code, the <code>-m</code> flag is causing the compiler
+to emit information about how it is handling our assignment of the address of a
+local variable (<code>a</code>) with a temporary lifetime to a global variable (<code>g</code>) that
+outlives it. This is explained in the <a href="https://go.dev/doc/faq#stack_or_heap">Go
+FAQ</a>:</p>
+<blockquote>
+<p>How do I know whether a variable is allocated on the heap or the stack?</p>
+</blockquote>
+<blockquote>
+<p>From a correctness standpoint, you don&rsquo;t need to know. Each variable in Go
+exists as long as there are references to it. The storage location chosen by
+the implementation is irrelevant to the semantics of the language.</p>
+</blockquote>
+<blockquote>
+<p>The storage location does have an effect on writing efficient programs. When
+possible, the Go compilers will allocate variables that are local to a
+function in that function&rsquo;s stack frame. However, if the compiler cannot prove
+that the variable is not referenced after the function returns, then the
+compiler must allocate the variable on the garbage-collected heap to avoid
+dangling pointer errors. Also, if a local variable is very large, it might
+make more sense to store it on the heap rather than the stack.</p>
+</blockquote>
+<blockquote>
+<p>In the current compilers, if a variable has its address taken, that variable
+is a candidate for allocation on the heap. However, a basic escape analysis
+recognizes some cases when such variables will not live past the return from
+the function and can reside on the stack.</p>
+</blockquote>
+<p>In our program, <code>a</code> fits the description of a variable that the compiler cannot
+prove is not referenced after the function returns. The compiler will allocate
+<code>a</code> on the heap, making us no longer susceptible to the use after return
+vulnerability.</p>
+<p>Because Go does have a fairly large runtime, stepping through a program&rsquo;s
+execution is more complex and requires knowledge of the language&rsquo;s internals to
+fully understand what is going on. For example, the Go runtime maintains a
+separate stack per goroutine, which can be dynamically expanded as needed,
+meaning that understanding a given function&rsquo;s stack frame is not as simple as
+examining the the stack and frame pointer after the prologue. Futhermore, Go has
+an <a href="https://go.googlesource.com/go/+/refs/heads/dev.regabi/src/cmd/compile/internal-abi.md">internal
+ABI</a>
+that does not guarantee backwards compatibility and differs from one
+architecture to another.</p>
+<p>The Go team recommends using <a href="https://github.com/go-delve/delve">Delve</a> for
+debugging as it is specifically built to understand Go programs. However, Delve
+does not currently support RISC-V, so we&rsquo;ll stick with GDB today, which can
+still be useful if you know where to look (and has the advantage of using
+consistent tooling across languages). Before we jump into GDB, let&rsquo;s dump our
+machine code:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+$ riscv64-unknown-linux-gnu-objdump -D main | less
+
+</code></pre></div><div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-asm" data-lang="asm">
+<span style="color:#f00">0000000000090020</span> <span style="color:#f00">&lt;</span>main.first<span style="color:#f00">&gt;</span>:
+   <span style="color:#f00">90020:</span>       <span style="color:#f00">010</span>db503                ld      a0,<span style="color:#ff0;font-weight:bold">16</span>(s11)
+   <span style="color:#f00">90024:</span>       <span style="color:#f00">00256663</span>                bltu    a0,sp,<span style="color:#ff0;font-weight:bold">90030</span> &lt;main.first+<span style="color:#ff0;font-weight:bold">0x10</span>&gt;
+   <span style="color:#f00">90028:</span>       ac8da2ef                jal     t0,<span style="color:#ff0;font-weight:bold">6a2f0</span> &lt;runtime.morestack_noctxt&gt;
+   <span style="color:#f00">9002</span>c:       ff5ff06f                j       <span style="color:#ff0;font-weight:bold">90020</span> &lt;main.first&gt;
+   <span style="color:#f00">90030:</span>       fc113c23                sd      ra,-<span style="color:#ff0;font-weight:bold">40</span>(sp)
+   <span style="color:#f00">90034:</span>       fd810113                addi    sp,sp,-<span style="color:#ff0;font-weight:bold">40</span>
+   <span style="color:#f00">90038:</span>       <span style="color:#f00">00016297</span>                auipc   t0,<span style="color:#ff0;font-weight:bold">0x16</span>
+   <span style="color:#f00">9003</span>c:       <span style="color:#f00">68828293</span>                addi    t0,t0,<span style="color:#ff0;font-weight:bold">1672</span> <span style="color:#007f7f"># a66c0 &lt;type.*+0x66c0&gt;
+</span><span style="color:#007f7f"></span>   <span style="color:#ff0;font-weight:bold">90040</span>:       <span style="color:#ff0;font-weight:bold">00513423</span>                sd      t0,<span style="color:#ff0;font-weight:bold">8</span>(sp)
+   <span style="color:#f00">90044:</span>       ff58a0ef                jal     ra,<span style="color:#ff0;font-weight:bold">1b038</span> &lt;runtime.newobject&gt;
+   <span style="color:#f00">90048:</span>       <span style="color:#f00">01013283</span>                ld      t0,<span style="color:#ff0;font-weight:bold">16</span>(sp)
+   <span style="color:#f00">9004</span>c:       <span style="color:#f00">02513023</span>                sd      t0,<span style="color:#ff0;font-weight:bold">32</span>(sp)
+   <span style="color:#f00">90050:</span>       <span style="color:#f00">00100313</span>                li      t1,<span style="color:#ff0;font-weight:bold">1</span>
+   <span style="color:#f00">90054:</span>       <span style="color:#f00">0062</span>b023                sd      t1,<span style="color:#ff0;font-weight:bold">0</span>(t0)
+   <span style="color:#f00">90058:</span>       <span style="color:#f00">000</span>e5297                auipc   t0,<span style="color:#ff0;font-weight:bold">0xe5</span>
+   <span style="color:#f00">9005</span>c:       <span style="color:#f00">2</span>b82e283                lwu     t0,<span style="color:#ff0;font-weight:bold">696</span>(t0) <span style="color:#007f7f"># 175310 &lt;runtime.writeBarrier&gt;
+</span><span style="color:#007f7f"></span>   <span style="color:#ff0;font-weight:bold">90060</span>:       <span style="color:#ff0;font-weight:bold">02013303</span>                ld      t1,<span style="color:#ff0;font-weight:bold">32</span>(sp)
+   <span style="color:#f00">90064:</span>       <span style="color:#f00">00028463</span>                beqz    t0,<span style="color:#ff0;font-weight:bold">9006c</span> &lt;main.first+<span style="color:#ff0;font-weight:bold">0x4c</span>&gt;
+   <span style="color:#f00">90068:</span>       <span style="color:#f00">0100006</span>f                j       <span style="color:#ff0;font-weight:bold">90078</span> &lt;main.first+<span style="color:#ff0;font-weight:bold">0x58</span>&gt;
+   <span style="color:#f00">9006</span>c:       <span style="color:#f00">000</span>b8f97                auipc   t6,<span style="color:#ff0;font-weight:bold">0xb8</span>
+   <span style="color:#f00">90070:</span>       <span style="color:#f00">086</span>fba23                sd      t1,<span style="color:#ff0;font-weight:bold">148</span>(t6) <span style="color:#007f7f"># 148100 &lt;main.g&gt;
+</span><span style="color:#007f7f"></span>   <span style="color:#ff0;font-weight:bold">90074</span>:       <span style="color:#ff0;font-weight:bold">0140006</span>f                j       <span style="color:#ff0;font-weight:bold">90088</span> &lt;main.first+<span style="color:#ff0;font-weight:bold">0x68</span>&gt;
+   <span style="color:#f00">90078:</span>       <span style="color:#f00">000</span>b8297                auipc   t0,<span style="color:#ff0;font-weight:bold">0xb8</span>
+   <span style="color:#f00">9007</span>c:       <span style="color:#f00">08828293</span>                addi    t0,t0,<span style="color:#ff0;font-weight:bold">136</span> <span style="color:#007f7f"># 148100 &lt;main.g&gt;
+</span><span style="color:#007f7f"></span>   <span style="color:#ff0;font-weight:bold">90080</span>:       ff1db0ef                jal     ra,<span style="color:#ff0;font-weight:bold">6c070</span> &lt;runtime.gcWriteBarrier&gt;
+   <span style="color:#f00">90084:</span>       <span style="color:#f00">0040006</span>f                j       <span style="color:#ff0;font-weight:bold">90088</span> &lt;main.first+<span style="color:#ff0;font-weight:bold">0x68</span>&gt;
+   <span style="color:#f00">90088:</span>       <span style="color:#f00">00013083</span>                ld      ra,<span style="color:#ff0;font-weight:bold">0</span>(sp)
+   <span style="color:#f00">9008</span>c:       <span style="color:#f00">02810113</span>                addi    sp,sp,<span style="color:#ff0;font-weight:bold">40</span>
+   <span style="color:#f00">90090:</span>       <span style="color:#f00">00008067</span>                ret
+   <span style="color:#f00">90094:</span>       <span style="color:#f00">0000</span>                    unimp
+        <span style="color:#007f7f">...</span>
+
+<span style="color:#f00">0000000000090098</span> <span style="color:#f00">&lt;</span>main.second<span style="color:#f00">&gt;</span>:
+   <span style="color:#f00">90098:</span>       <span style="color:#f00">010</span>db503                ld      a0,<span style="color:#ff0;font-weight:bold">16</span>(s11)
+   <span style="color:#f00">9009</span>c:       <span style="color:#f00">00256663</span>                bltu    a0,sp,<span style="color:#ff0;font-weight:bold">900a8</span> &lt;main.second+<span style="color:#ff0;font-weight:bold">0x10</span>&gt;
+   <span style="color:#f00">900</span>a0:       a50da2ef                jal     t0,<span style="color:#ff0;font-weight:bold">6a2f0</span> &lt;runtime.morestack_noctxt&gt;
+   <span style="color:#f00">900</span>a4:       ff5ff06f                j       <span style="color:#ff0;font-weight:bold">90098</span> &lt;main.second&gt;
+   <span style="color:#f00">900</span>a8:       fe113823                sd      ra,-<span style="color:#ff0;font-weight:bold">16</span>(sp)
+   <span style="color:#f00">900</span>ac:       ff010113                addi    sp,sp,-<span style="color:#ff0;font-weight:bold">16</span>
+   <span style="color:#f00">900</span>b0:       <span style="color:#f00">00200293</span>                li      t0,<span style="color:#ff0;font-weight:bold">2</span>
+   <span style="color:#f00">900</span>b4:       <span style="color:#f00">00513423</span>                sd      t0,<span style="color:#ff0;font-weight:bold">8</span>(sp)
+   <span style="color:#f00">900</span>b8:       <span style="color:#f00">00013083</span>                ld      ra,<span style="color:#ff0;font-weight:bold">0</span>(sp)
+   <span style="color:#f00">900</span>bc:       <span style="color:#f00">01010113</span>                addi    sp,sp,<span style="color:#ff0;font-weight:bold">16</span>
+   <span style="color:#f00">900</span>c0:       <span style="color:#f00">00008067</span>                ret
+   <span style="color:#f00">900</span>c4:       <span style="color:#f00">0000</span>                    unimp
+        <span style="color:#007f7f">...</span>
+
+</code></pre></div><blockquote>
+<p>Note: <code>&lt;main.main&gt;</code> is omitted above for brevity as we are primarily
+interested in the difference between what is happening in <code>&lt;main.first&gt;</code> and
+<code>&lt;main.second&gt;</code>.</p>
+</blockquote>
+<p>There is a lot more going on in <code>first()</code> and <code>second()</code> than in our original C
+program, but we still see some of the same operations, such as growing (e.g.
+<code>90034</code>, <code>900ac</code>) and shrinking (e.g. <code>9008c</code>, <code>900bc</code>) the stack frame by
+changing the address in <code>sp</code>. A notable difference exists in the function
+prologue, which includes a check (e.g. <code>90024</code>, <code>9009c</code>) comparing the stack
+pointer (<code>sp</code>) to what is the current goroutine&rsquo;s &ldquo;stack guard&rdquo; (i.e.
+<code>16(s11)</code>). This check is what determines whether we need to dynamically grow
+the goroutine stack via a call to <code>runtime.morestack</code>.</p>
+<p>However, what we primarily care about for the purposes of this post is the
+following instructions in <code>first()</code>:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-asm" data-lang="asm">
+   <span style="color:#f00">90038:</span>       <span style="color:#f00">00016297</span>                auipc   t0,<span style="color:#ff0;font-weight:bold">0x16</span>
+   <span style="color:#f00">9003</span>c:       <span style="color:#f00">68828293</span>                addi    t0,t0,<span style="color:#ff0;font-weight:bold">1672</span> <span style="color:#007f7f"># a66c0 &lt;type.*+0x66c0&gt;
+</span><span style="color:#007f7f"></span>   <span style="color:#ff0;font-weight:bold">90040</span>:       <span style="color:#ff0;font-weight:bold">00513423</span>                sd      t0,<span style="color:#ff0;font-weight:bold">8</span>(sp)
+   <span style="color:#f00">90044:</span>       ff58a0ef                jal     ra,<span style="color:#ff0;font-weight:bold">1b038</span> &lt;runtime.newobject&gt;
+   <span style="color:#f00">90048:</span>       <span style="color:#f00">01013283</span>                ld      t0,<span style="color:#ff0;font-weight:bold">16</span>(sp)
+   <span style="color:#f00">9004</span>c:       <span style="color:#f00">02513023</span>                sd      t0,<span style="color:#ff0;font-weight:bold">32</span>(sp)
+   <span style="color:#f00">90050:</span>       <span style="color:#f00">00100313</span>                li      t1,<span style="color:#ff0;font-weight:bold">1</span>
+   <span style="color:#f00">90054:</span>       <span style="color:#f00">0062</span>b023                sd      t1,<span style="color:#ff0;font-weight:bold">0</span>(t0)
+
+        <span style="color:#007f7f">...</span>
+
+</code></pre></div><p>In contrast to just loading the value (<code>1</code>) into a register then storing to the
+stack, we are:</p>
+<ol>
+<li>Storing a reference to the type information of the object (<a href="https://github.com/golang/go/blob/f32519e5fbcf1b12f9654a6175e5e72b09ae8f3a/src/runtime/type.go#L35">of type
+<code>*_type</code></a>).
+In this case, the <code>066c0</code> address just points to a value of <code>0x8</code> in memory,
+as the 64-bit integer we are storing has size of <code>8</code> bytes. (instructions:
+<code>90038</code> - <code>9003c</code>).</li>
+<li>Passing that type information (on the stack, more on this in a moment) to
+<code>runtime.newobject</code>
+(<a href="https://github.com/golang/go/blob/f32519e5fbcf1b12f9654a6175e5e72b09ae8f3a/src/runtime/malloc.go#L1191">ref</a>).
+This function ultimately calls <code>runtime.mallocgc</code>
+(<a href="https://github.com/golang/go/blob/f32519e5fbcf1b12f9654a6175e5e72b09ae8f3a/src/runtime/malloc.go#L842">ref</a>),
+which allocates the necessary memory on the heap, and returns an address to
+it. (instructions: <code>90040</code> - <code>90044</code>)</li>
+<li>Loading the value of <code>1</code> into <code>t1</code>, then storing it in memory to the address
+returned from <code>runtime.newobject</code> (which is now in <code>t0</code>). (instructions:
+<code>90048</code> - <code>90054</code>)</li>
+</ol>
+<p>One area of note for us is that Go currently uses a &ldquo;stack-based calling
+convention&rdquo;, meaning that all arguments and return values are passed from one
+procedure to another on the stack. There is work being done to instead utilize
+registers, which modern CPUs can access <em>much</em> faster in many scenarios, as
+described in <a href="https://go.googlesource.com/proposal/+/master/design/40724-register-calling.md">this
+proposal</a>.
+You can read more about <a href="https://danielmangum.com/posts/risc-v-bytes-passing-on-the-stack/">passing on the
+stack</a> in
+RISC-V in an earlier post in the <a href="https://danielmangum.com/categories/risc-v-bytes/">RISC-V Bytes
+series</a>.</p>
+<blockquote>
+<p>Note: it appears that RISC-V support for the register-based calling convention
+<a href="https://github.com/golang/go/issues/40724#issuecomment-1131062687">will be available in Go
+1.19</a>! A
+future post will compare this updated calling convention with the generated
+machine code we are exploring today.</p>
+</blockquote>
+<p>Now that we have stored <code>1</code> on the heap, we need to update the address that <code>g</code>
+contains. This occurs in the subsequent instructions:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-asm" data-lang="asm">
+   <span style="color:#f00">90058:</span>       <span style="color:#f00">000</span>e5297                auipc   t0,<span style="color:#ff0;font-weight:bold">0xe5</span>
+   <span style="color:#f00">9005</span>c:       <span style="color:#f00">2</span>b82e283                lwu     t0,<span style="color:#ff0;font-weight:bold">696</span>(t0) <span style="color:#007f7f"># 175310 &lt;runtime.writeBarrier&gt;
+</span><span style="color:#007f7f"></span>   <span style="color:#ff0;font-weight:bold">90060</span>:       <span style="color:#ff0;font-weight:bold">02013303</span>                ld      t1,<span style="color:#ff0;font-weight:bold">32</span>(sp)
+   <span style="color:#f00">90064:</span>       <span style="color:#f00">00028463</span>                beqz    t0,<span style="color:#ff0;font-weight:bold">9006c</span> &lt;main.first+<span style="color:#ff0;font-weight:bold">0x4c</span>&gt;
+   <span style="color:#f00">90068:</span>       <span style="color:#f00">0100006</span>f                j       <span style="color:#ff0;font-weight:bold">90078</span> &lt;main.first+<span style="color:#ff0;font-weight:bold">0x58</span>&gt;
+   <span style="color:#f00">9006</span>c:       <span style="color:#f00">000</span>b8f97                auipc   t6,<span style="color:#ff0;font-weight:bold">0xb8</span>
+   <span style="color:#f00">90070:</span>       <span style="color:#f00">086</span>fba23                sd      t1,<span style="color:#ff0;font-weight:bold">148</span>(t6) <span style="color:#007f7f"># 148100 &lt;main.g&gt;
+</span><span style="color:#007f7f"></span>   <span style="color:#ff0;font-weight:bold">90074</span>:       <span style="color:#ff0;font-weight:bold">0140006</span>f                j       <span style="color:#ff0;font-weight:bold">90088</span> &lt;main.first+<span style="color:#ff0;font-weight:bold">0x68</span>&gt;
+   <span style="color:#f00">90078:</span>       <span style="color:#f00">000</span>b8297                auipc   t0,<span style="color:#ff0;font-weight:bold">0xb8</span>
+   <span style="color:#f00">9007</span>c:       <span style="color:#f00">08828293</span>                addi    t0,t0,<span style="color:#ff0;font-weight:bold">136</span> <span style="color:#007f7f"># 148100 &lt;main.g&gt;
+</span><span style="color:#007f7f"></span>   <span style="color:#ff0;font-weight:bold">90080</span>:       ff1db0ef                jal     ra,<span style="color:#ff0;font-weight:bold">6c070</span> &lt;runtime.gcWriteBarrier&gt;
+   <span style="color:#f00">90084:</span>       <span style="color:#f00">0040006</span>f                j       <span style="color:#ff0;font-weight:bold">90088</span> &lt;main.first+<span style="color:#ff0;font-weight:bold">0x68</span>&gt;
+   <span style="color:#f00">90088:</span>       <span style="color:#f00">00013083</span>                ld      ra,<span style="color:#ff0;font-weight:bold">0</span>(sp)
+   <span style="color:#f00">9008</span>c:       <span style="color:#f00">02810113</span>                addi    sp,sp,<span style="color:#ff0;font-weight:bold">40</span>
+   <span style="color:#f00">90090:</span>       <span style="color:#f00">00008067</span>                ret
+        <span style="color:#007f7f">...</span>
+
+</code></pre></div><p>This may look confusing at first as it appears there are two different sequences
+that update <code>g</code> (i.e. <code>&lt;main.g&gt;</code>). However, any execution of <code>first()</code> will
+result in only one of these operations being performed, with the deciding factor
+being the state of the garbage collector. If the garbage collector is in either
+the <code>_GCmark</code>
+(<a href="https://github.com/golang/go/blob/8f9bfa9b7b7739324e73b4f19280caa2011e6ae8/src/runtime/mgc.go#L208">ref</a>)
+or <code>_GCmarktermination</code>
+(<a href="https://github.com/golang/go/blob/8f9bfa9b7b7739324e73b4f19280caa2011e6ae8/src/runtime/mgc.go#L209">ref</a>)
+phases the <code>runtime.writeBarrier</code> <code>enabled</code> flag
+(<a href="https://github.com/golang/go/blob/8f9bfa9b7b7739324e73b4f19280caa2011e6ae8/src/runtime/mgc.go#L193">ref</a>)
+<a href="https://github.com/golang/go/blob/8f9bfa9b7b7739324e73b4f19280caa2011e6ae8/src/runtime/mgc.go#L215">will be
+set</a>.
+For our purposes, this just means that we have to inform the garbage collector
+when we are performing certain memory write operations. In this case, we are
+preforming a <a href="https://github.com/golang/go/blob/8f9bfa9b7b7739324e73b4f19280caa2011e6ae8/src/runtime/mbarrier.go#L121">global
+write</a>,
+and we must write through <code>runtime.gcWriteBarrier</code>
+(<a href="https://github.com/golang/go/blob/7ec6ef432a85a390365f2daed788f0d14c830c73/src/runtime/asm_riscv64.s#L720">ref</a>)
+if <code>runtime.writeBarrier.enabled</code> is set.</p>
+<blockquote>
+<p>Note: you can read more about <a href="https://github.com/golang/go/blob/8f9bfa9b7b7739324e73b4f19280caa2011e6ae8/src/runtime/mbarrier.go#L22">write
+barriers</a>
+and the <a href="https://github.com/golang/go/blob/8f9bfa9b7b7739324e73b4f19280caa2011e6ae8/src/runtime/mgc.go#L5">garbage
+collector</a>
+in the heavily documented Go <a href="https://github.com/golang/go/tree/8f9bfa9b7b7739324e73b4f19280caa2011e6ae8/src/runtime">runtime source
+code</a>.</p>
+</blockquote>
+<p>In full, we are performing the following steps:</p>
+<ol>
+<li>Loading <code>runtime.writeBarrier.enabled</code> into <code>t0</code>. (instructions: <code>90058</code> -
+<code>9005c</code>)</li>
+<li>Loading the address in <code>a</code>, which was provided by <code>runtime.newobject</code> and
+stored on the stack, into <code>t1</code>. (instruction: <code>90060</code>)</li>
+<li>Checking whether <code>runtime.writeBarrier.enabled</code> is set. If it is equal to <code>0</code>
+(i.e. not set) then we break (<code>beqz</code>) to the address after the jump (<code>j</code>) in
+the subsequent instruction (<code>90068</code>), and write the address in <code>t1</code> directly
+to <code>g</code> without informing the garbage collector. If the write barrier is
+enabled, we instead proceed to the jump, skipping our direct write, and load
+the address of <code>g</code> into <code>t0</code> and call <code>runtime.gcWriteBarrier</code>.
+(instructions: <code>90064</code> - <code>90084</code>).</li>
+<li>Finally, restoring the return address (<code>ra</code>) and stack pointer (<code>sp</code>) and
+returning. (instructions: <code>90088</code> - <code>90090</code>)</li>
+</ol>
+<blockquote>
+<p>Note: the aforementioned &ldquo;stack-based calling convention&rdquo; is not applied with
+<code>runtime.gcWriteBarrier</code>, which receives the destination write address in
+<code>t0</code>, and the source value in <code>t1</code>. This is called out <a href="https://github.com/golang/go/blob/7ec6ef432a85a390365f2daed788f0d14c830c73/src/runtime/asm_riscv64.s#L722">in the
+implementation</a>.</p>
+</blockquote>
+<p>Because the address in <code>g</code> lives on the heap, we won&rsquo;t encounter the same issue
+we saw in our C program when we subsequently call <code>second()</code> and write <code>2</code> on
+the stack for <code>b</code>. Let&rsquo;s fire up GDB to see this in action.</p>
+<p>Start QEMU:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">$ qemu-riscv64 -g 1234 main
+</code></pre></div><p>Start GDB:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+$ riscv64-unknown-linux-gnu-gdb main -ex &#34;target remote :1234&#34; -ex &#34;break main.first&#34; -ex &#34;break main.second&#34;
+Breakpoint 1 at 0x90044: file /home/dan/code/github.com/hasheddan/blog-code/main.go, line 8.
+Breakpoint 2 at 0x900b0: file /home/dan/code/github.com/hasheddan/blog-code/main.go, line 13.
+(gdb) c
+Continuing.
+[New Thread 1.152910]
+[New Thread 1.152911]
+[New Thread 1.152912]
+[New Thread 1.152913]
+[New Thread 1.152914]
+
+Thread 1 hit Breakpoint 1, 0x0000000000090044 in main.first () at /home/dan/code/github.com/hasheddan/blog-code/main.go:8
+8		a := 1
+(gdb) x/8i $pc
+=&gt; 0x90044 &lt;main.first+36&gt;:	jal	ra,0x1b038 &lt;runtime.newobject&gt;
+   0x90048 &lt;main.first+40&gt;:	ld	t0,16(sp)
+   0x9004c &lt;main.first+44&gt;:	sd	t0,32(sp)
+   0x90050 &lt;main.first+48&gt;:	li	t1,1
+   0x90054 &lt;main.first+52&gt;:	sd	t1,0(t0)
+   0x90058 &lt;main.first+56&gt;:	auipc	t0,0xe5
+   0x9005c &lt;main.first+60&gt;:	lwu	t0,696(t0)
+   0x90060 &lt;main.first+64&gt;:	ld	t1,32(sp)
+(gdb) n
+warning: multi-threaded target stopped without sending a thread-id, using first non-exited thread
+9		g = &amp;a
+(gdb) x/8i $pc
+=&gt; 0x90058 &lt;main.first+56&gt;:	auipc	t0,0xe5
+   0x9005c &lt;main.first+60&gt;:	lwu	t0,696(t0)
+   0x90060 &lt;main.first+64&gt;:	ld	t1,32(sp)
+   0x90064 &lt;main.first+68&gt;:	beqz	t0,0x9006c &lt;main.first+76&gt;
+   0x90068 &lt;main.first+72&gt;:	j	0x90078 &lt;main.first+88&gt;
+   0x9006c &lt;main.first+76&gt;:	auipc	t6,0xb8
+   0x90070 &lt;main.first+80&gt;:	sd	t1,148(t6)
+   0x90074 &lt;main.first+84&gt;:	j	0x90088 &lt;main.first+104&gt;
+(gdb) i r t0 t1
+t0             0xc0000c4000	824634523648
+t1             0x1	1
+(gdb) x /d $t0
+0xc0000c4000:	1
+
+</code></pre></div><p>So far we have seen that <code>runtime.newobject</code> did in fact give us an address on
+the heap, and that we have written <code>1</code> to that address. Next, let&rsquo;s check
+whether <code>runtime.writeBarrier.enabled</code> is set.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+(gdb) si
+0x000000000009005c	9		g = &amp;a
+(gdb) si
+0x0000000000090060	9		g = &amp;a
+(gdb) i r t0
+t0             0x0	0
+
+</code></pre></div><p>Because the write barrier is not enabled (i.e. <code>t0</code> = <code>0</code>), we should break and
+write directly to <code>g</code>.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+(gdb) x/8i $pc
+=&gt; 0x90060 &lt;main.first+64&gt;:	ld	t1,32(sp)
+   0x90064 &lt;main.first+68&gt;:	beqz	t0,0x9006c &lt;main.first+76&gt;
+   0x90068 &lt;main.first+72&gt;:	j	0x90078 &lt;main.first+88&gt;
+   0x9006c &lt;main.first+76&gt;:	auipc	t6,0xb8
+   0x90070 &lt;main.first+80&gt;:	sd	t1,148(t6)
+   0x90074 &lt;main.first+84&gt;:	j	0x90088 &lt;main.first+104&gt;
+   0x90078 &lt;main.first+88&gt;:	auipc	t0,0xb8
+   0x9007c &lt;main.first+92&gt;:	addi	t0,t0,136
+(gdb) si
+0x0000000000090064	9		g = &amp;a
+(gdb) si
+9		g = &amp;a
+(gdb) x/8i $pc
+=&gt; 0x9006c &lt;main.first+76&gt;:	auipc	t6,0xb8
+   0x90070 &lt;main.first+80&gt;:	sd	t1,148(t6)
+   0x90074 &lt;main.first+84&gt;:	j	0x90088 &lt;main.first+104&gt;
+   0x90078 &lt;main.first+88&gt;:	auipc	t0,0xb8
+   0x9007c &lt;main.first+92&gt;:	addi	t0,t0,136
+   0x90080 &lt;main.first+96&gt;:	jal	ra,0x6c070 &lt;runtime.gcWriteBarrier&gt;
+   0x90084 &lt;main.first+100&gt;:	j	0x90088 &lt;main.first+104&gt;
+   0x90088 &lt;main.first+104&gt;:	ld	ra,0(sp)
+
+</code></pre></div><p>And we do! Finally, let&rsquo;s continue to <code>second()</code> and take a look at the stack
+address that <code>2</code> is written to.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+(gdb) c
+Continuing.
+
+Thread 1 hit Breakpoint 2, 0x00000000000900b0 in main.second () at /home/dan/code/github.com/hasheddan/blog-code/main.go:13
+13		b := 2
+(gdb) x/8i $pc
+=&gt; 0x900b0 &lt;main.second+24&gt;:	li	t0,2
+   0x900b4 &lt;main.second+28&gt;:	sd	t0,8(sp)
+   0x900b8 &lt;main.second+32&gt;:	ld	ra,0(sp)
+   0x900bc &lt;main.second+36&gt;:	addi	sp,sp,16
+   0x900c0 &lt;main.second+40&gt;:	ret
+   0x900c4:	unimp
+   0x900c6:	unimp
+   0x900c8 &lt;main.main&gt;:	ld	a0,16(s11)
+(gdb) si
+13		b := 2
+(gdb) si
+16	}
+(gdb) x /d $sp+8
+0xc0000aaf00:	2
+
+</code></pre></div><p>Here we are able to safely write to the stack because the compiler is able to
+determine that we don&rsquo;t have any references that outlive <code>second()</code>.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../static/risc_v_stack_uar_4.png"
+    alt="risc-v-stack-uar-4"
+  />
+</div>
+<blockquote>
+<p>Description: visualization of <code>first()</code> and <code>second()</code>, showing that the
+address in <code>g</code> is safely on the heap where it will not be impacted by the
+write of <code>2</code> to the stack in <code>second()</code>.</p>
+</blockquote>
+<h2 id="how-does-rust-handle-this">How does Rust handle this?</h2>
+<p>Go, and other garbage collected languages, provide immense value to the
+programmer by protecting them from making potentially catastrophic memory
+management mistakes, but that protection comes at a cost. Generally speaking,
+writing to the heap is going to be more expensive that writing to the stack, and
+we also must accommodate for the scenarios where we are trying to write but the
+garbage collector is running.</p>
+<blockquote>
+<p>In reality, there are additional penalties that one must pay for garbage
+collection that we have not explored here, but we&rsquo;ll save those for another
+day.</p>
+</blockquote>
+<p>Rust takes a different approach, providing similar (or stronger, as we&rsquo;ll see in
+a moment) guarantees, but imposing a greater burden on the programmer, rather
+than the language runtime. Fortunately, the rust compiler provides very helpful
+error messages to help us understand why the operation we are trying to perform
+may lead to undesirable behavior. This is exemplified if we try to reproduce a
+program that looks similar to our C and Go implementations.</p>
+<p><code>main.rs</code></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust">
+<span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">mut</span> G: <span style="color:#fff;font-weight:bold">&amp;</span><span style="color:#fff;font-weight:bold">i32</span> = &amp;<span style="color:#ff0;font-weight:bold">0</span>;
+
+<span style="color:#fff;font-weight:bold">fn</span> first() {
+    <span style="color:#fff;font-weight:bold">let</span> a = <span style="color:#ff0;font-weight:bold">1</span>;
+    G = &amp;a;
+}
+
+<span style="color:#fff;font-weight:bold">fn</span> second() {
+    <span style="color:#fff;font-weight:bold">let</span> _b: <span style="color:#fff;font-weight:bold">i64</span> = <span style="color:#ff0;font-weight:bold">2</span>;
+}
+
+<span style="color:#fff;font-weight:bold">fn</span> main() {
+    first();
+    second();
+    println!(<span style="color:#0ff;font-weight:bold">&#34;{}&#34;</span>, *G)
+}
+
+</code></pre></div><p>Attempting to compile this program results in three errors:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+$ cargo build
+   Compiling blog-code v0.1.0 (/home/dan/code/github.com/hasheddan/blog-code)
+error[E0597]: `a` does not live long enough
+ --&gt; main.rs:5:9
+  |
+5 |     G = &amp;a;
+  |     ----^^
+  |     |   |
+  |     |   borrowed value does not live long enough
+  |     assignment requires that `a` is borrowed for `&#39;static`
+6 | }
+  | - `a` dropped here while still borrowed
+
+error[E0133]: use of mutable static is unsafe and requires unsafe function or block
+ --&gt; main.rs:5:5
+  |
+5 |     G = &amp;a;
+  |     ^^^^^^ use of mutable static
+  |
+  = note: mutable statics can be mutated by multiple threads: aliasing violations or data races will cause undefined behavior
+
+error[E0133]: use of mutable static is unsafe and requires unsafe function or block
+  --&gt; main.rs:15:20
+   |
+15 |     println!(&#34;{}&#34;, *G)
+   |                    ^^ use of mutable static
+   |
+   = note: mutable statics can be mutated by multiple threads: aliasing violations or data races will cause undefined behavior
+
+</code></pre></div><blockquote>
+<p>Rust Version: 1.58.0</p>
+</blockquote>
+<blockquote>
+<p>Note: for more information on how to cross-compile Rust programs for RISC-V,
+check out this <a href="https://danielmangum.com/posts/risc-v-bytes-rust-cross-compilation/">earlier
+post</a> in
+the <a href="https://danielmangum.com/categories/risc-v-bytes/">RISC-V Bytes series</a>.</p>
+</blockquote>
+<p>The second two are more obvious than the first, and actually happen to be the
+same error (<code>error[E0133]</code>) in two different locations. Fortunately, the
+compiler tells us exactly what is wrong: &ldquo;use of mutable static is unsafe and
+requires unsafe function or block&rdquo;. This is an important, and sometimes
+overlooked, distinction of Rust compared to other &ldquo;memory safe&rdquo; languages such
+as Go. While Go protected us from implicitly overwriting memory, it did not
+protect us from mutating a global variable (variables with <code>'static</code> lifetimes
+outlive all other lifetimes), which, as the additional note in our Rust compiler
+error states, can lead to complex and dangerous bugs in multi-threaded programs.</p>
+<p>However, Rust doesn&rsquo;t say that we just can&rsquo;t use mutable static variables. In
+fact, <a href="https://doc.rust-lang.org/reference/items/static-items.html#mutable-statics">the
+documentation</a>
+points out that mutable statics &ldquo;are still very useful&rdquo;, especially when
+integrating with C libraries. What Rust does force us to do is denote that their
+usage is <code>unsafe</code>, making it quite obvious that the block of code should be
+handled with care. Let&rsquo;s update our program as instructed and recompile.</p>
+<p><code>main.rs</code></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust">
+<span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">mut</span> G: <span style="color:#fff;font-weight:bold">&amp;</span><span style="color:#fff;font-weight:bold">i32</span> = &amp;<span style="color:#ff0;font-weight:bold">0</span>;
+
+<span style="color:#fff;font-weight:bold">fn</span> first() {
+    <span style="color:#fff;font-weight:bold">let</span> a = <span style="color:#ff0;font-weight:bold">1</span>;
+    <span style="color:#fff;font-weight:bold">unsafe</span> {
+        G = &amp;a;
+    }
+}
+
+<span style="color:#fff;font-weight:bold">fn</span> second() {
+    <span style="color:#fff;font-weight:bold">let</span> _b: <span style="color:#fff;font-weight:bold">i64</span> = <span style="color:#ff0;font-weight:bold">2</span>;
+}
+
+<span style="color:#fff;font-weight:bold">fn</span> main() {
+    first();
+    second();
+    <span style="color:#fff;font-weight:bold">unsafe</span> {
+        println!(<span style="color:#0ff;font-weight:bold">&#34;{}&#34;</span>, *G)
+    }
+}
+
+</code></pre></div><div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+$ cargo build
+   Compiling blog-code v0.1.0 (/home/dan/code/github.com/hasheddan/blog-code)
+error[E0597]: `a` does not live long enough
+ --&gt; main.rs:6:13
+  |
+6 |         G = &amp;a;
+  |         ----^^
+  |         |   |
+  |         |   borrowed value does not live long enough
+  |         assignment requires that `a` is borrowed for `&#39;static`
+7 |     }
+8 | }
+  | - `a` dropped here while still borrowed
+
+</code></pre></div><p>Despite wrapping our assignment in an unsafe block, our first error persists,
+illustrating another subtle benefit of Rust: writing <em>some</em> <code>unsafe</code> code does
+not make the entire program unsafe. If this error was eliminated by our <code>unsafe</code>
+block, we would still be susceptible to our use after return bug. However, the
+compiler continues enforcing the lifetime constraints of the language here,
+meaning that if <code>a</code> is to be borrowed by something that lives for a <code>'static</code>
+lifetime, it must also have a <code>'static</code> lifetime. Adding the suggested lifetime
+annotation not only allows us to compile successfully, but also ensures that <code>a</code>
+does not live on the stack, meaning that a future procedure cannot overwrite its
+value in memory.</p>
+<p><code>main.rs</code></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-rust" data-lang="rust">
+<span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">mut</span> G: <span style="color:#fff;font-weight:bold">&amp;</span><span style="color:#fff;font-weight:bold">i32</span> = &amp;<span style="color:#ff0;font-weight:bold">0</span>;
+
+<span style="color:#fff;font-weight:bold">fn</span> first() {
+    <span style="color:#fff;font-weight:bold">let</span> a: <span style="color:#fff;font-weight:bold">&amp;</span><span style="color:#fff;font-weight:bold">&#39;static</span> <span style="color:#fff;font-weight:bold">i32</span> = &amp;<span style="color:#ff0;font-weight:bold">1</span>;
+    <span style="color:#fff;font-weight:bold">unsafe</span> {
+        G = &amp;a;
+    }
+}
+
+<span style="color:#fff;font-weight:bold">fn</span> second() {
+    <span style="color:#fff;font-weight:bold">let</span> _b: <span style="color:#fff;font-weight:bold">i64</span> = <span style="color:#ff0;font-weight:bold">2</span>;
+}
+
+<span style="color:#fff;font-weight:bold">fn</span> main() {
+    first();
+    second();
+    <span style="color:#fff;font-weight:bold">unsafe</span> {
+        println!(<span style="color:#0ff;font-weight:bold">&#34;{}&#34;</span>, *G)
+    }
+}
+
+</code></pre></div><div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+$ cargo build
+    Finished dev [unoptimized + debuginfo] target(s) in 0.00s
+
+</code></pre></div><p>Running our program will result in the expected output of <code>1</code>:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+$ ./target/riscv64gc-unknown-linux-gnu/debug/blog-code 
+1
+
+</code></pre></div><p>For completeness, let&rsquo;s dump the machine code and bring out GDB to see what is
+actually being executed.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-asm" data-lang="asm">
+<span style="color:#f00">000000000001234</span>a <span style="color:#f00">&lt;</span>_ZN9blog_code5first17h704821ce71949405E<span style="color:#f00">&gt;</span>:
+   <span style="color:#f00">1234</span>a:       <span style="color:#f00">1141</span>                    addi    sp,sp,-<span style="color:#ff0;font-weight:bold">16</span>
+   <span style="color:#f00">1234</span>c:       <span style="color:#f00">00078517</span>                auipc   a0,<span style="color:#ff0;font-weight:bold">0x78</span>
+   <span style="color:#f00">12350:</span>       ae850513                addi    a0,a0,-<span style="color:#ff0;font-weight:bold">1304</span> <span style="color:#007f7f"># 89e34 &lt;buffer_free+0x32&gt;
+</span><span style="color:#007f7f"></span>   <span style="color:#ff0;font-weight:bold">12354</span>:       e42a                    sd      a0,<span style="color:#ff0;font-weight:bold">8</span>(sp)
+   <span style="color:#f00">12356:</span>       <span style="color:#f00">000</span>ab597                auipc   a1,<span style="color:#ff0;font-weight:bold">0xab</span>
+   <span style="color:#f00">1235</span>a:       <span style="color:#f00">78</span>a58593                addi    a1,a1,<span style="color:#ff0;font-weight:bold">1930</span> <span style="color:#007f7f"># bdae0 &lt;_ZN9blog_code1G17hdf4e2a24b3404040E&gt;
+</span><span style="color:#007f7f"></span>   <span style="color:#ff0;font-weight:bold">1235</span>e:       e188                    sd      a0,<span style="color:#ff0;font-weight:bold">0</span>(a1)
+   <span style="color:#f00">12360:</span>       <span style="color:#f00">0141</span>                    addi    sp,sp,<span style="color:#ff0;font-weight:bold">16</span>
+   <span style="color:#f00">12362:</span>       <span style="color:#f00">8082</span>                    ret
+
+<span style="color:#f00">0000000000012364</span> <span style="color:#f00">&lt;</span>_ZN9blog_code6second17h0dfb1109f83f0614E<span style="color:#f00">&gt;</span>:
+   <span style="color:#f00">12364:</span>       <span style="color:#f00">1141</span>                    addi    sp,sp,-<span style="color:#ff0;font-weight:bold">16</span>
+   <span style="color:#f00">12366:</span>       <span style="color:#f00">4509</span>                    li      a0,<span style="color:#ff0;font-weight:bold">2</span>
+   <span style="color:#f00">12368:</span>       e42a                    sd      a0,<span style="color:#ff0;font-weight:bold">8</span>(sp)
+   <span style="color:#f00">1236</span>a:       <span style="color:#f00">0141</span>                    addi    sp,sp,<span style="color:#ff0;font-weight:bold">16</span>
+   <span style="color:#f00">1236</span>c:       <span style="color:#f00">8082</span>                    ret
+
+</code></pre></div><blockquote>
+<p>What are those funky symbols for <code>first()</code> and <code>second()</code>? They are the result
+of <a href="https://en.wikipedia.org/wiki/Name_mangling">name mangling</a>, which allows
+languages to avoid symbol name conflicts when supporting features such as
+generics. You can read more about the <code>legacy</code> and <code>v0</code> name mangling schemes
+in Rust in the <a href="https://rust-lang.github.io/rfcs/2603-rust-symbol-name-mangling-v0.html">v0
+RFC</a>.</p>
+</blockquote>
+<p>This looks much more similar to our original C program, and we once again see
+our familiar function prologue and epilogue. However, we also see that <code>first()</code>
+and <code>second()</code> differ in that <code>first()</code> loads the address containing <code>1</code>
+(<code>0x89e34</code>), which is known at compile time, into <code>a0</code>, stores it on the stack
+(which could be omitted in an optimized build), then updates <code>G</code> (<code>0xbdae0</code>) to
+point to it. <code>G</code> now contains an address that is not part of the stack (the
+address of <code>a</code> is actually in <code>.rodata</code>), so even though <code>second()</code> sets up a
+<code>16</code> byte stack frame and writes <code>2</code> to <code>8(sp)</code>, it will not impact the value
+that <code>G</code> points to. We can see this in action in our debugger.</p>
+<p>Start QEMU:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">$ qemu-riscv64 -g 1234 target/riscv64gc-unknown-linux-gnu/debug/blog-code
+</code></pre></div><p>Start GDB:</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+$ riscv64-unknown-linux-gnu-gdb target/riscv64gc-unknown-linux-gnu/debug/blog-code -ex &#34;target remote :1234&#34; -ex &#34;break first&#34; -ex &#34;break second&#34;
+(gdb) c
+Continuing.
+
+Breakpoint 1, blog_code::first () at main.rs:4
+4	    let a: &amp;&#39;static i32 = &amp;1;
+(gdb) x/8i $pc
+=&gt; 0x1234c &lt;_ZN9blog_code5first17h704821ce71949405E+2&gt;:	auipc	a0,0x78
+   0x12350 &lt;_ZN9blog_code5first17h704821ce71949405E+6&gt;:	addi	a0,a0,-1304
+   0x12354 &lt;_ZN9blog_code5first17h704821ce71949405E+10&gt;:	sd	a0,8(sp)
+   0x12356 &lt;_ZN9blog_code5first17h704821ce71949405E+12&gt;:	auipc	a1,0xab
+   0x1235a &lt;_ZN9blog_code5first17h704821ce71949405E+16&gt;:	addi	a1,a1,1930
+   0x1235e &lt;_ZN9blog_code5first17h704821ce71949405E+20&gt;:	sd	a0,0(a1)
+   0x12360 &lt;_ZN9blog_code5first17h704821ce71949405E+22&gt;:	addi	sp,sp,16
+   0x12362 &lt;_ZN9blog_code5first17h704821ce71949405E+24&gt;:	ret
+(gdb) si
+0x0000000000012350	4	    let a: &amp;&#39;static i32 = &amp;1;
+(gdb) si
+0x0000000000012354	4	    let a: &amp;&#39;static i32 = &amp;1;
+(gdb) i r a0
+a0             0x89e34	564788
+(gdb) x /d 0x89e34
+0x89e34:	1
+(gdb) si
+6	        G = &amp;a;
+(gdb) si
+0x000000000001235a	6	        G = &amp;a;
+(gdb) si
+0x000000000001235e	6	        G = &amp;a;
+(gdb) i r a1
+a1             0xbdae0	776928
+(gdb) si
+8	}
+(gdb) x /x 0xbdae0
+0xbdae0 &lt;_ZN9blog_code1G17hdf4e2a24b3404040E&gt;:	0x00089e34
+
+</code></pre></div><p>After stepping through the body of <code>first()</code> we see that <code>G</code> (<code>0xbdae0</code>)
+contains <code>0x00089e34</code>, which contains the value <code>1</code>. If we also step through
+<code>second()</code>, we can see that all it does is write <code>2</code> to the stack.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+(gdb) c
+Continuing.
+
+Breakpoint 2, blog_code::second () at main.rs:11
+11	    let _b: i64 = 2;
+(gdb) x/8i $pc
+=&gt; 0x12368 &lt;_ZN9blog_code6second17h0dfb1109f83f0614E+4&gt;:	sd	a0,8(sp)
+   0x1236a &lt;_ZN9blog_code6second17h0dfb1109f83f0614E+6&gt;:	addi	sp,sp,16
+   0x1236c &lt;_ZN9blog_code6second17h0dfb1109f83f0614E+8&gt;:	ret
+   0x1236e &lt;_ZN9blog_code4main17h71d262632147b946E&gt;:	addi	sp,sp,-112
+   0x12370 &lt;_ZN9blog_code4main17h71d262632147b946E+2&gt;:	sd	ra,104(sp)
+   0x12372 &lt;_ZN9blog_code4main17h71d262632147b946E+4&gt;:	auipc	ra,0x0
+   0x12376 &lt;_ZN9blog_code4main17h71d262632147b946E+8&gt;:	jalr	-40(ra)
+   0x1237a &lt;_ZN9blog_code4main17h71d262632147b946E+12&gt;:	j	0x1237c &lt;_ZN9blog_code4main17h71d262632147b946E+14&gt;
+(gdb) si
+12	}
+(gdb) x /d $sp+8
+0x40007ffbe8:	2
+
+</code></pre></div><p>This is similar to what we saw in our example Go program, though instead of
+writing <code>1</code> to the heap, the compiler has already placed it at a known address
+in the binary, so all that <code>first()</code> needs to do is update <code>G</code> to point to it.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../static/risc_v_stack_uar_5.png"
+    alt="risc-v-stack-uar-5"
+  />
+</div>
+<blockquote>
+<p>Description: visualization of <code>first()</code> and <code>second()</code>, showing that <code>1</code>
+already exists in memory outside of the segment used for the stack.</p>
+</blockquote>
+<p>While using a mutable static in this way is still likely not recommended in most
+scenarios, Rust provides some useful features to do so safely where possible,
+and explicitly where not.</p>
+<h2 id="concluding-thoughts">Concluding Thoughts</h2>
+<p>The example programs in this post (hopefully) do not resemble programs we write
+on a day-to-day basis, but they serve as useful illustrations of the approach
+each language takes to mitigate (or not) a certain class of bugs. Peeking behind
+the scenes at the compiler-generated machine code can bring to life some of the
+more abstract features of a language. In this post, diving into each binary
+exposed concepts related to garbage collection, escape analysis, lifetimes,
+mutability, and more.</p>
+<p>As always, these posts are meant to serve as a useful resource for folks who are
+interested in learning more about RISC-V and low-level software in general. If I
+can do a better job of reaching that goal, or you have any questions or
+comments, please feel free to send me a message
+<a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter!</p>
+
+  </article>
+
+  <br/>
+
+  
+  
+</section>
+
+      </div>
+
+      <footer class="footer">
+  <section class="container">
+     © 2022  
+  </section>
+</footer>
+
+    </main>
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+
+  </body>
+
+</html>
