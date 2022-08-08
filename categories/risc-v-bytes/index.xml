@@ -6,10 +6,20 @@
     <description>Recent content in RISC-V Bytes on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 01 Aug 2022 00:10:34 -0600</lastBuildDate>
+    <lastBuildDate>Mon, 08 Aug 2022 00:10:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/categories/risc-v-bytes/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>RISC-V Bytes: Go 1.19&#39;s Register-Based Calling Convention</title>
+      <link>https://danielmangum.com/posts/risc-v-bytes-go-1-19-register-calling/</link>
+      <pubDate>Mon, 08 Aug 2022 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/risc-v-bytes-go-1-19-register-calling/</guid>
+      <description>In our last post in the RISC-V Bytes series, I briefly alluded to the proposal to switch the Go Application Binary Interface (ABI) from a stack-based calling convention to a register-based calling convention. I also mentioned that it appeared at that time that the RISC-V port would support the new calling convention as early as Go 1.19.
+Last week, Go 1.19 was officially released, and sure enough, tucked in the release notes was a section mentioning that the riscv64 port now supports passing arguments and results using registers.</description>
+    </item>
     
     <item>
       <title>RISC-V Bytes: Stack Use After Return in C, Go, and Rust</title>

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="author" content="Daniel Mangum">
+    <meta name="description" content="Daniel Mangum&#39;s personal website">
+    <meta name="keywords" content="blog,developer,personal">
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@hasheddan" />
+    <meta name="twitter:title" content="RISC-V Bytes: Go 1.19&#39;s Register-Based Calling Convention"/>
+    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
+
+    <base href="https://danielmangum.com">
+    <title>
+  RISC-V Bytes: Go 1.19&#39;s Register-Based Calling Convention · Daniel Mangum
+</title>
+
+    <link rel="canonical" href="https://danielmangum.com/posts/risc-v-bytes-go-1-19-register-calling/">
+
+    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
+    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
+    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
+
+    
+
+    
+      <link rel="stylesheet" href="https://danielmangum.com/css/custom.css">
+    
+
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+    
+
+    <meta name="generator" content="Hugo 0.68.3" />
+  </head>
+
+  <body class="">
+    <main class="wrapper">
+      <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com">
+      Daniel Mangum
+    </a>
+    
+    <ul class="navigation-list  float-right ">
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+      </li>
+      
+      <li class="navigation-item">
+        <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+      </li>
+      
+    </ul>
+    
+  </section>
+</nav>
+
+
+      <div class="content">
+        
+  <section class="container post">
+  <article>
+    <header>
+      <h1 class="title">RISC-V Bytes: Go 1.19&#39;s Register-Based Calling Convention</h1>
+      <h2 class="date">August 8, 2022</h2>
+      <style>
+        .twitter-tweet-rendered {
+          display:block;
+          margin-left:auto;
+          margin-right:auto;
+        }
+      </style>
+
+      
+    </header>
+
+    <p>In our <a href="https://danielmangum.com/posts/risc-v-bytes-stack-use-after-return/">last
+post</a> in
+the <a href="https://danielmangum.com/categories/risc-v-bytes/">RISC-V Bytes</a> series, I
+briefly alluded to the
+<a href="https://go.googlesource.com/proposal/+/master/design/40724-register-calling.md">proposal</a>
+to switch the Go <a href="https://en.wikipedia.org/wiki/Application_binary_interface">Application Binary Interface
+(ABI)</a> from a
+<a href="https://danielmangum.com/posts/risc-v-bytes-passing-on-the-stack/">stack-based calling
+convention</a>
+to a register-based calling convention. I also mentioned that it <a href="https://github.com/golang/go/issues/40724#issuecomment-1131062687">appeared at
+that time</a>
+that the RISC-V port would support the new calling convention as early as Go
+1.19.</p>
+<p>Last week, <a href="https://go.dev/blog/go1.19">Go 1.19 was officially released</a>, and
+sure enough, tucked in the <a href="https://tip.golang.org/doc/go1.19#riscv64">release
+notes</a> was a section mentioning that
+the <code>riscv64</code> port now supports passing arguments and results using registers.
+Go 1.19 is notably lighter than the <a href="https://tip.golang.org/doc/go1.18">1.18
+release</a>, which included the <a href="https://go.googlesource.com/proposal/+/refs/heads/master/design/43651-type-parameters.md">long-awaited
+support for
+generics</a>,
+but even with the lack of major new features, the RISC-V calling convention
+change seemed to, anecdotally, garner less attention than other updates. Perhaps
+this is due to the lack of available hardware for running meaningful RISC-V
+programs that would traditionally be written in Go (i.e. programs that run in
+userspace), or perhaps it is less newsworthy due to the fact that Go 1.17
+initially <a href="https://tip.golang.org/doc/go1.17#compiler">added support for the register-based calling
+convention</a> on <code>linux/amd64</code>,
+<code>darwin/amd64</code>, and <code>windows/amd64</code>, and 1.18 expanded to all operating systems
+for <code>amd64</code>, <code>arm64</code>, <code>ppc64</code>, and <code>ppc64le</code>. Needless to say, it is hardly a
+new feature.</p>
+<p>However, readers of this series are likely more interested in RISC-V than the
+average Go user, and I haven&rsquo;t seen any in-depth comparison of the calling
+convention before and after this change, so we are going to dedicate this post
+to diving in!</p>
+<h2 id="getting-set-up">Getting Set Up</h2>
+<p>Before we get started, we need to ensure we have Go 1.18 and Go 1.19 both
+installed on our system. Fortunately, Go makes it very easy to <a href="https://go.dev/doc/manage-install">manage multiple
+installed versions</a>. The following commands
+will download <code>go1.18.5</code>, the latest patch release for 1.18, and <code>go1.19</code>.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
+$ go install golang.org/dl/go1.18.5@latest
+go: downloading golang.org/dl v0.0.0-20220802161245-b76e4016dde5
+$ go1.18.5 download
+Downloaded   0.0% (     3234 / 141855946 bytes) ...
+Downloaded   0.4% (   622592 / 141855946 bytes) ...
+Downloaded  31.5% ( 44629680 / 141855946 bytes) ...
+Downloaded  59.1% ( 83888666 / 141855946 bytes) ...
+Downloaded  82.8% (117442840 / 141855946 bytes) ...
+Downloaded 100.0% (141855946 / 141855946 bytes)
+Unpacking /home/dan/sdk/go1.18.5/go1.18.5.linux-amd64.tar.gz ...
+Success. You may now run &#39;go1.18.5&#39;
+$ go install golang.org/dl/go1.19@latest
+$ go1.19 download
+Downloaded   0.0% (    16384 / 148796421 bytes) ...
+Downloaded  29.3% ( 43597536 / 148796421 bytes) ...
+Downloaded  67.7% (100760832 / 148796421 bytes) ...
+Downloaded 100.0% (148796421 / 148796421 bytes)
+Unpacking /home/dan/sdk/go1.19/go1.19.linux-amd64.tar.gz ...
+Success. You may now run &#39;go1.19&#39;
+
+</code></pre></div><p>For consistency, we&rsquo;ll use the same simple program to demonstrate the
+stack-based and register-based calling conventions.</p>
+<p><code>main.go</code></p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">
+<span style="color:#fff;font-weight:bold">package</span> main
+
+<span style="color:#fff;font-weight:bold">import</span> (
+	<span style="color:#0ff;font-weight:bold">&#34;fmt&#34;</span>
+)
+
+<span style="color:#007f7f">//go:noinline
+</span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">func</span> add(a, b <span style="color:#fff;font-weight:bold">int</span>) <span style="color:#fff;font-weight:bold">int</span> {
+	<span style="color:#fff;font-weight:bold">return</span> a + b
+}
+
+<span style="color:#fff;font-weight:bold">func</span> main() {
+	fmt.Println(add(<span style="color:#ff0;font-weight:bold">1</span>, <span style="color:#ff0;font-weight:bold">2</span>))
+}
+
+</code></pre></div><blockquote>
+<p>Note: we decorate our <code>add()</code> function with <code>//go:noinline</code> because we are
+compiling with optimization and want to demonstrate passing arguments and a
+return value between procedures. Without the directive, the compiler would
+eliminate the overhead of passing data between the two procedures by bringing
+the body of <code>add()</code> into <code>main()</code>.</p>
+</blockquote>
+<h2 id="118-and-stack-based-calling-convention">1.18 and Stack-Based Calling Convention</h2>
+<p>To look at how the stack-based calling convention works in Go 1.18, we need to
+build our program for RISC-V with the <code>go1.18.5</code> version we installed.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">$ GOOS=linux GOARCH=riscv64 go1.18.5 build -o main1.18 main.go
+</code></pre></div><p>Next, we can jump into the disassembled machine code using <code>objdump</code> and <code>less</code>,
+and searching for <code>main.main</code>.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">$ riscv64-unknown-linux-gnu-objdump -D main1.18 | less
+</code></pre></div><p>We should find <code>main.add</code> right before <code>main.main</code> in the dump.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-asm" data-lang="asm">
+<span style="color:#f00">00000000000900</span>c0 <span style="color:#f00">&lt;</span>main.add<span style="color:#f00">&gt;</span>:
+   <span style="color:#f00">900</span>c0:       <span style="color:#f00">00813283</span>                ld      t0,<span style="color:#ff0;font-weight:bold">8</span>(sp)
+   <span style="color:#f00">900</span>c4:       <span style="color:#f00">01013303</span>                ld      t1,<span style="color:#ff0;font-weight:bold">16</span>(sp)
+   <span style="color:#f00">900</span>c8:       <span style="color:#f00">006282</span>b3                add     t0,t0,t1
+   <span style="color:#f00">900</span>cc:       <span style="color:#f00">00513</span>c23                sd      t0,<span style="color:#ff0;font-weight:bold">24</span>(sp)
+   <span style="color:#f00">900</span>d0:       <span style="color:#f00">00008067</span>                ret
+   <span style="color:#f00">900</span>d4:       <span style="color:#f00">0000</span>                    unimp
+        <span style="color:#007f7f">...</span>
+
+<span style="color:#f00">00000000000900</span>d8 <span style="color:#f00">&lt;</span>main.main<span style="color:#f00">&gt;</span>:
+   <span style="color:#f00">900</span>d8:       <span style="color:#f00">010</span>db503                ld      a0,<span style="color:#ff0;font-weight:bold">16</span>(s11)
+   <span style="color:#f00">900</span>dc:       <span style="color:#f00">00256663</span>                bltu    a0,sp,<span style="color:#ff0;font-weight:bold">900e8</span> &lt;main.main+<span style="color:#ff0;font-weight:bold">0x10</span>&gt;
+   <span style="color:#f00">900</span>e0:       b20da2ef                jal     t0,<span style="color:#ff0;font-weight:bold">6a400</span> &lt;runtime.morestack_noctxt&gt;
+   <span style="color:#f00">900</span>e4:       ff5ff06f                j       <span style="color:#ff0;font-weight:bold">900d8</span> &lt;main.main&gt;
+   <span style="color:#f00">900</span>e8:       fa113423                sd      ra,-<span style="color:#ff0;font-weight:bold">88</span>(sp)
+   <span style="color:#f00">900</span>ec:       fa810113                addi    sp,sp,-<span style="color:#ff0;font-weight:bold">88</span>
+   <span style="color:#f00">900</span>f0:       <span style="color:#f00">00100293</span>                li      t0,<span style="color:#ff0;font-weight:bold">1</span>
+   <span style="color:#f00">900</span>f4:       <span style="color:#f00">00513423</span>                sd      t0,<span style="color:#ff0;font-weight:bold">8</span>(sp)
+   <span style="color:#f00">900</span>f8:       <span style="color:#f00">00200293</span>                li      t0,<span style="color:#ff0;font-weight:bold">2</span>
+   <span style="color:#f00">900</span>fc:       <span style="color:#f00">00513823</span>                sd      t0,<span style="color:#ff0;font-weight:bold">16</span>(sp)
+   <span style="color:#f00">90100:</span>       fc1ff0ef                jal     ra,<span style="color:#ff0;font-weight:bold">900c0</span> &lt;main.add&gt;
+   <span style="color:#f00">90104:</span>       <span style="color:#f00">01813283</span>                ld      t0,<span style="color:#ff0;font-weight:bold">24</span>(sp)
+   <span style="color:#f00">90108:</span>       <span style="color:#f00">04013423</span>                sd      zero,<span style="color:#ff0;font-weight:bold">72</span>(sp)
+   <span style="color:#f00">9010</span>c:       <span style="color:#f00">04013823</span>                sd      zero,<span style="color:#ff0;font-weight:bold">80</span>(sp)
+   <span style="color:#f00">90110:</span>       <span style="color:#f00">00513423</span>                sd      t0,<span style="color:#ff0;font-weight:bold">8</span>(sp)
+   <span style="color:#f00">90114:</span>       <span style="color:#f00">8</span>ed880ef                jal     ra,<span style="color:#ff0;font-weight:bold">18a00</span> &lt;runtime.convT64&gt;
+   <span style="color:#f00">90118:</span>       <span style="color:#f00">01013283</span>                ld      t0,<span style="color:#ff0;font-weight:bold">16</span>(sp)
+   <span style="color:#f00">9011</span>c:       <span style="color:#f00">00016317</span>                auipc   t1,<span style="color:#ff0;font-weight:bold">0x16</span>
+   <span style="color:#f00">90120:</span>       <span style="color:#f00">66430313</span>                addi    t1,t1,<span style="color:#ff0;font-weight:bold">1636</span> <span style="color:#007f7f"># a6780 &lt;type.*+0x6780&gt;
+</span><span style="color:#007f7f"></span>   <span style="color:#ff0;font-weight:bold">90124</span>:       <span style="color:#ff0;font-weight:bold">04613423</span>                sd      t1,<span style="color:#ff0;font-weight:bold">72</span>(sp)
+   <span style="color:#f00">90128:</span>       <span style="color:#f00">04513823</span>                sd      t0,<span style="color:#ff0;font-weight:bold">80</span>(sp)
+   <span style="color:#f00">9012</span>c:       <span style="color:#f00">000</span>b8297                auipc   t0,<span style="color:#ff0;font-weight:bold">0xb8</span>
+   <span style="color:#f00">90130:</span>       fc42b283                ld      t0,-<span style="color:#ff0;font-weight:bold">60</span>(t0) <span style="color:#007f7f"># 1480f0 &lt;os.Stdout&gt;
+</span><span style="color:#007f7f"></span>   <span style="color:#ff0;font-weight:bold">90134</span>:       <span style="color:#ff0;font-weight:bold">00044317</span>                auipc   t1,<span style="color:#ff0;font-weight:bold">0x44</span>
+   <span style="color:#f00">90138:</span>       <span style="color:#f00">34430313</span>                addi    t1,t1,<span style="color:#ff0;font-weight:bold">836</span> <span style="color:#007f7f"># d4478 &lt;go.itab.*os.File,io.Writer&gt;
+</span><span style="color:#007f7f"></span>   <span style="color:#ff0;font-weight:bold">9013</span>c:       <span style="color:#ff0;font-weight:bold">00613423</span>                sd      t1,<span style="color:#ff0;font-weight:bold">8</span>(sp)
+   <span style="color:#f00">90140:</span>       <span style="color:#f00">00513823</span>                sd      t0,<span style="color:#ff0;font-weight:bold">16</span>(sp)
+   <span style="color:#f00">90144:</span>       <span style="color:#f00">04810293</span>                addi    t0,sp,<span style="color:#ff0;font-weight:bold">72</span>
+   <span style="color:#f00">90148:</span>       <span style="color:#f00">00513</span>c23                sd      t0,<span style="color:#ff0;font-weight:bold">24</span>(sp)
+   <span style="color:#f00">9014</span>c:       <span style="color:#f00">00100293</span>                li      t0,<span style="color:#ff0;font-weight:bold">1</span>
+   <span style="color:#f00">90150:</span>       <span style="color:#f00">02513023</span>                sd      t0,<span style="color:#ff0;font-weight:bold">32</span>(sp)
+   <span style="color:#f00">90154:</span>       <span style="color:#f00">02513423</span>                sd      t0,<span style="color:#ff0;font-weight:bold">40</span>(sp)
+   <span style="color:#f00">90158:</span>       c08fa0ef                jal     ra,<span style="color:#ff0;font-weight:bold">8a560</span> &lt;fmt.Fprintln&gt;
+   <span style="color:#f00">9015</span>c:       <span style="color:#f00">00013083</span>                ld      ra,<span style="color:#ff0;font-weight:bold">0</span>(sp)
+   <span style="color:#f00">90160:</span>       <span style="color:#f00">05810113</span>                addi    sp,sp,<span style="color:#ff0;font-weight:bold">88</span>
+   <span style="color:#f00">90164:</span>       <span style="color:#f00">00008067</span>                ret
+
+</code></pre></div><p>This looks pretty similar to the assembly in our last post. We&rsquo;ll focus in
+specifically on the instructions starting at <code>900f0</code> in <code>main.main</code>. We are:</p>
+<ol>
+<li>Loading <code>1</code> into temporary register <code>t0</code>. (address: <code>900f0</code>)</li>
+<li>Storing the contents of <code>t0</code> on the stack. (address: <code>900f4</code>)</li>
+<li>Loading <code>2</code> into temporary register <code>t1</code>. (address: <code>900f8</code>)</li>
+<li>Storing the contents of <code>t1</code> on the stack. (address: <code>900fc</code>)</li>
+<li>Jumping to <code>main.add</code>. (address: <code>90100</code>)</li>
+</ol>
+<p>At this point we have both of our arguments that we want to pass to <code>add()</code>
+(i.e. <code>a</code> and <code>b</code>) on the stack, and we are transferring control. Because
+<code>add()</code> is a small enough procedure, the compiler avoids performing the
+customary stack guard check (compare to the first few instructions in <code>main()</code>).
+The purpose of an ABI is to allow for procedures to communicate data by adhering
+to a set of rules. In this case, <code>add()</code> expects that its caller (<code>main()</code>) has
+placed the required arguments on the stack because that is what the Go ABI is
+dictating. Within <code>add()</code> we are:</p>
+<ol>
+<li>Loading the value stored at the memory address at an <code>8</code> byte offset from the
+stack pointer (<code>sp</code>) into temporary register <code>t0</code>. (address: <code>900c0</code>)</li>
+<li>Loading the value stored at the memory address at a <code>16</code> byte offset from the
+stack pointer (<code>sp</code>) into temporary register <code>t1</code>. (address: <code>900c4</code>)</li>
+<li>Adding the contents of <code>t0</code> and <code>t1</code>. (address: <code>900c8</code>)</li>
+<li>Storing the result in <code>t0</code> at the memory address at a <code>24</code> byte offset from
+the stack pointer (<code>sp</code>). (address: <code>900cc</code>)</li>
+<li>Returning to the address in the return address register (<code>ra</code>). (address:
+<code>900d0</code>) This was automatically set to the address of the next instruction in
+<code>main.main</code> when we executed <code>jal  ra,900c0 &lt;main.add&gt;</code>.</li>
+</ol>
+<blockquote>
+<p>Check yourself: why are values on the stack stored <code>8</code> bytes apart from each
+other? Because we are targeting a 64-bit architecture (i.e. <code>riscv64</code>), the
+default <code>int</code> size is <code>64</code> bits (i.e. <code>8</code> bytes).</p>
+</blockquote>
+<p>Similarly, when control is returned to <code>main()</code>, it assumes that <code>add()</code> has
+placed the return value on the stack, so it loads the values at the memory
+address at a <code>24</code> byte offset from the stack pointer (<code>sp</code>) into <code>t0</code> (address:
+<code>90104</code>), before subsequently storing it on the stack again before calling
+<code>runtime.convT64</code> (address: <code>90114</code>).</p>
+<p>You might already be noticing that the
+<a href="https://en.wikipedia.org/wiki/Load%E2%80%93store_architecture">load-store</a>
+nature of RISC-V, coupled with Go&rsquo;s requirement that arguments and return values
+be passed on the stack, is creating some unnecessary overhead here.</p>
+<h2 id="119-and-register-based-calling-convention">1.19 and Register-Based Calling Convention</h2>
+<p>Let&rsquo;s compile with Go 1.19 and see how the generated machine code changes.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">$ GOOS=linux GOARCH=riscv64 go1.19 build -o main1.19 main.go
+</code></pre></div><div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">$ riscv64-unknown-linux-gnu-objdump -D main1.19 | less
+</code></pre></div><p>We&rsquo;ll again find <code>main.main</code> and <code>main.add</code> in the disassembly, but the total
+number of instructions is noticeably less.</p>
+<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-asm" data-lang="asm">
+<span style="color:#f00">000000000008</span>bcb0 <span style="color:#f00">&lt;</span>main.add<span style="color:#f00">&gt;</span>:
+   <span style="color:#f00">8</span>bcb0:       <span style="color:#f00">00</span>b50533                add     a0,a0,a1
+   <span style="color:#f00">8</span>bcb4:       <span style="color:#f00">00008067</span>                ret
+        <span style="color:#007f7f">...</span>
+
+<span style="color:#f00">000000000008</span>bcc0 <span style="color:#f00">&lt;</span>main.main<span style="color:#f00">&gt;</span>:
+   <span style="color:#f00">8</span>bcc0:       <span style="color:#f00">010</span>db303                ld      t1,<span style="color:#ff0;font-weight:bold">16</span>(s11)
+   <span style="color:#f00">8</span>bcc4:       <span style="color:#f00">00236663</span>                bltu    t1,sp,<span style="color:#ff0;font-weight:bold">8bcd0</span> &lt;main.main+<span style="color:#ff0;font-weight:bold">0x10</span>&gt;
+   <span style="color:#f00">8</span>bcc8:       b90dc2ef                jal     t0,<span style="color:#ff0;font-weight:bold">68058</span> &lt;runtime.morestack_noctxt.abi0&gt;
+   <span style="color:#f00">8</span>bccc:       ff5ff06f                j       <span style="color:#ff0;font-weight:bold">8bcc0</span> &lt;main.main&gt;
+   <span style="color:#f00">8</span>bcd0:       fc113023                sd      ra,-<span style="color:#ff0;font-weight:bold">64</span>(sp)
+   <span style="color:#f00">8</span>bcd4:       fc010113                addi    sp,sp,-<span style="color:#ff0;font-weight:bold">64</span>
+   <span style="color:#f00">8</span>bcd8:       <span style="color:#f00">00113023</span>                sd      ra,<span style="color:#ff0;font-weight:bold">0</span>(sp)
+   <span style="color:#f00">8</span>bcdc:       <span style="color:#f00">00100513</span>                li      a0,<span style="color:#ff0;font-weight:bold">1</span>
+   <span style="color:#f00">8</span>bce0:       <span style="color:#f00">00200593</span>                li      a1,<span style="color:#ff0;font-weight:bold">2</span>
+   <span style="color:#f00">8</span>bce4:       fcdff0ef                jal     ra,<span style="color:#ff0;font-weight:bold">8bcb0</span> &lt;main.add&gt;
+   <span style="color:#f00">8</span>bce8:       <span style="color:#f00">02013823</span>                sd      zero,<span style="color:#ff0;font-weight:bold">48</span>(sp)
+   <span style="color:#f00">8</span>bcec:       <span style="color:#f00">02013</span>c23                sd      zero,<span style="color:#ff0;font-weight:bold">56</span>(sp)
+   <span style="color:#f00">8</span>bcf0:       b488c0ef                jal     ra,<span style="color:#ff0;font-weight:bold">18038</span> &lt;runtime.convT64&gt;
+   <span style="color:#f00">8</span>bcf4:       <span style="color:#f00">0000</span>b297                auipc   t0,<span style="color:#ff0;font-weight:bold">0xb</span>
+   <span style="color:#f00">8</span>bcf8:       d2c28293                addi    t0,t0,-<span style="color:#ff0;font-weight:bold">724</span> <span style="color:#007f7f"># 96a20 &lt;type.*+0x6a20&gt;
+</span><span style="color:#007f7f"></span>   <span style="color:#ff0;font-weight:bold">8</span>bcfc:       <span style="color:#ff0;font-weight:bold">02513823</span>                sd      t0,<span style="color:#ff0;font-weight:bold">48</span>(sp)
+   <span style="color:#f00">8</span>bd00:       <span style="color:#f00">02</span>a13c23                sd      a0,<span style="color:#ff0;font-weight:bold">56</span>(sp)
+   <span style="color:#f00">8</span>bd04:       <span style="color:#f00">000</span>bc597                auipc   a1,<span style="color:#ff0;font-weight:bold">0xbc</span>
+   <span style="color:#f00">8</span>bd08:       <span style="color:#f00">42</span>c5b583                ld      a1,<span style="color:#ff0;font-weight:bold">1068</span>(a1) <span style="color:#007f7f"># 148130 &lt;os.Stdout&gt;
+</span><span style="color:#007f7f"></span>   <span style="color:#ff0;font-weight:bold">8</span>bd0c:       <span style="color:#ff0;font-weight:bold">0003</span>a517                auipc   a0,<span style="color:#ff0;font-weight:bold">0x3a</span>
+   <span style="color:#f00">8</span>bd10:       <span style="color:#f00">6</span>fc50513                addi    a0,a0,<span style="color:#ff0;font-weight:bold">1788</span> <span style="color:#007f7f"># c6408 &lt;go.itab.*os.File,io.Writer&gt;
+</span><span style="color:#007f7f"></span>   <span style="color:#ff0;font-weight:bold">8</span>bd14:       <span style="color:#ff0;font-weight:bold">03010613</span>                addi    a2,sp,<span style="color:#ff0;font-weight:bold">48</span>
+   <span style="color:#f00">8</span>bd18:       <span style="color:#f00">00100693</span>                li      a3,<span style="color:#ff0;font-weight:bold">1</span>
+   <span style="color:#f00">8</span>bd1c:       <span style="color:#f00">00068713</span>                mv      a4,a3
+   <span style="color:#f00">8</span>bd20:       a10fb0ef                jal     ra,<span style="color:#ff0;font-weight:bold">86f30</span> &lt;fmt.Fprintln&gt;
+   <span style="color:#f00">8</span>bd24:       <span style="color:#f00">00013083</span>                ld      ra,<span style="color:#ff0;font-weight:bold">0</span>(sp)
+   <span style="color:#f00">8</span>bd28:       <span style="color:#f00">04010113</span>                addi    sp,sp,<span style="color:#ff0;font-weight:bold">64</span>
+   <span style="color:#f00">8</span>bd2c:       <span style="color:#f00">00008067</span>                ret
+
+</code></pre></div><p>Where we previously had to first load our values into registers, then store them
+on the stack, we now only load them into registers before jumping to <code>main.add</code>.
+The sequence consists of:</p>
+<ol>
+<li>Loading <code>1</code> into argument register <code>a0</code>. (address: <code>8bcdc</code>)</li>
+<li>Loading <code>2</code> into argument register <code>a1</code>. (address: <code>8bce0</code>)</li>
+<li>Jumping to <code>main.add</code>. (address: <code>8bce4</code>)</li>
+</ol>
+<p><code>add()</code> is even more drastically simplified, only containing the <code>add</code>
+instruction (address: <code>8bcb0</code>), then returning to <code>main()</code>. Just as the calling
+convention dictated in Go 1.18 that arguments and return values would be at a
+certain location on the stack, Go 1.19 dictates that they will be present in the
+specified argument registers.</p>
+<p>Less instructions, assuming constant cycles per instruction (CPI), is more
+efficient. However, we are not only eliminating instructions, but specifically
+eliminating <em>more expensive</em> instructions. The example we are using is trivial,
+but in some cases the number of instructions may not be strictly less than the
+stack-based calling convention. For example, if the values were not already in
+the correct registers we would need to move them. However, accessing registers
+is much faster than accessing main memory, despite modern processors using
+sophisticated caching to make stack access quite fast. The proposal for the
+register-based ABI <a href="https://go.googlesource.com/proposal/+/master/design/40724-register-calling.md#background">states that accessing registers is roughly 40%
+faster</a>
+than accessing arguments on the stack (see linked
+<a href="https://gist.github.com/aclements/ded22bb8451eead8249d22d3cd873566">benchmark</a>).
+The release notes indicate that the register-based ABI results in typical
+performance improvements of 10% or more for RISC-V programs.</p>
+<p>A side benefit is that registers are being used more conventionally as described
+in the <a href="https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md#general-registers">RISC-V
+ABI</a>.
+However, it is important to note that Go is still <em>not</em> adhering to platform
+ABIs. The proposal <a href="https://go.googlesource.com/proposal/+/master/design/40724-register-calling.md#proposal">provides
+justification</a>
+for why adhering to platform ABIs would not be optimal for Go&rsquo;s language design,
+noting the differences between Go and C, as well as the value of maintaining a
+simple common ABI across platforms.</p>
+<h2 id="concluding-thoughts">Concluding Thoughts</h2>
+<p>One of the major benefits of using high-level languages is that simply upgrading
+to a newer version can result in your program becoming significantly more
+performant. While most developers won&rsquo;t need to dig into what&rsquo;s happening behind
+the scenes, doing so can give you a better grasp of how design decisions you
+make in your code lead to actual instructions being executed on the machine.
+Furthermore, if you are interested in working on compilers and other parts of
+language toolchains, one of the best ways to get started is learning how the
+toolchain works for languages you already use.</p>
+<p>As always, these posts are meant to serve as a useful resource for folks who are
+interested in learning more about RISC-V and low-level software in general. If I
+can do a better job of reaching that goal, or you have any questions or
+comments, please feel free to send me a message
+<a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter!</p>
+
+  </article>
+
+  <br/>
+
+  
+  
+</section>
+
+      </div>
+
+      <footer class="footer">
+  <section class="container">
+     © 2022  
+  </section>
+</footer>
+
+    </main>
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+
+  </body>
+
+</html>
