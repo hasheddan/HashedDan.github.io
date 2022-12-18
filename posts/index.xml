@@ -6,10 +6,19 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 08 Aug 2022 00:10:34 -0600</lastBuildDate>
+    <lastBuildDate>Sun, 18 Dec 2022 00:10:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>I&#39;m on Mastodon</title>
+      <link>https://danielmangum.com/posts/im-on-mastodon/</link>
+      <pubDate>Sun, 18 Dec 2022 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/im-on-mastodon/</guid>
+      <description>Twitter has been a huge part of my online community, but it has become untenable as a platform. I have found a nice community of folks over on the types.pl server. I would love to reconnect with all of the wonderful people I have interacted with on Twitter and elsewhere. You can find me at @hasheddan@types.pl!</description>
+    </item>
     
     <item>
       <title>RISC-V Bytes: Go 1.19&#39;s Register-Based Calling Convention</title>
