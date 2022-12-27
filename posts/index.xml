@@ -6,10 +6,21 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 18 Dec 2022 00:10:34 -0600</lastBuildDate>
+    <lastBuildDate>Tue, 27 Dec 2022 00:10:34 -0600</lastBuildDate>
     
 	<atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>RISC-V Bytes: Timer Interrupts</title>
+      <link>https://danielmangum.com/posts/risc-v-bytes-timer-interrupts/</link>
+      <pubDate>Tue, 27 Dec 2022 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/risc-v-bytes-timer-interrupts/</guid>
+      <description>Operating systems do great work, but sometimes they need a little bit of help to know when to switch from one task to another. Thankfully, hardware is there to help! Today we are going to take a look at how operating systems schedule reminders for themselves using timer interrupts.
+Sections  Don&amp;rsquo;t care about the why and just want to see the code? Jump ahead to The Full Picture.
+  Hardware Threads Exceptions, Interrupts, and Traps Memory-Mapped Registers Enabling Timer Interrupts  Step 0: Differentiating Machine and Supervisor Timer Interrupts Step 1: Enabling Global Interrupts Step 2: Enabling Timer Interrupts Step 3: Delegating Supervisor Timer Interrupts to Supervisor Mode   Setting the Timer Jumping to Supervisor Mode Setting Up a Supervisor Trap Handler The Full Picture Running Concluding Thoughts  Hardware Threads Before we can talk about how operating systems switch from doing one thing to another, we need to establish how many things they can do at a time.</description>
+    </item>
     
     <item>
       <title>I&#39;m on Mastodon</title>
