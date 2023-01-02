@@ -1,95 +1,163 @@
 <!DOCTYPE html>
 <html lang="en">
-
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <meta name="author" content="Daniel Mangum">
-    <meta name="description" content="Daniel Mangum&#39;s personal website">
-    <meta name="keywords" content="blog,developer,personal">
-
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:site" content="@hasheddan" />
-    <meta name="twitter:title" content="Why You Shouldn&#39;t Use ^Parameters with CloudFormation Templates"/>
-    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
-
-    <base href="https://danielmangum.com">
     <title>
   Why You Shouldn&#39;t Use ^Parameters with CloudFormation Templates · Daniel Mangum
 </title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
 
-    <link rel="canonical" href="https://danielmangum.com/posts/why-you-shouldnt-use-parameters-with-cloudformation-templates/">
 
-    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
-    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
-    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
 
-    
 
-    
-      <link rel="stylesheet" href="https://danielmangum.com/css/custom.css">
-    
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="^Run-Time (I admit that the title is intended to be clickbait)
+CloudFormation has become a popular Infrastructure as Code (IaC) tool for organizations that use AWS exclusively as their cloud provider (whether it should be or not is another whole discussion). The tool features the ability to add parameters to your configuration scripts (written in either YAML or JSON). However, I will argue in this post that you should not use parameters in your (top-level) scripts by enumerating Adam Jacob&rsquo;s (creator of Chef) 10 principles of IaC as detailed in his chapter in Web Operations and illustrating how the use of parameters either violates or does not add any further value for each of them.">
+<meta name="keywords" content="blog,developer,personal">
 
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Why You Shouldn&#39;t Use ^Parameters with CloudFormation Templates"/>
+<meta name="twitter:description" content="^Run-Time (I admit that the title is intended to be clickbait)
+CloudFormation has become a popular Infrastructure as Code (IaC) tool for organizations that use AWS exclusively as their cloud provider (whether it should be or not is another whole discussion). The tool features the ability to add parameters to your configuration scripts (written in either YAML or JSON). However, I will argue in this post that you should not use parameters in your (top-level) scripts by enumerating Adam Jacob&rsquo;s (creator of Chef) 10 principles of IaC as detailed in his chapter in Web Operations and illustrating how the use of parameters either violates or does not add any further value for each of them."/>
 
-    
+<meta property="og:title" content="Why You Shouldn&#39;t Use ^Parameters with CloudFormation Templates" />
+<meta property="og:description" content="^Run-Time (I admit that the title is intended to be clickbait)
+CloudFormation has become a popular Infrastructure as Code (IaC) tool for organizations that use AWS exclusively as their cloud provider (whether it should be or not is another whole discussion). The tool features the ability to add parameters to your configuration scripts (written in either YAML or JSON). However, I will argue in this post that you should not use parameters in your (top-level) scripts by enumerating Adam Jacob&rsquo;s (creator of Chef) 10 principles of IaC as detailed in his chapter in Web Operations and illustrating how the use of parameters either violates or does not add any further value for each of them." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/why-you-shouldnt-use-parameters-with-cloudformation-templates/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2019-02-07T15:17:47-06:00" />
+<meta property="article:modified_time" content="2019-02-07T15:17:47-06:00" />
 
-    <meta name="generator" content="Hugo 0.68.3" />
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/why-you-shouldnt-use-parameters-with-cloudformation-templates/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.109.0">
+
+
+
+
+
   </head>
 
-  <body class="">
-    <main class="wrapper">
-      <nav class="navigation">
+
+
+
+<body class="preload-transitions colorscheme-light">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
   <section class="container">
-    <a class="navigation-title" href="https://danielmangum.com">
+    <a class="navigation-title" href="https://danielmangum.com/">
       Daniel Mangum
     </a>
     
-    <ul class="navigation-list  float-right ">
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
-      </li>
-      
-    </ul>
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
     
   </section>
 </nav>
 
 
-      <div class="content">
-        
-  <section class="container post">
-  <article>
-    <header>
-      <h1 class="title">Why You Shouldn&#39;t Use ^Parameters with CloudFormation Templates</h1>
-      <h2 class="date">February 7, 2019</h2>
-      <style>
-        .twitter-tweet-rendered {
-          display:block;
-          margin-left:auto;
-          margin-right:auto;
-        }
-      </style>
-
+    <div class="content">
       
-    </header>
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/why-you-shouldnt-use-parameters-with-cloudformation-templates/">
+              Why You Shouldn&#39;t Use ^Parameters with CloudFormation Templates
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2019-02-07T15:17:47-06:00">
+                February 7, 2019
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              7-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
 
-    <p>^<em>Run-Time</em> (I admit that the title is intended to be clickbait)</p>
+      <div class="post-content">
+        
+        <p>^<em>Run-Time</em> (I admit that the title is intended to be clickbait)</p>
 <p><a href="https://aws.amazon.com/cloudformation/">CloudFormation</a> has become a popular Infrastructure as Code (IaC) tool for organizations that use AWS exclusively as their cloud provider (whether it should be or not is another whole discussion). The tool features the ability to add parameters to your configuration scripts (written in either YAML or JSON). However, I will argue in this post that you should not use parameters in your (top-level) scripts by enumerating Adam Jacob&rsquo;s (creator of <a href="https://www.chef.io/">Chef</a>) 10 principles of IaC as detailed in his chapter in <a href="https://www.oreilly.com/library/view/web-operations/9781449377465/">Web Operations</a> and illustrating how the use of parameters either violates or does not add any further value for each of them.</p>
 <p><em>Disclaimers</em></p>
 <ul>
@@ -104,80 +172,170 @@
 </li>
 </ul>
 <p><em>Summary of principles provided by <a href="https://www.oreilly.com/library/view/test-driven-infrastructure-with/9781449309718/ch01s02.html#ftn.id2860266">Stephen Nelson-Smith</a></em></p>
-<h2 id="modularity">Modularity</h2>
+<h2 id="modularity">
+  Modularity
+  <a class="heading-link" href="#modularity">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <blockquote>
 <p>Our services should be small and simple—think at the level of the simplest freestanding, useful component.</p>
 </blockquote>
 <p>Parameters don&rsquo;t explicitly violate this principle, but they do not philosophically align with the idea of being freestanding. Parameters allow a template to be more general, thus meaning that there is no one file that fully describes the infrastructure configuration for a component. They are reliant on further information being provided at runtime, information that is not necessarily recorded or committed to version control.</p>
-<h2 id="cooperation">Cooperation</h2>
+<h2 id="cooperation">
+  Cooperation
+  <a class="heading-link" href="#cooperation">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <blockquote>
 <p>Our design should discourage overlap of services, and should encourage other people and services to use our service in a way which fosters continuous improvement of our design and implementation.</p>
 </blockquote>
 <p>A first thought may be that defining similar services from the same script enhances their ability to work together. However, duplicating scripts and making minor changes (or adding to the end of an existing script) allows you to work from the same starting point, while still having a single code-defined source of truth for each service.</p>
-<h3 id="composability">Composability</h3>
+<h3 id="composability">
+  Composability
+  <a class="heading-link" href="#composability">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
 <blockquote>
 <p>Our services should be like building blocks—we should be able to build complete, complex systems by integrating them.</p>
 </blockquote>
 <p>Parameters are useful for defining building blocks. However, if you don&rsquo;t bring those building block together in code, then you end up with a library of infrastructure components that have been integrated in various ways, but may be unable to be reproduced in the same manner.</p>
-<h3 id="extensibility">Extensibility</h3>
+<h3 id="extensibility">
+  Extensibility
+  <a class="heading-link" href="#extensibility">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
 <blockquote>
 <p>Our services should be easy to modify, enhance, and improve in response to new demands.</p>
 </blockquote>
 <p>Services are easier to modify when we have a version controlled configuration file for them. We can see the current state of the service because it mirrors the most recently committed version of the configuration file. The diffs in our infrastructure should always be reflected in the change or addition of a IaC file.</p>
-<h3 id="flexibility">Flexibility</h3>
+<h3 id="flexibility">
+  Flexibility
+  <a class="heading-link" href="#flexibility">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
 <blockquote>
 <p>We should build our services using tools that provide unlimited power to ensure we have the (theoretical) ability to solve even the most complicated of problems.</p>
 </blockquote>
 <p>Problem solving requires three things: knowing where you are, knowing where you want to go, and figuring out how to get there. Configuration files that show our current infrastructure represent the first part. Knowing where we want to go may come from seeing things in our community or doing organic research. Figuring out how to get there is an iterative process. Codified infrastructure allows us to make small, incremental changes, view results, and roll-back if necessary. Staying away from runtime parameters provides the opportunity to see how we got from one place to another.</p>
-<h3 id="repeatability">Repeatability</h3>
+<h3 id="repeatability">
+  Repeatability
+  <a class="heading-link" href="#repeatability">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
 <blockquote>
 <p>Our services should produce the same results, in the same way, with the same inputs, every time.</p>
 </blockquote>
 <p>This is a principle that parameters have the potential to <em>severely</em> violate. If you are simply defining the names of various resources, it is unlikely for this to happen. However, if you are modifying ports, Availability Zones, Regions, instance types and sizes, etc., your scripts are very likely to produce different outputs (in fact, this is the whole purpose of parameters!).</p>
-<h3 id="declaration">Declaration</h3>
+<h3 id="declaration">
+  Declaration
+  <a class="heading-link" href="#declaration">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
 <blockquote>
 <p>We should specify our services in terms of what we want it to do, not how we want to do it.</p>
 </blockquote>
 <p>Verbose infrastructure as code does not mean that we are moving closer to how and farther from what. In fact, it takes smaller components and integrates them together so that our defining of what we want to happen inherently shows us how it is going to happen. We say we want a cluster with 3 nodes. Our code says for AWS to spin up 3 EC2 instances. We get into trouble when we have the EC2 instances defined, but we never define the cluster as code. We only say &ldquo;what we want&rdquo; at a high level as a parameter in the management console or at the command line, and down the line we won&rsquo;t know what we have.</p>
-<h3 id="abstraction">Abstraction</h3>
+<h3 id="abstraction">
+  Abstraction
+  <a class="heading-link" href="#abstraction">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
 <blockquote>
 <p>We should not worry about the details of the implementation, and think at the level of the component and its function.</p>
 </blockquote>
 <p>I imagine this will be the most contentious point I make in this post, as parameters certainly seem to increase the abstraction of infrastructure provisioning. However, I believe there is a limit to the abstraction that Mr. Jacobs is speaking of. We are controlling computers halfway around the world with configuration templates: I think we are still achieving abstraction even without parameters. And as mentioned in the disclaimers, I am not opposed to achieving abstraction by having top-level templates reference other templates that include parameters.</p>
-<h3 id="idempotence">Idempotence</h3>
+<h3 id="idempotence">
+  Idempotence
+  <a class="heading-link" href="#idempotence">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
 <blockquote>
 <p>Our services should only be configured when required—action should only be taken once.</p>
 </blockquote>
 <p>Eliminating parameters naturally encourages more thought than uploading someone elses template file, filling in values, and launching a new CloudFormation Stack does. Knowing what a template specifies (because you wrote it yourself), and committing any modifications to your chosen version control system steers a team toward more consistent infrastructure, and tracks any changes you do have to make.</p>
-<h3 id="convergence">Convergence</h3>
+<h3 id="convergence">
+  Convergence
+  <a class="heading-link" href="#convergence">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
 <blockquote>
 <p>Our services should take responsibility for their own state being in line with policy; over time, the overall system will tend to correctness.</p>
 </blockquote>
 <p>This one is simple: if we don&rsquo;t have every aspect of a service policy defined, how can they know if their current state is in line? If you are familiar with Kubernetes or any other orchestration platform, you know that we define a <a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/kubernetes-objects/#object-spec-and-status">Spec and a Status</a>, and a the system compares the two, making sure to take the necessary steps to bring them into a consistent state. Our infrastructure should operate in the same way. Ideally this happens through some sort of automated process, but we can at least ensure that we are capable of comparing manually.</p>
-<h2 id="conclusions">Conclusions</h2>
+<h2 id="conclusions">
+  Conclusions
+  <a class="heading-link" href="#conclusions">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>The stated benefit of parameters in any IaC configuration is the efficiency of being able to provision multiple sets of infrastructure from the same script. In reality, it mostly only allows someone in your organization to provision infrastructure without understanding exactly what the underlying pieces are. Copying, pasting, and modifying is not that much harder (if at all) than entering parameter values in a GUI or CLI. There are much fewer benefits than drawbacks.</p>
 <p>However, parameters are not the true issue, it is how we choose to use them. As mentioned in the disclaimers, parameters used <em>the right way</em> can be very advantageous. I am simply advocating for creating a IaC library that allows you to provision all of your infrastructure without providing runtime arguments. A good rule of thumb would be that every time you create a new infrastructure configuration in your organization, at least one new configuration file should also be created.</p>
 <p>As always, send me a message <a href="https://twitter.com/HashedDan">@HashedDan</a> on Twitter for any questions or comments!</p>
 
-  </article>
-
-  <br/>
-
-  
-  
-</section>
-
       </div>
 
-      <footer class="footer">
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
   <section class="container">
-     © 2022  
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
   </section>
 </footer>
 
-    </main>
+  </main>
 
-    
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {
@@ -191,7 +349,19 @@ if (!doNotTrack) {
 }
 </script>
 
+  
 
-  </body>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
 
 </html>

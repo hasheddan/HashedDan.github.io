@@ -1,179 +1,268 @@
 <!DOCTYPE html>
 <html lang="en">
-
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <meta name="author" content="Daniel Mangum">
-    <meta name="description" content="Daniel Mangum&#39;s personal website">
-    <meta name="keywords" content="blog,developer,personal">
-
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:site" content="@hasheddan" />
-    <meta name="twitter:title" content="Tweet Thread: Crossplane Packages and K8s Features You Thought You Didn&#39;t Have"/>
-    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
-
-    <base href="https://danielmangum.com">
     <title>
   Tweet Thread: Crossplane Packages and K8s Features You Thought You Didn&#39;t Have · Daniel Mangum
 </title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
 
-    <link rel="canonical" href="https://danielmangum.com/posts/crossplane-packages-k8s-features/">
 
-    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
-    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
-    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
 
-    
 
-    
-      <link rel="stylesheet" href="https://danielmangum.com/css/custom.css">
-    
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="The following is an unroll of a tweet thread about Crossplane packages that I posted after reading Dave Anderson&rsquo;s post &ldquo;A better Kubernetes, from the ground up&rdquo;. I found many of the points in the post compelling, but feel that the existing extensibility model of Kubernetes allows for implementing at least some of the desired features without tearing down the entire system, as evidenced by the implementation of Crossplane packages. It is my hope that some of the design decisions we have made with Crossplane can be generally abstracted and improved upon to continue to enhance the Kubernetes ecosystem.">
+<meta name="keywords" content="blog,developer,personal">
 
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Tweet Thread: Crossplane Packages and K8s Features You Thought You Didn&#39;t Have"/>
+<meta name="twitter:description" content="The following is an unroll of a tweet thread about Crossplane packages that I posted after reading Dave Anderson&rsquo;s post &ldquo;A better Kubernetes, from the ground up&rdquo;. I found many of the points in the post compelling, but feel that the existing extensibility model of Kubernetes allows for implementing at least some of the desired features without tearing down the entire system, as evidenced by the implementation of Crossplane packages. It is my hope that some of the design decisions we have made with Crossplane can be generally abstracted and improved upon to continue to enhance the Kubernetes ecosystem."/>
 
-    
+<meta property="og:title" content="Tweet Thread: Crossplane Packages and K8s Features You Thought You Didn&#39;t Have" />
+<meta property="og:description" content="The following is an unroll of a tweet thread about Crossplane packages that I posted after reading Dave Anderson&rsquo;s post &ldquo;A better Kubernetes, from the ground up&rdquo;. I found many of the points in the post compelling, but feel that the existing extensibility model of Kubernetes allows for implementing at least some of the desired features without tearing down the entire system, as evidenced by the implementation of Crossplane packages. It is my hope that some of the design decisions we have made with Crossplane can be generally abstracted and improved upon to continue to enhance the Kubernetes ecosystem." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/crossplane-packages-k8s-features/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2020-11-30T05:51:26-05:00" />
+<meta property="article:modified_time" content="2020-11-30T05:51:26-05:00" />
 
-    <meta name="generator" content="Hugo 0.68.3" />
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/crossplane-packages-k8s-features/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.109.0">
+
+
+
+
+
   </head>
 
-  <body class="">
-    <main class="wrapper">
-      <nav class="navigation">
+
+
+
+<body class="preload-transitions colorscheme-light">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
   <section class="container">
-    <a class="navigation-title" href="https://danielmangum.com">
+    <a class="navigation-title" href="https://danielmangum.com/">
       Daniel Mangum
     </a>
     
-    <ul class="navigation-list  float-right ">
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
-      </li>
-      
-    </ul>
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
     
   </section>
 </nav>
 
 
-      <div class="content">
-        
-  <section class="container post">
-  <article>
-    <header>
-      <h1 class="title">Tweet Thread: Crossplane Packages and K8s Features You Thought You Didn&#39;t Have</h1>
-      <h2 class="date">November 30, 2020</h2>
-      <style>
-        .twitter-tweet-rendered {
-          display:block;
-          margin-left:auto;
-          margin-right:auto;
-        }
-      </style>
-
+    <div class="content">
       
-    </header>
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/crossplane-packages-k8s-features/">
+              Tweet Thread: Crossplane Packages and K8s Features You Thought You Didn&#39;t Have
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2020-11-30T05:51:26-05:00">
+                November 30, 2020
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              6-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
 
-    <p>The following is an unroll of a <a href="https://twitter.com/hasheddan/status/1333055314518827013?s=20">tweet thread</a> about <a href="https://crossplane.io/">Crossplane</a> packages that I posted after reading <a href="https://twitter.com/dave_universetf">Dave Anderson&rsquo;s</a> post <a href="https://blog.dave.tf/post/new-kubernetes/">&ldquo;A better Kubernetes, from the ground up&rdquo;</a>. I found many of the points in the post compelling, but feel that the existing extensibility model of Kubernetes allows for implementing at least some of the desired features without tearing down the entire system, as evidenced by the implementation of Crossplane packages. It is my hope that some of the design decisions we have made with Crossplane can be generally abstracted and improved upon to continue to enhance the Kubernetes ecosystem.</p>
+      <div class="post-content">
+        
+        <p>The following is an unroll of a <a href="https://twitter.com/hasheddan/status/1333055314518827013?s=20">tweet thread</a> about <a href="https://crossplane.io/">Crossplane</a> packages that I posted after reading <a href="https://twitter.com/dave_universetf">Dave Anderson&rsquo;s</a> post <a href="https://blog.dave.tf/post/new-kubernetes/">&ldquo;A better Kubernetes, from the ground up&rdquo;</a>. I found many of the points in the post compelling, but feel that the existing extensibility model of Kubernetes allows for implementing at least some of the desired features without tearing down the entire system, as evidenced by the implementation of Crossplane packages. It is my hope that some of the design decisions we have made with Crossplane can be generally abstracted and improved upon to continue to enhance the Kubernetes ecosystem.</p>
 <p>A big thank you to folks like Dave and <a href="https://twitter.com/vllry?s=20">Vallery Lancey</a> for challenging existing models and driving change, and an equally large thanks to many of my wonderful colleagues who work tirelessly to maintain Kubernetes and make it what it is today.</p>
-<p><blockquote class="twitter-tweet"><p lang="en" dir="ltr">Interesting post from <a href="https://twitter.com/dave_universetf?ref_src=twsrc%5Etfw">@dave_universetf</a>. Lots of parallels to <a href="https://twitter.com/crossplane_io?ref_src=twsrc%5Etfw">@crossplane_io</a> packages in the &quot;version controlled pods&quot; and &quot;explicit ownership&quot; sections. More info in the docs, but I&#39;ll give an overview here.<br><br>Post: <a href="https://t.co/gG918TFNoI">https://t.co/gG918TFNoI</a><br>Docs: <a href="https://t.co/WqGuBUJABa">https://t.co/WqGuBUJABa</a><br><br>(1/n)</p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055314518827013?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<p><blockquote class="twitter-tweet"><p lang="en" dir="ltr">Interesting post from <a href="https://twitter.com/dave_universetf?ref_src=twsrc%5Etfw">@dave_universetf</a>. Lots of parallels to <a href="https://twitter.com/crossplane_io?ref_src=twsrc%5Etfw">@crossplane_io</a> packages in the &quot;version controlled pods&quot; and &quot;explicit ownership&quot; sections. More info in the docs, but I&#39;ll give an overview here.<br><br>Post: <a href="https://t.co/gG918TFNoI">https://t.co/gG918TFNoI</a><br>Docs: <a href="https://t.co/WqGuBUJABa">https://t.co/WqGuBUJABa</a><br><br>(1/n)</p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055314518827013?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">First, what are <a href="https://twitter.com/crossplane_io?ref_src=twsrc%5Etfw">@crossplane_io</a> packages? They are single layer OCI images that contain manifests for installing CRDs, XRDs, and <a href="https://twitter.com/kubernetesio?ref_src=twsrc%5Etfw">@kubernetesio</a> controllers to reconcile them. K8s controllers have become ubiquitous, and are typically installed using a tool like <a href="https://twitter.com/HelmPack?ref_src=twsrc%5Etfw">@HelmPack</a>. (2/n)</p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055315651276800?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">First, what are <a href="https://twitter.com/crossplane_io?ref_src=twsrc%5Etfw">@crossplane_io</a> packages? They are single layer OCI images that contain manifests for installing CRDs, XRDs, and <a href="https://twitter.com/kubernetesio?ref_src=twsrc%5Etfw">@kubernetesio</a> controllers to reconcile them. K8s controllers have become ubiquitous, and are typically installed using a tool like <a href="https://twitter.com/HelmPack?ref_src=twsrc%5Etfw">@HelmPack</a>. (2/n)</p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055315651276800?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">So why reinvent the wheel? Well, first of all, a single <a href="https://twitter.com/crossplane_io?ref_src=twsrc%5Etfw">@crossplane_io</a> cluster could have quite a few of these controllers, each bringing potentially hundreds of CRDs. The core Crossplane controller needs to have RBAC on all of these types so they can be composed. (3/n)</p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055316699865090?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">So why reinvent the wheel? Well, first of all, a single <a href="https://twitter.com/crossplane_io?ref_src=twsrc%5Etfw">@crossplane_io</a> cluster could have quite a few of these controllers, each bringing potentially hundreds of CRDs. The core Crossplane controller needs to have RBAC on all of these types so they can be composed. (3/n)</p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055316699865090?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">Composition is the process of grouping together multiple &quot;primitive&quot; resources into a higher level abstraction. Think of an EKS cluster + Node Group + VPC + Subnets satisfying a &quot;Cluster&quot; abstraction. Kind of like OOP for infrastructure. (4/n)</p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055317693837313?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">Composition is the process of grouping together multiple &quot;primitive&quot; resources into a higher level abstraction. Think of an EKS cluster + Node Group + VPC + Subnets satisfying a &quot;Cluster&quot; abstraction. Kind of like OOP for infrastructure. (4/n)</p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055317693837313?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">Composition machinery in core Crossplane needs to be able to create these primitives when it observes an instance of the abstraction they satisfy. In addition, the controller installed with the CRDs needs permissions to manage them. (5/n)</p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055318650220548?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">Composition machinery in core Crossplane needs to be able to create these primitives when it observes an instance of the abstraction they satisfy. In addition, the controller installed with the CRDs needs permissions to manage them. (5/n)</p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055318650220548?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">The Crossplane RBAC manager runs as an isolated Deployment responsible for doling out these permissions, meaning it must be given RBAC privilege escalation powers. (6/n)</p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055319551995906?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">The Crossplane RBAC manager runs as an isolated Deployment responsible for doling out these permissions, meaning it must be given RBAC privilege escalation powers. (6/n)</p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055319551995906?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">However, isolating the RBAC manager means that we can constrain the logic that runs with escalation privileges, and a user can also opt not to deploy the RBAC manager and just manage permissions on their own. (7/n)</p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055320483123201?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">However, isolating the RBAC manager means that we can constrain the logic that runs with escalation privileges, and a user can also opt not to deploy the RBAC manager and just manage permissions on their own. (7/n)</p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055320483123201?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">So now that we can guarantee that an installed package will be given permissions to manage the types that it installs, the next issue is versioning. (8/n)</p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055321376518144?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">So now that we can guarantee that an installed package will be given permissions to manage the types that it installs, the next issue is versioning. (8/n)</p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055321376518144?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">Crossplane uses many of the ideas introduced in <a href="https://twitter.com/kubernetesio?ref_src=twsrc%5Etfw">@kubernetesio</a> Deployment revisions in our design of package revisions. Installing a Package will create a PackageRevision for the specified image. (9/n)</p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055322395643909?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">Crossplane uses many of the ideas introduced in <a href="https://twitter.com/kubernetesio?ref_src=twsrc%5Etfw">@kubernetesio</a> Deployment revisions in our design of package revisions. Installing a Package will create a PackageRevision for the specified image. (9/n)</p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055322395643909?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">Based on the package contents and the directives in the crossplane.yaml file, Crossplane will unpack and install the revision&#39;s contents. For instance, provider-aws will result in a slew of new CRDs and a Deployment that reconciles them. (10/n)</p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055323372916736?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">Based on the package contents and the directives in the crossplane.yaml file, Crossplane will unpack and install the revision&#39;s contents. For instance, provider-aws will result in a slew of new CRDs and a Deployment that reconciles them. (10/n)</p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055323372916736?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">When a new version of your package is available, you simply bump the tag, and a new revision is created. A revision can either be Active or Inactive, the former meaning it controls its installed objects, and the latter meaning it doesn&#39;t (more on this later). (11/n)</p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055324358664193?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">When a new version of your package is available, you simply bump the tag, and a new revision is created. A revision can either be Active or Inactive, the former meaning it controls its installed objects, and the latter meaning it doesn&#39;t (more on this later). (11/n)</p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055324358664193?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">When a new Active revision is introduced, the existing revision is transitioned to Inactive, meaning that its controllers are stopped, but the objects it installed remain. The new revision then attempts to install its own objects, or observe that they exist. (12/n)</p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055325356896257?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">When a new Active revision is introduced, the existing revision is transitioned to Inactive, meaning that its controllers are stopped, but the objects it installed remain. The new revision then attempts to install its own objects, or observe that they exist. (12/n)</p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055325356896257?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">If all goes well, the new controllers are now reconciling the objects, and the old revision sits idly by. Users may also choose to have a manual activation policy, meaning Crossplane will create a new revision, but you must explicitly say to Activate it. (13/n)</p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055326283845633?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">If all goes well, the new controllers are now reconciling the objects, and the old revision sits idly by. Users may also choose to have a manual activation policy, meaning Crossplane will create a new revision, but you must explicitly say to Activate it. (13/n)</p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055326283845633?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">Over time, depending on your revision history limit, inactive revisions will be garbage collected, which means that if subsequent revisions did not install a given CRD, it will also be cleaned up with its parent revision. (14/n)</p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055327302979584?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">Over time, depending on your revision history limit, inactive revisions will be garbage collected, which means that if subsequent revisions did not install a given CRD, it will also be cleaned up with its parent revision. (14/n)</p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055327302979584?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">So how does this ownership work? Primarily using built-in <a href="https://twitter.com/kubernetesio?ref_src=twsrc%5Etfw">@kubernetesio</a> controller and owner references. In order for a revision to reconcile a CRD, it must be the controller of it, and k8s mandates there can only be one. (15/n)</p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055328196448257?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">So how does this ownership work? Primarily using built-in <a href="https://twitter.com/kubernetesio?ref_src=twsrc%5Etfw">@kubernetesio</a> controller and owner references. In order for a revision to reconcile a CRD, it must be the controller of it, and k8s mandates there can only be one. (15/n)</p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055328196448257?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">When a revision becomes active, it first attempts to become the controller of every object kind it will reconcile (remember, for it to reconcile an object it needs permissions, which are assigned in a deterministic manner). (16/n)</p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055329182109698?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">When a revision becomes active, it first attempts to become the controller of every object kind it will reconcile (remember, for it to reconcile an object it needs permissions, which are assigned in a deterministic manner). (16/n)</p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055329182109698?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">If all of the revision&#39;s object kinds do not exist, or do and it can become the controller, then it is free to begin reconciling those types. But if older revisions exist, how can the newer one be the sole controller? (17/n)</p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055330088050688?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">If all of the revision&#39;s object kinds do not exist, or do and it can become the controller, then it is free to begin reconciling those types. But if older revisions exist, how can the newer one be the sole controller? (17/n)</p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055330088050688?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">When a revision is transitioned to Inactive, it changes all of the controller references it established to owner references, which a single object can have many of. When it finishes this process, the new revision is then free to become the controller. (18/n)</p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055330947883009?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">When a revision is transitioned to Inactive, it changes all of the controller references it established to owner references, which a single object can have many of. When it finishes this process, the new revision is then free to become the controller. (18/n)</p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055330947883009?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">This is also how we guard against two distinct packages attempting to install the same types and reconcile them. If the GVK is owned by a revision, no other revision, whether an iteration of the same package or an entirely different one can reconcile it. (19/n)</p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055331866464257?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">This is also how we guard against two distinct packages attempting to install the same types and reconcile them. If the GVK is owned by a revision, no other revision, whether an iteration of the same package or an entirely different one can reconcile it. (19/n)</p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055331866464257?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">The same process works when rolling backward to a revision that is Inactive. You can even have Crossplane periodically check for new versions of a package, and create new revisions when it observes a newer version. This can all be configured. (20/n)<a href="https://t.co/0ZkXREDQOq">https://t.co/0ZkXREDQOq</a></p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055332814364675?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">The same process works when rolling backward to a revision that is Inactive. You can even have Crossplane periodically check for new versions of a package, and create new revisions when it observes a newer version. This can all be configured. (20/n)<a href="https://t.co/0ZkXREDQOq">https://t.co/0ZkXREDQOq</a></p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055332814364675?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">Lastly, I am excited to say that Crossplane v1.0, which is due to land in ~2 weeks. Will also support dependency resolution between packages! Here is a small demo of what this looks like. (21/21)<a href="https://t.co/slA3Nfv970">https://t.co/slA3Nfv970</a></p>&mdash; Daniel Mangum (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055333883924488?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
+<blockquote class="twitter-tweet" data-conversation="none"><p lang="en" dir="ltr">Lastly, I am excited to say that Crossplane v1.0, which is due to land in ~2 weeks. Will also support dependency resolution between packages! Here is a small demo of what this looks like. (21/21)<a href="https://t.co/slA3Nfv970">https://t.co/slA3Nfv970</a></p>&mdash; Daniel Mangum (@hasheddan@types.pl) (@hasheddan) <a href="https://twitter.com/hasheddan/status/1333055333883924488?ref_src=twsrc%5Etfw">November 29, 2020</a></blockquote>
 <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 </p>
 
-  </article>
-
-  <br/>
-
-  
-  
-</section>
-
       </div>
 
-      <footer class="footer">
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
   <section class="container">
-     © 2022  
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
   </section>
 </footer>
 
-    </main>
+  </main>
 
-    
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {
@@ -187,7 +276,19 @@ if (!doNotTrack) {
 }
 </script>
 
+  
 
-  </body>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
 
 </html>

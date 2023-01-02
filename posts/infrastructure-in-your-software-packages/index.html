@@ -1,95 +1,163 @@
 <!DOCTYPE html>
 <html lang="en">
-
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <meta name="author" content="Daniel Mangum">
-    <meta name="description" content="Daniel Mangum&#39;s personal website">
-    <meta name="keywords" content="blog,developer,personal">
-
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:site" content="@hasheddan" />
-    <meta name="twitter:title" content="Infrastructure in Your Software Packages"/>
-    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
-
-    <base href="https://danielmangum.com">
     <title>
   Infrastructure in Your Software Packages · Daniel Mangum
 </title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
 
-    <link rel="canonical" href="https://danielmangum.com/posts/infrastructure-in-your-software-packages/">
 
-    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
-    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
-    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
 
-    
 
-    
-      <link rel="stylesheet" href="https://danielmangum.com/css/custom.css">
-    
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="This post explores what a future of shipping infrastructure alongside software may look like by detailing where we are today, and evaluating how the delivery of software has evolved over time. If you just want the big ideas, skip to the final section: A New Kind of Software Marketplace.
+Almost all software depends on infrastructure. Installation documentation typically has a section detailing how to run with your favorite cloud provider managed services, and, if you&rsquo;re lucky, may even include a script to provision that infrastructure for you.">
+<meta name="keywords" content="blog,developer,personal">
 
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Infrastructure in Your Software Packages"/>
+<meta name="twitter:description" content="This post explores what a future of shipping infrastructure alongside software may look like by detailing where we are today, and evaluating how the delivery of software has evolved over time. If you just want the big ideas, skip to the final section: A New Kind of Software Marketplace.
+Almost all software depends on infrastructure. Installation documentation typically has a section detailing how to run with your favorite cloud provider managed services, and, if you&rsquo;re lucky, may even include a script to provision that infrastructure for you."/>
 
-    
+<meta property="og:title" content="Infrastructure in Your Software Packages" />
+<meta property="og:description" content="This post explores what a future of shipping infrastructure alongside software may look like by detailing where we are today, and evaluating how the delivery of software has evolved over time. If you just want the big ideas, skip to the final section: A New Kind of Software Marketplace.
+Almost all software depends on infrastructure. Installation documentation typically has a section detailing how to run with your favorite cloud provider managed services, and, if you&rsquo;re lucky, may even include a script to provision that infrastructure for you." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/infrastructure-in-your-software-packages/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2021-10-19T01:41:34-06:00" />
+<meta property="article:modified_time" content="2021-10-19T01:41:34-06:00" />
 
-    <meta name="generator" content="Hugo 0.68.3" />
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/infrastructure-in-your-software-packages/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.109.0">
+
+
+
+
+
   </head>
 
-  <body class="">
-    <main class="wrapper">
-      <nav class="navigation">
+
+
+
+<body class="preload-transitions colorscheme-light">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
   <section class="container">
-    <a class="navigation-title" href="https://danielmangum.com">
+    <a class="navigation-title" href="https://danielmangum.com/">
       Daniel Mangum
     </a>
     
-    <ul class="navigation-list  float-right ">
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
-      </li>
-      
-    </ul>
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
     
   </section>
 </nav>
 
 
-      <div class="content">
-        
-  <section class="container post">
-  <article>
-    <header>
-      <h1 class="title">Infrastructure in Your Software Packages</h1>
-      <h2 class="date">October 19, 2021</h2>
-      <style>
-        .twitter-tweet-rendered {
-          display:block;
-          margin-left:auto;
-          margin-right:auto;
-        }
-      </style>
-
+    <div class="content">
       
-    </header>
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/infrastructure-in-your-software-packages/">
+              Infrastructure in Your Software Packages
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2021-10-19T01:41:34-06:00">
+                October 19, 2021
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              14-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
 
-    <blockquote>
+      <div class="post-content">
+        
+        <blockquote>
 <p>This post explores what a future of shipping infrastructure alongside software
 may look like by detailing where we are today, and evaluating how the delivery
 of software has evolved over time. If you just want the big ideas, skip to the
@@ -118,7 +186,7 @@ deploying their infrastructure as workloads within the Kubernetes cluster. The
 problem is, when we do this we throw away more than two decades of work that
 cloud providers have done to run managed infrastructure with absurd levels of
 reliability and minimal burden on the consumer.</p>
-<p><img src="../static/infra-in-pkg-0.png" alt="TF Law"></p>
+<p><img src="../../static/infra-in-pkg-0.png" alt="TF Law"></p>
 <blockquote>
 <p>This is not a shot at Terraform, but rather an acknowledgement of a common
 trend in most organizations, with Terraform being the most widely adopted and
@@ -128,7 +196,13 @@ successful tool in the infrastructure provisioning space over the last decade.</
 our infrastructure management from the management of applications that consume
 them or we must take on the relatively colossal effort of running the
 infrastructure ourselves.</p>
-<h2 id="dynamically-linked-infrastructure">Dynamically Linked Infrastructure</h2>
+<h2 id="dynamically-linked-infrastructure">
+  Dynamically Linked Infrastructure
+  <a class="heading-link" href="#dynamically-linked-infrastructure">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>The relationship between software products and their infrastructure dependencies
 today feels not so different from dynamically linked binaries, a practice we
 have <a href="https://gavinhoward.com/2021/10/static-linking-considered-harmful-considered-harmful/">started to move away
@@ -217,7 +291,13 @@ potentially ship a few common implementations of that interface alongside their
 software. This would result in a package that, when deployed, would ensure the
 necessary infrastructure dependencies were in place, yet leave the granular
 configuration and policy to the consumer.</p>
-<h2 id="crossplane-the-control-plane-framework">Crossplane: The Control Plane Framework</h2>
+<h2 id="crossplane-the-control-plane-framework">
+  Crossplane: The Control Plane Framework
+  <a class="heading-link" href="#crossplane-the-control-plane-framework">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>If Kubernetes has becomes the de facto distributed system framework, then
 <a href="https://crossplane.io/">Crossplane</a> is aiming to be the control plane framework
 built on top of it. Crossplane is comprised of three major concepts, which
@@ -250,88 +330,88 @@ the Kubernetes ecosystem is rife with walls of YAML. We are working on tooling
 to reduce the strain on Crossplane users authoring these resources. Stay
 tuned!</p>
 </blockquote>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#fff;font-weight:bold">apiVersion</span>: apiextensions.crossplane.io/v1
-<span style="color:#fff;font-weight:bold">kind</span>: CompositeResourceDefinition
-<span style="color:#fff;font-weight:bold">metadata</span>:
-  <span style="color:#fff;font-weight:bold">name</span>: xdatabases.example.org
-<span style="color:#fff;font-weight:bold">spec</span>:
-  <span style="color:#fff;font-weight:bold">group</span>: example.org
-  <span style="color:#fff;font-weight:bold">names</span>:
-    <span style="color:#fff;font-weight:bold">kind</span>: XDatabase
-    <span style="color:#fff;font-weight:bold">plural</span>: xdatabase
-  <span style="color:#fff;font-weight:bold">claimNames</span>:
-    <span style="color:#fff;font-weight:bold">kind</span>: Database
-    <span style="color:#fff;font-weight:bold">plural</span>: databases
-  <span style="color:#fff;font-weight:bold">connectionSecretKeys</span>:
-    - username
-    - password
-    - endpoint
-    - port
-  <span style="color:#fff;font-weight:bold">versions</span>:
-  - <span style="color:#fff;font-weight:bold">name</span>: v1alpha1
-    <span style="color:#fff;font-weight:bold">served</span>: <span style="color:#fff;font-weight:bold">true</span>
-    <span style="color:#fff;font-weight:bold">referenceable</span>: <span style="color:#fff;font-weight:bold">true</span>
-    <span style="color:#fff;font-weight:bold">schema</span>:
-      <span style="color:#fff;font-weight:bold">openAPIV3Schema</span>:
-        <span style="color:#fff;font-weight:bold">type</span>: object
-        <span style="color:#fff;font-weight:bold">properties</span>:
-          <span style="color:#fff;font-weight:bold">spec</span>:
-            <span style="color:#fff;font-weight:bold">type</span>: object
-            <span style="color:#fff;font-weight:bold">properties</span>:
-              <span style="color:#fff;font-weight:bold">parameters</span>:
-                <span style="color:#fff;font-weight:bold">type</span>: object
-                <span style="color:#fff;font-weight:bold">properties</span>:
-                  <span style="color:#fff;font-weight:bold">storageGB</span>:
-                    <span style="color:#fff;font-weight:bold">type</span>: integer
-                <span style="color:#fff;font-weight:bold">required</span>:
-                  - storageGB
-            <span style="color:#fff;font-weight:bold">required</span>:
-              - parameters
-</code></pre></div><p>Then they will author one or more <code>Compositions</code> that dictate what
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="font-weight:bold">apiVersion</span>: apiextensions.crossplane.io/v1
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">kind</span>: CompositeResourceDefinition
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">name</span>: xdatabases.example.org
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">group</span>: example.org
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">names</span>:
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">kind</span>: XDatabase
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">plural</span>: xdatabase
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">claimNames</span>:
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">kind</span>: Database
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">plural</span>: databases
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">connectionSecretKeys</span>:
+</span></span><span style="display:flex;"><span>    - username
+</span></span><span style="display:flex;"><span>    - password
+</span></span><span style="display:flex;"><span>    - endpoint
+</span></span><span style="display:flex;"><span>    - port
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">versions</span>:
+</span></span><span style="display:flex;"><span>  - <span style="font-weight:bold">name</span>: v1alpha1
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">served</span>: <span style="color:#fff;font-weight:bold">true</span>
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">referenceable</span>: <span style="color:#fff;font-weight:bold">true</span>
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">schema</span>:
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">openAPIV3Schema</span>:
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">type</span>: object
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">properties</span>:
+</span></span><span style="display:flex;"><span>          <span style="font-weight:bold">spec</span>:
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">type</span>: object
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">properties</span>:
+</span></span><span style="display:flex;"><span>              <span style="font-weight:bold">parameters</span>:
+</span></span><span style="display:flex;"><span>                <span style="font-weight:bold">type</span>: object
+</span></span><span style="display:flex;"><span>                <span style="font-weight:bold">properties</span>:
+</span></span><span style="display:flex;"><span>                  <span style="font-weight:bold">storageGB</span>:
+</span></span><span style="display:flex;"><span>                    <span style="font-weight:bold">type</span>: integer
+</span></span><span style="display:flex;"><span>                <span style="font-weight:bold">required</span>:
+</span></span><span style="display:flex;"><span>                  - storageGB
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">required</span>:
+</span></span><span style="display:flex;"><span>              - parameters
+</span></span></code></pre></div><p>Then they will author one or more <code>Compositions</code> that dictate what
 infrastructure is provisioned and how the configured fields on the <code>Database</code>
 modify it.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#fff;font-weight:bold">apiVersion</span>: apiextensions.crossplane.io/v1
-<span style="color:#fff;font-weight:bold">kind</span>: Composition
-<span style="color:#fff;font-weight:bold">metadata</span>:
-  <span style="color:#fff;font-weight:bold">name</span>: database.aws.example.org
-  <span style="color:#fff;font-weight:bold">labels</span>:
-    <span style="color:#fff;font-weight:bold">provider</span>: aws
-<span style="color:#fff;font-weight:bold">spec</span>:
-  <span style="color:#fff;font-weight:bold">writeConnectionSecretsToNamespace</span>: crossplane-system
-  <span style="color:#fff;font-weight:bold">compositeTypeRef</span>:
-    <span style="color:#fff;font-weight:bold">apiVersion</span>: example.org/v1alpha1
-    <span style="color:#fff;font-weight:bold">kind</span>: XDatabase
-  <span style="color:#fff;font-weight:bold">resources</span>:
-    - <span style="color:#fff;font-weight:bold">name</span>: rdsinstance
-      <span style="color:#fff;font-weight:bold">base</span>:
-        <span style="color:#fff;font-weight:bold">apiVersion</span>: database.aws.crossplane.io/v1beta1
-        <span style="color:#fff;font-weight:bold">kind</span>: RDSInstance
-        <span style="color:#fff;font-weight:bold">spec</span>:
-          <span style="color:#fff;font-weight:bold">forProvider</span>:
-            <span style="color:#fff;font-weight:bold">region</span>: us-east<span style="color:#ff0;font-weight:bold">-1</span>
-            <span style="color:#fff;font-weight:bold">dbInstanceClass</span>: db.t2.small
-            <span style="color:#fff;font-weight:bold">masterUsername</span>: masteruser
-            <span style="color:#fff;font-weight:bold">engine</span>: postgres
-            <span style="color:#fff;font-weight:bold">engineVersion</span>: <span style="color:#0ff;font-weight:bold">&#34;12&#34;</span>
-            <span style="color:#fff;font-weight:bold">skipFinalSnapshotBeforeDeletion</span>: <span style="color:#fff;font-weight:bold">true</span>
-            <span style="color:#fff;font-weight:bold">publiclyAccessible</span>: <span style="color:#fff;font-weight:bold">true</span>
-          <span style="color:#fff;font-weight:bold">writeConnectionSecretToRef</span>:
-            <span style="color:#fff;font-weight:bold">namespace</span>: crossplane-system
-      <span style="color:#fff;font-weight:bold">patches</span>:
-        - <span style="color:#fff;font-weight:bold">fromFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;metadata.uid&#34;</span>
-          <span style="color:#fff;font-weight:bold">toFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;spec.writeConnectionSecretToRef.name&#34;</span>
-          <span style="color:#fff;font-weight:bold">transforms</span>:
-            - <span style="color:#fff;font-weight:bold">type</span>: string
-              <span style="color:#fff;font-weight:bold">string</span>:
-                <span style="color:#fff;font-weight:bold">fmt</span>: <span style="color:#0ff;font-weight:bold">&#34;%s-postgresql&#34;</span>
-        - <span style="color:#fff;font-weight:bold">fromFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;spec.parameters.storageGB&#34;</span>
-          <span style="color:#fff;font-weight:bold">toFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;spec.forProvider.allocatedStorage&#34;</span>
-      <span style="color:#fff;font-weight:bold">connectionDetails</span>:
-        - <span style="color:#fff;font-weight:bold">fromConnectionSecretKey</span>: username
-        - <span style="color:#fff;font-weight:bold">fromConnectionSecretKey</span>: password
-        - <span style="color:#fff;font-weight:bold">fromConnectionSecretKey</span>: endpoint
-        - <span style="color:#fff;font-weight:bold">fromConnectionSecretKey</span>: port
-</code></pre></div><blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="font-weight:bold">apiVersion</span>: apiextensions.crossplane.io/v1
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">kind</span>: Composition
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">name</span>: database.aws.example.org
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">labels</span>:
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">provider</span>: aws
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">writeConnectionSecretsToNamespace</span>: crossplane-system
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">compositeTypeRef</span>:
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">apiVersion</span>: example.org/v1alpha1
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">kind</span>: XDatabase
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">resources</span>:
+</span></span><span style="display:flex;"><span>    - <span style="font-weight:bold">name</span>: rdsinstance
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">base</span>:
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">apiVersion</span>: database.aws.crossplane.io/v1beta1
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">kind</span>: RDSInstance
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">spec</span>:
+</span></span><span style="display:flex;"><span>          <span style="font-weight:bold">forProvider</span>:
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">region</span>: us-east-1
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">dbInstanceClass</span>: db.t2.small
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">masterUsername</span>: masteruser
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">engine</span>: postgres
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">engineVersion</span>: <span style="color:#0ff;font-weight:bold">&#34;12&#34;</span>
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">skipFinalSnapshotBeforeDeletion</span>: <span style="color:#fff;font-weight:bold">true</span>
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">publiclyAccessible</span>: <span style="color:#fff;font-weight:bold">true</span>
+</span></span><span style="display:flex;"><span>          <span style="font-weight:bold">writeConnectionSecretToRef</span>:
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">namespace</span>: crossplane-system
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">patches</span>:
+</span></span><span style="display:flex;"><span>        - <span style="font-weight:bold">fromFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;metadata.uid&#34;</span>
+</span></span><span style="display:flex;"><span>          <span style="font-weight:bold">toFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;spec.writeConnectionSecretToRef.name&#34;</span>
+</span></span><span style="display:flex;"><span>          <span style="font-weight:bold">transforms</span>:
+</span></span><span style="display:flex;"><span>            - <span style="font-weight:bold">type</span>: string
+</span></span><span style="display:flex;"><span>              <span style="font-weight:bold">string</span>:
+</span></span><span style="display:flex;"><span>                <span style="font-weight:bold">fmt</span>: <span style="color:#0ff;font-weight:bold">&#34;%s-postgresql&#34;</span>
+</span></span><span style="display:flex;"><span>        - <span style="font-weight:bold">fromFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;spec.parameters.storageGB&#34;</span>
+</span></span><span style="display:flex;"><span>          <span style="font-weight:bold">toFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;spec.forProvider.allocatedStorage&#34;</span>
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">connectionDetails</span>:
+</span></span><span style="display:flex;"><span>        - <span style="font-weight:bold">fromConnectionSecretKey</span>: username
+</span></span><span style="display:flex;"><span>        - <span style="font-weight:bold">fromConnectionSecretKey</span>: password
+</span></span><span style="display:flex;"><span>        - <span style="font-weight:bold">fromConnectionSecretKey</span>: endpoint
+</span></span><span style="display:flex;"><span>        - <span style="font-weight:bold">fromConnectionSecretKey</span>: port
+</span></span></code></pre></div><blockquote>
 <p>This <code>Composition</code> only composes a single resource (<code>RDSInstance</code>), but an
 arbitrary number of resources may be included in a single <code>Composition</code>.</p>
 </blockquote>
@@ -339,17 +419,17 @@ arbitrary number of resources may be included in a single <code>Composition</cod
 package, defining any dependencies on other packages. For instance, the
 <code>Composition</code> above provisions resources on AWS, so the <code>Configuration</code> package
 should declare a dependency on the AWS <code>Provider</code> package.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#fff;font-weight:bold">apiVersion</span>: meta.pkg.crossplane.io/v1
-<span style="color:#fff;font-weight:bold">kind</span>: Configuration
-<span style="color:#fff;font-weight:bold">metadata</span>:
-  <span style="color:#fff;font-weight:bold">name</span>: MyDatabasePkg
-<span style="color:#fff;font-weight:bold">spec</span>:
-  <span style="color:#fff;font-weight:bold">crossplane</span>:
-    <span style="color:#fff;font-weight:bold">version</span>: <span style="color:#0ff;font-weight:bold">&#34;&gt;=v1.0.0-0&#34;</span>
-  <span style="color:#fff;font-weight:bold">dependsOn</span>:
-    - <span style="color:#fff;font-weight:bold">provider</span>: crossplane/provider-aws
-      <span style="color:#fff;font-weight:bold">version</span>: <span style="color:#0ff;font-weight:bold">&#34;&gt;=v0.19.0&#34;</span>
-</code></pre></div><p>The <code>Configuration</code> package is bundled as an OCI image that can be hosted on any
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="font-weight:bold">apiVersion</span>: meta.pkg.crossplane.io/v1
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">kind</span>: Configuration
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">name</span>: MyDatabasePkg
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">crossplane</span>:
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">version</span>: <span style="color:#0ff;font-weight:bold">&#34;&gt;=v1.0.0-0&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">dependsOn</span>:
+</span></span><span style="display:flex;"><span>    - <span style="font-weight:bold">provider</span>: crossplane/provider-aws
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">version</span>: <span style="color:#0ff;font-weight:bold">&#34;&gt;=v0.19.0&#34;</span>
+</span></span></code></pre></div><p>The <code>Configuration</code> package is bundled as an OCI image that can be hosted on any
 registry, and when it is <a href="https://crossplane.io/docs/v1.4/concepts/packages.html#installing-a-package">installed into a Kubernetes
 cluster</a>
 with Crossplane present, Crossplane will ensure that all dependencies are
@@ -357,21 +437,21 @@ installed and configured. From that point forward, a <code>Database</code> objec
 created in the cluster, and the infrastructure defined in the <code>Composition</code> will
 be provisioned. If multiple <code>Compositions</code> are defined, one can be optionally
 selected as a parameter to the <code>Database</code> object.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="color:#fff;font-weight:bold">apiVersion</span>: example.org/v1alpha1
-<span style="color:#fff;font-weight:bold">kind</span>: Database
-<span style="color:#fff;font-weight:bold">metadata</span>:
-  <span style="color:#fff;font-weight:bold">name</span>: my-db
-  <span style="color:#fff;font-weight:bold">namespace</span>: default
-<span style="color:#fff;font-weight:bold">spec</span>:
-  <span style="color:#fff;font-weight:bold">parameters</span>:
-    <span style="color:#fff;font-weight:bold">storageGB</span>: <span style="color:#ff0;font-weight:bold">20</span>
-  <span style="color:#fff;font-weight:bold">compositionSelector</span>:
-    <span style="color:#fff;font-weight:bold">matchLabels</span>:
-      <span style="color:#fff;font-weight:bold">provider</span>: aws
-  <span style="color:#fff;font-weight:bold">writeConnectionSecretToRef</span>:
-    <span style="color:#fff;font-weight:bold">name</span>: db-conn
-</code></pre></div><p>At this point, the organization control plane looks like this:</p>
-<p><img src="../static/infra-in-pkg-1.png" alt="Control Plane Initial"></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="font-weight:bold">apiVersion</span>: example.org/v1alpha1
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">kind</span>: Database
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">name</span>: my-db
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">namespace</span>: default
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">parameters</span>:
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">storageGB</span>: <span style="color:#ff0;font-weight:bold">20</span>
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">compositionSelector</span>:
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">matchLabels</span>:
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">provider</span>: aws
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">writeConnectionSecretToRef</span>:
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">name</span>: db-conn
+</span></span></code></pre></div><p>At this point, the organization control plane looks like this:</p>
+<p><img src="../../static/infra-in-pkg-1.png" alt="Control Plane Initial"></p>
 <p>Now when a developer goes to create and deploy their application Helm chart,
 they don&rsquo;t ask for the platform team to create a database and a <code>Secret</code> for
 them to consume. They add a <code>Database</code> to their chart and it gets deployed
@@ -386,7 +466,7 @@ credentials via Kubernetes <code>Secrets</code>, but, ya know, it happens.</p>
 even higher-level XRD. Over time, an organization can continue to build out its
 control plane by composing infrastructure and exposing it at various levels of
 abstraction.</p>
-<p><img src="../static/infra-in-pkg-2.png" alt="Control Plane More"></p>
+<p><img src="../../static/infra-in-pkg-2.png" alt="Control Plane More"></p>
 <blockquote>
 <p>Each of the packages in the control plane above could be installed
 individually, in which case Crossplane&rsquo;s package manager would ensure that
@@ -397,7 +477,13 @@ dependencies. This allows Crossplane to manage dependencies, all of which
 become ancestors of the root package, and upgrades can be managed from a
 single location.</p>
 </blockquote>
-<h2 id="an-opportunity-for-software-vendors">An Opportunity for Software Vendors</h2>
+<h2 id="an-opportunity-for-software-vendors">
+  An Opportunity for Software Vendors
+  <a class="heading-link" href="#an-opportunity-for-software-vendors">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>Working at a company that sells enterprise software, I can tell you firsthand
 that integrating a complex product into a customer environment can be time
 consuming and error prone. The difficulty arises from the fact that the builder
@@ -420,7 +506,7 @@ package with the following contents:</p>
 <li>Dependencies on the <a href="https://github.com/crossplane/provider-gcp">GCP</a> and
 <a href="https://github.com/crossplane-contrib/provider-helm">Helm</a> <code>Providers</code></li>
 </ul>
-<p><img src="../static/infra-in-pkg-3.png" alt="Vendor Package"></p>
+<p><img src="../../static/infra-in-pkg-3.png" alt="Vendor Package"></p>
 <blockquote>
 <p>Earlier we talked about including an XRD-defined resource in a Helm chart to
 provision infrastructure alongside our software. Here we are bundling a Helm
@@ -445,13 +531,19 @@ only need to create a <code>VendorSoftware</code> instance and they get a vendor
 infrastructure configuration without any manual intervention. If they want to
 supply their own <code>VendorSoftwareDB</code> compatible <code>Composition</code>, they can opt to
 use it, while still provisioning it via the top-level <code>VendorSoftware</code> type.</p>
-<p><img src="../static/infra-in-pkg-4.png" alt="Control Plane with Vendor"></p>
+<p><img src="../../static/infra-in-pkg-4.png" alt="Control Plane with Vendor"></p>
 <p>Furthermore, they can add to the <code>VendorSoftware</code> by including it in a
 <code>Composition</code> for a higher-level XRD. This can be especially useful in the case
 that additional infrastructure needs to be provisioned every time an instance of
 the software is deployed (e.g. custom firewall rules, DNS entries, etc.).</p>
-<p><img src="../static/infra-in-pkg-5.png" alt="Control Plane with Vendor Custom"></p>
-<h2 id="a-new-kind-of-software-marketplace">A New Kind of Software Marketplace</h2>
+<p><img src="../../static/infra-in-pkg-5.png" alt="Control Plane with Vendor Custom"></p>
+<h2 id="a-new-kind-of-software-marketplace">
+  A New Kind of Software Marketplace
+  <a class="heading-link" href="#a-new-kind-of-software-marketplace">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>So where does this leave us? In my mind, it is a fundamental reshaping of how we
 integrate new software into an organization. It is a vision of a world where
 taking a dependency on an enterprise product is quite literally just updating
@@ -483,25 +575,49 @@ are welcome!</p>
 <p>Send me a message <a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter with
 any questions or comments!</p>
 
-  </article>
-
-  <br/>
-
-  
-  
-</section>
-
       </div>
 
-      <footer class="footer">
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
   <section class="container">
-     © 2022  
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
   </section>
 </footer>
 
-    </main>
+  </main>
 
-    
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {
@@ -515,7 +631,19 @@ if (!doNotTrack) {
 }
 </script>
 
+  
 
-  </body>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
 
 </html>

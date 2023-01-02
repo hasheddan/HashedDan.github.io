@@ -6,11 +6,7 @@
     <description>Recent content in Risc-v-tips on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 03 Jul 2022 00:10:34 -0600</lastBuildDate>
-    
-	<atom:link href="https://danielmangum.com/risc-v-tips/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Sun, 03 Jul 2022 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/risc-v-tips/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Dynamically Linked Programs with Binfmt_misc</title>
       <link>https://danielmangum.com/risc-v-tips/2022-07-03-dynamically-linked-binfmt-misc/</link>
@@ -19,7 +15,7 @@
       <guid>https://danielmangum.com/risc-v-tips/2022-07-03-dynamically-linked-binfmt-misc/</guid>
       <description>Today&amp;rsquo;s @risc_v Tip:
 If cross-compiling a dynamically linked program, then executing using binfmt_misc, you&amp;rsquo;ll need to both:
- Inform the OS where the dynamic linker resides (or invoke directly) Inform dynamic linker where other shared libraries reside (LD_LIBRARY_PATH)  Original Tweet</description>
+Inform the OS where the dynamic linker resides (or invoke directly) Inform dynamic linker where other shared libraries reside (LD_LIBRARY_PATH) Original Tweet</description>
     </item>
     
     <item>
@@ -29,9 +25,9 @@ If cross-compiling a dynamically linked program, then executing using binfmt_mis
       
       <guid>https://danielmangum.com/risc-v-tips/2022-05-14-opening-a-udp-socket-risc-v/</guid>
       <description>The following is an aggregation of a Twitter thread I posted on April 14th, 2022.
- Ever wondered how to open a UDP socket in @risc_v assembly? Wonder no more!
+Ever wondered how to open a UDP socket in @risc_v assembly? Wonder no more!
 li a0, 2 li a1, 2 li a2, 0 li a7, 198 ecall Let&amp;rsquo;s walk through it! 👇🏼🧵
- The first thing to understand is that we are just a &amp;ldquo;normal&amp;rdquo; program running in user space. We don&amp;rsquo;t have special privileges in the system, and opening a socket is a privileged operation.</description>
+The first thing to understand is that we are just a &amp;ldquo;normal&amp;rdquo; program running in user space. We don&amp;rsquo;t have special privileges in the system, and opening a socket is a privileged operation.</description>
     </item>
     
     <item>
@@ -75,7 +71,7 @@ Original Tweet</description>
       <guid>https://danielmangum.com/risc-v-tips/2022-01-05-rvwmo/</guid>
       <description>Today&amp;rsquo;s @risc_v Tip:
 RISC-V defines its memory model (RVWMO) in the context of 3 orderings:
- Program Order: order of ops performed by a single hart Global Memory Order: order of ops performed by all harts Preserved Program Order: subset of program order respected globally  This diagram is an abstract example, but the key points are illustrated: memory operations appear to perform sequentially in the context of a single hart, but may not be observed in the same order globally.</description>
+Program Order: order of ops performed by a single hart Global Memory Order: order of ops performed by all harts Preserved Program Order: subset of program order respected globally This diagram is an abstract example, but the key points are illustrated: memory operations appear to perform sequentially in the context of a single hart, but may not be observed in the same order globally.</description>
     </item>
     
     <item>
@@ -240,7 +236,7 @@ Original Tweet</description>
       <guid>https://danielmangum.com/risc-v-tips/2021-12-14-atomicity-pmas/</guid>
       <description>Tonight&amp;rsquo;s @risc_v Tip:
 Atomicity Physical Memory Attributes (PMAs) specify support for atomic instructions described in the A extension in the Unprivileged Spec for a given range. There are two types:
- Atomic Memory Operations (AMO) Load Reserved / Store Conditional (LR/SC)  Original Tweet</description>
+Atomic Memory Operations (AMO) Load Reserved / Store Conditional (LR/SC) Original Tweet</description>
     </item>
     
     <item>
@@ -251,7 +247,7 @@ Atomicity Physical Memory Attributes (PMAs) specify support for atomic instructi
       <guid>https://danielmangum.com/risc-v-tips/2021-12-12-physical-memory-attributes/</guid>
       <description>Tonight’s @risc_v Tip:
 Physical Memory Attributes (PMAs) define the capabilities of a given address range. A range may be mapped to main memory, I/O devices, or may be empty. PMAs include:
- Access Type Atomicity Memory-Ordering Coherence / Cacheability Idempotency  Original Tweet</description>
+Access Type Atomicity Memory-Ordering Coherence / Cacheability Idempotency Original Tweet</description>
     </item>
     
     <item>
@@ -295,8 +291,8 @@ Original Tweet</description>
       <guid>https://danielmangum.com/risc-v-tips/2021-12-09-interrupt-controllers/</guid>
       <description>Tonight&amp;rsquo;s @risc_v Tip:
 RISC-V contains a few interrupt controller specs, each providing additional functionality over basic privilege-based preemption:
- Core-Local Interrupt Controller (CLIC) Platform-Level Interrupt Controller (PLIC) Advanced Interrupt Architecture (AIA)  The Advanced Interrupt Architecture (AIA) spec encompasses two different interrupt controllers:
- Advanced Platform-Level Interrupt Controller (APLIC) Incoming Message-Signaled Interrupt Controller (IMSIC)  Original Tweet</description>
+Core-Local Interrupt Controller (CLIC) Platform-Level Interrupt Controller (PLIC) Advanced Interrupt Architecture (AIA) The Advanced Interrupt Architecture (AIA) spec encompasses two different interrupt controllers:
+Advanced Platform-Level Interrupt Controller (APLIC) Incoming Message-Signaled Interrupt Controller (IMSIC) Original Tweet</description>
     </item>
     
     <item>
@@ -356,7 +352,7 @@ Sv32 supports a 2-level page table, but any Page Table Entry (PTE) may be a leaf
 1 PTE -&amp;gt; 1 Page
 1 Page Table -&amp;gt; 1024 PTE
 4 KiB * 1024 = 4 MiB
- Errata: Small correction to diagram: VPN[0] is used to populate PPN[0], while PPN[1] is populated with PPN in the Level 1 leaf PTE.</description>
+Errata: Small correction to diagram: VPN[0] is used to populate PPN[0], while PPN[1] is populated with PPN in the Level 1 leaf PTE.</description>
     </item>
     
     <item>
@@ -521,7 +517,7 @@ Original Tweet</description>
       <guid>https://danielmangum.com/risc-v-tips/2021-11-09-golang-compare-and-swap/</guid>
       <description>Tonight&amp;rsquo;s @risc_v Tip (feat. @golang):
 Go uses a compare and swap (CAS) implementation similar to the example provided in the RISC-V unprivileged spec. The Go assembler always uses acquire access (aq=1) to align with the language&amp;rsquo;s memory requirements.
-   Original Tweet</description>
+Original Tweet</description>
     </item>
     
     <item>
@@ -578,7 +574,7 @@ Original Tweet</description>
       <guid>https://danielmangum.com/risc-v-tips/2021-10-16-hpm-hardware-performance-monitoring/</guid>
       <description>Today’s @risc_v Tip:
 Machine (M) mode supports hardware performance monitoring (HPM) with the following CSRs:
- mcycle: number of clock cycles executed minstret: number of instructions retired mhpmcounter[3-31]: event counters mhpmevent[3-31]: event selectors  Original Tweet</description>
+mcycle: number of clock cycles executed minstret: number of instructions retired mhpmcounter[3-31]: event counters mhpmevent[3-31]: event selectors Original Tweet</description>
     </item>
     
     <item>
@@ -589,7 +585,7 @@ Machine (M) mode supports hardware performance monitoring (HPM) with the followi
       <guid>https://danielmangum.com/risc-v-tips/2021-10-12-supervisor-address-translation-and-protection/</guid>
       <description>Today’s @risc_v Tip:
 The satp (Supervisor Address Translation and Protection) CSR contains virtual memory translation information, including MODE. Valid modes for RV32 &amp;amp; RV64 include:
- RV32: Bare / Sv32 RV64: Bare / Sv39 / Sv48  Bare indicates no translation or protection.
+RV32: Bare / Sv32 RV64: Bare / Sv39 / Sv48 Bare indicates no translation or protection.
 Original Tweet</description>
     </item>
     
@@ -601,7 +597,7 @@ Original Tweet</description>
       <guid>https://danielmangum.com/risc-v-tips/2021-10-09-three-main-privilege-levels/</guid>
       <description>Today&amp;rsquo;s @risc_v Tip:
 RISC-V systems may support 3 main privilege levels:
- Machine (M) (Req.) Supervisor (S) (Opt.) User (U) (Opt.)  Execution context changes via traps. A trap that moves to a higher privilege level is a vertical trap, one that does not is a horizontal trap.
+Machine (M) (Req.) Supervisor (S) (Opt.) User (U) (Opt.) Execution context changes via traps. A trap that moves to a higher privilege level is a vertical trap, one that does not is a horizontal trap.
 Original Tweet</description>
     </item>
     
@@ -613,7 +609,7 @@ Original Tweet</description>
       <guid>https://danielmangum.com/risc-v-tips/2021-10-03-csr-field-behaviors/</guid>
       <description>Today’s @risc_v Tip:
 Fields of CSRs adhere to one of the following behaviors:
- WIRI: Reserved Writes Ignored, Reads Ignore Values WPRI: Reserved Writes Preserve Values, Reads Ignore Values WLRL: Write/Read Only Legal Values WARL: Write Any Values, Reads Legal Values  Original Tweet</description>
+WIRI: Reserved Writes Ignored, Reads Ignore Values WPRI: Reserved Writes Preserve Values, Reads Ignore Values WLRL: Write/Read Only Legal Values WARL: Write Any Values, Reads Legal Values Original Tweet</description>
     </item>
     
     <item>

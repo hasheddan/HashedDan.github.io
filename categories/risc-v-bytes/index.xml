@@ -6,11 +6,7 @@
     <description>Recent content in RISC-V Bytes on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 27 Dec 2022 00:10:34 -0600</lastBuildDate>
-    
-	<atom:link href="https://danielmangum.com/categories/risc-v-bytes/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Tue, 27 Dec 2022 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/categories/risc-v-bytes/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>RISC-V Bytes: Timer Interrupts</title>
       <link>https://danielmangum.com/posts/risc-v-bytes-timer-interrupts/</link>
@@ -18,8 +14,7 @@
       
       <guid>https://danielmangum.com/posts/risc-v-bytes-timer-interrupts/</guid>
       <description>Operating systems do great work, but sometimes they need a little bit of help to know when to switch from one task to another. Thankfully, hardware is there to help! Today we are going to take a look at how operating systems schedule reminders for themselves using timer interrupts.
-Sections  Don&amp;rsquo;t care about the why and just want to see the code? Jump ahead to The Full Picture.
-  Hardware Threads Exceptions, Interrupts, and Traps Memory-Mapped Registers Enabling Timer Interrupts  Step 0: Differentiating Machine and Supervisor Timer Interrupts Step 1: Enabling Global Interrupts Step 2: Enabling Timer Interrupts Step 3: Delegating Supervisor Timer Interrupts to Supervisor Mode   Setting the Timer Jumping to Supervisor Mode Setting Up a Supervisor Trap Handler The Full Picture Running Concluding Thoughts  Hardware Threads Before we can talk about how operating systems switch from doing one thing to another, we need to establish how many things they can do at a time.</description>
+Sections Link to heading Don&amp;rsquo;t care about the why and just want to see the code? Jump ahead to The Full Picture.</description>
     </item>
     
     <item>
@@ -48,7 +43,7 @@ Last week, Go 1.19 was officially released, and sure enough, tucked in the relea
       
       <guid>https://danielmangum.com/posts/risc-v-bytes-rust-cross-compilation/</guid>
       <description>This is part of a series on the blog where we explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
- Today we are going to take a brief detour from our previous posts in this series and look at Rust Cross-Compilation for RISC-V. This will be a shorter post focused on providing useful information about how rustc works, as well as offering exact steps and configuration to target RISC-V when compiling your Rust programs.</description>
+Today we are going to take a brief detour from our previous posts in this series and look at Rust Cross-Compilation for RISC-V. This will be a shorter post focused on providing useful information about how rustc works, as well as offering exact steps and configuration to target RISC-V when compiling your Rust programs.</description>
     </item>
     
     <item>
@@ -58,7 +53,7 @@ Last week, Go 1.19 was officially released, and sure enough, tucked in the relea
       
       <guid>https://danielmangum.com/posts/risc-v-bytes-privilege-levels/</guid>
       <description>This is part of a series on the blog where we explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
- It has been a bit since our last post, but today we are going to begin our journey into some of the more interesting areas of RISC-V systems. In the first post in the series, we installed our RISC-V toolchain, which included QEMU.</description>
+It has been a bit since our last post, but today we are going to begin our journey into some of the more interesting areas of RISC-V systems. In the first post in the series, we installed our RISC-V toolchain, which included QEMU.</description>
     </item>
     
     <item>
@@ -68,7 +63,7 @@ Last week, Go 1.19 was officially released, and sure enough, tucked in the relea
       
       <guid>https://danielmangum.com/posts/risc-v-bytes-intro-instruction-formats/</guid>
       <description>This is part of a series on the blog where we explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
- So far in this series, we have been looking at the assembly generated when compiling relatively simple programs. At this point, we have seen instructions that perform a wide variety of operations. Let&amp;rsquo;s take another look at our minimal example from the Passing on the Stack post:</description>
+So far in this series, we have been looking at the assembly generated when compiling relatively simple programs. At this point, we have seen instructions that perform a wide variety of operations. Let&amp;rsquo;s take another look at our minimal example from the Passing on the Stack post:</description>
     </item>
     
     <item>
@@ -78,7 +73,7 @@ Last week, Go 1.19 was officially released, and sure enough, tucked in the relea
       
       <guid>https://danielmangum.com/posts/risc-v-bytes-passing-on-the-stack/</guid>
       <description>This is part of a series on the blog where we explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
- I once took a class on compilers where my professor told us that a CPU is like a human brain: it can store important data and access it quickly, but there is a limit to the amount of data that can be stored.</description>
+I once took a class on compilers where my professor told us that a CPU is like a human brain: it can store important data and access it quickly, but there is a limit to the amount of data that can be stored.</description>
     </item>
     
     <item>
@@ -88,7 +83,7 @@ Last week, Go 1.19 was officially released, and sure enough, tucked in the relea
       
       <guid>https://danielmangum.com/posts/risc-v-bytes-caller-callee-registers/</guid>
       <description>This is part of a new series I am starting on the blog where we’ll explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
- When looking at the generated assembly for a function, you may have noticed that the first few instructions involve moving values from registers to the stack, then loading those values back into the same registers before returning.</description>
+When looking at the generated assembly for a function, you may have noticed that the first few instructions involve moving values from registers to the stack, then loading those values back into the same registers before returning.</description>
     </item>
     
     <item>
@@ -98,7 +93,7 @@ Last week, Go 1.19 was officially released, and sure enough, tucked in the relea
       
       <guid>https://danielmangum.com/posts/risc-v-bytes-qemu-gdb/</guid>
       <description>This is part of a new series I am starting on the blog where we&amp;rsquo;ll explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
- To start of the series, we are just going to get setup to do some exploration. I am going to assume you will not primarily be using a RISC-V machine1, so we need to configure our local development environment for cross-platform compiling, emulation, and debugging.</description>
+To start of the series, we are just going to get setup to do some exploration. I am going to assume you will not primarily be using a RISC-V machine1, so we need to configure our local development environment for cross-platform compiling, emulation, and debugging.</description>
     </item>
     
   </channel>

@@ -1,95 +1,163 @@
 <!DOCTYPE html>
 <html lang="en">
-
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <meta name="author" content="Daniel Mangum">
-    <meta name="description" content="Daniel Mangum&#39;s personal website">
-    <meta name="keywords" content="blog,developer,personal">
-
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:site" content="@hasheddan" />
-    <meta name="twitter:title" content="Using a ConfigMap as an OCI Image Cache"/>
-    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
-
-    <base href="https://danielmangum.com">
     <title>
   Using a ConfigMap as an OCI Image Cache · Daniel Mangum
 </title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
 
-    <link rel="canonical" href="https://danielmangum.com/posts/config-map-oci-image-cache/">
 
-    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
-    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
-    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
 
-    
 
-    
-      <link rel="stylesheet" href="https://danielmangum.com/css/custom.css">
-    
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="For folks familiar with Crossplane, you likely know that we adopt the design practice of using interfaces over implementations as frequently as possible. Even if we begin with an implementation, such as the current composition engine, we make sure to consider a future with potentially many implementations for the same functionality.
+One of the places where we have taken advantage of Kubernetes&rsquo; similar approach to interfaces is in how we cache Crossplane package images.">
+<meta name="keywords" content="blog,developer,personal">
 
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Using a ConfigMap as an OCI Image Cache"/>
+<meta name="twitter:description" content="For folks familiar with Crossplane, you likely know that we adopt the design practice of using interfaces over implementations as frequently as possible. Even if we begin with an implementation, such as the current composition engine, we make sure to consider a future with potentially many implementations for the same functionality.
+One of the places where we have taken advantage of Kubernetes&rsquo; similar approach to interfaces is in how we cache Crossplane package images."/>
 
-    
+<meta property="og:title" content="Using a ConfigMap as an OCI Image Cache" />
+<meta property="og:description" content="For folks familiar with Crossplane, you likely know that we adopt the design practice of using interfaces over implementations as frequently as possible. Even if we begin with an implementation, such as the current composition engine, we make sure to consider a future with potentially many implementations for the same functionality.
+One of the places where we have taken advantage of Kubernetes&rsquo; similar approach to interfaces is in how we cache Crossplane package images." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/config-map-oci-image-cache/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2021-05-22T01:41:34-06:00" />
+<meta property="article:modified_time" content="2021-05-22T01:41:34-06:00" />
 
-    <meta name="generator" content="Hugo 0.68.3" />
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/config-map-oci-image-cache/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.109.0">
+
+
+
+
+
   </head>
 
-  <body class="">
-    <main class="wrapper">
-      <nav class="navigation">
+
+
+
+<body class="preload-transitions colorscheme-light">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
   <section class="container">
-    <a class="navigation-title" href="https://danielmangum.com">
+    <a class="navigation-title" href="https://danielmangum.com/">
       Daniel Mangum
     </a>
     
-    <ul class="navigation-list  float-right ">
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
-      </li>
-      
-    </ul>
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
     
   </section>
 </nav>
 
 
-      <div class="content">
-        
-  <section class="container post">
-  <article>
-    <header>
-      <h1 class="title">Using a ConfigMap as an OCI Image Cache</h1>
-      <h2 class="date">May 22, 2021</h2>
-      <style>
-        .twitter-tweet-rendered {
-          display:block;
-          margin-left:auto;
-          margin-right:auto;
-        }
-      </style>
-
+    <div class="content">
       
-    </header>
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/config-map-oci-image-cache/">
+              Using a ConfigMap as an OCI Image Cache
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2021-05-22T01:41:34-06:00">
+                May 22, 2021
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              7-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
 
-    <p>For folks familiar with <a href="https://crossplane.io/">Crossplane</a>, you likely know
+      <div class="post-content">
+        
+        <p>For folks familiar with <a href="https://crossplane.io/">Crossplane</a>, you likely know
 that we adopt the design practice of using interfaces over implementations as
 frequently as possible. Even if we begin with an implementation, such as the
 current <a href="https://crossplane.io/docs/v1.2/concepts/composition.html">composition
@@ -108,7 +176,7 @@ the context of Kubernetes, container images are typically pulled via the
 <code>kubelet</code> communicating with the container runtime on a given <code>Node</code>. However,
 because of Crossplane&rsquo;s mandate that images adhere to a specific minimal format,
 going through the <code>kubelet</code> introduces additional overhead and complexity
-compared to just deferring to Crossplane downloading the packages directly <sup id="fnref:1"><a href="posts/config-map-oci-image-cache/#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>.
+compared to just deferring to Crossplane downloading the packages directly <sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>.
 Also, because the package images are so small &ndash; the latest <code>provider-helm</code>
 <a href="https://hub.docker.com/layers/crossplane/provider-helm/v0.7.1/images/sha256-63a3f65673aeb8bd390867e96450de49548f0b9b17faf0c54ed5637727c817a8?context=repo">release</a>
 is <code>10.11 KB</code> and even much larger packages, such as <code>provider-aws</code>, are
@@ -134,8 +202,8 @@ requires direct access to <code>Nodes</code> in your cluster).</p>
 to rapidly test their package images without pushing them to a registry then
 having Crossplane install them by downloading from it. Essentially, I wanted to
 make the development loop feel as &ldquo;Kubernetes-native&rdquo; as possible. You might be
-thinking to yourself: &ldquo;Dan, have you heard of the <code>kubectl cp</code> command?&quot;. As it
-turns out, I have! What a useful<sup id="fnref:2"><a href="posts/config-map-oci-image-cache/#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup> little tool! However, <code>kubectl cp</code> (and its
+thinking to yourself: &ldquo;Dan, have you heard of the <code>kubectl cp</code> command?&rdquo;. As it
+turns out, I have! What a useful<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup> little tool! However, <code>kubectl cp</code> (and its
 good friend <code>kubectl exec</code>) are not super useful to us here as the former
 requires <code>tar</code> to be present in the container and the latter requires, well, at
 least something to write file contents. With Crossplane, we are out of luck
@@ -145,7 +213,7 @@ which includes the absolute minimum components for our binary to run. Also,
 though <code>kubectl cp</code> and <code>kubectl exec</code> are commands provided by <code>kubectl</code>
 itself, they feel more like backdoors than interacting with the Kubernetes API.</p>
 <p>So what do Kubernetes users do when they need to store some unstructured data?
-You guessed it<sup id="fnref:3"><a href="posts/config-map-oci-image-cache/#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup>: <code>ConfigMap</code>. If I was to personify <code>ConfigMap</code>, I would
+You guessed it<sup id="fnref:3"><a href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup>: <code>ConfigMap</code>. If I was to personify <code>ConfigMap</code>, I would
 describe it as that friend you have that has zero opinions and will say &ldquo;sure!&rdquo;
 to almost anything. Need to store some configuration data? I got you. Want me to
 handle some definitely sensitive information in plaintext? Say no more. When the
@@ -155,57 +223,52 @@ even willing to hold our non-UTF-8 bytes in its <code>binaryData</code> field.</
 <p>Because OCI images are just the highest praised tarballs of all time, they too
 can be stored in this <code>binaryData</code> field, and <code>kubectl</code> even has a handy
 shortcut to create a <code>ConfigMap</code> from a directory or file:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-$ kubectl create configmap package-cache --from-file=my-packages/ -n crossplane-system
-
-</code></pre></div><p>Let&rsquo;s say I have just <a href="https://crossplane.io/docs/v1.2/getting-started/create-configuration.html#build-and-push-the-configuration">built my Crossplane
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-console" data-lang="console"><span style="display:flex;"><span><span style="color:#f00">
+</span></span></span><span style="display:flex;"><span><span style="color:#f00"></span>$ kubectl create configmap package-cache --from-file=my-packages/ -n crossplane-system
+</span></span></code></pre></div><p>Let&rsquo;s say I have just <a href="https://crossplane.io/docs/v1.2/getting-started/create-configuration.html#build-and-push-the-configuration">built my Crossplane
 package</a>
 in the <code>my-packages</code> directory:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-$ kubectl crossplane build configuration --name=./mypackages/bestpackage.xpkg
-$ ls my-packages
-bestpackage.xpkg
-
-</code></pre></div><p>The aforementioned <code>kubectl create configmap</code> command will create a <code>ConfigMap</code>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-console" data-lang="console"><span style="display:flex;"><span><span style="color:#f00">
+</span></span></span><span style="display:flex;"><span><span style="color:#f00"></span>$ kubectl crossplane build configuration --name=./mypackages/bestpackage.xpkg
+</span></span><span style="display:flex;"><span>$ ls my-packages
+</span></span><span style="display:flex;"><span>bestpackage.xpkg
+</span></span></code></pre></div><p>The aforementioned <code>kubectl create configmap</code> command will create a <code>ConfigMap</code>
 with an entry in the <code>binaryData</code> map with a key of <code>bestpackage.xpkg</code> and value
 with the bytes of the package tarball.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">
-<span style="color:#fff;font-weight:bold">apiVersion</span>: v1
-<span style="color:#fff;font-weight:bold">kind</span>: ConfigMap
-<span style="color:#fff;font-weight:bold">metadata</span>:
-  <span style="color:#fff;font-weight:bold">name</span>: package-cache
-  <span style="color:#fff;font-weight:bold">namespace</span>: crossplane-system
-<span style="color:#fff;font-weight:bold">binaryData</span>:
-  <span style="color:#fff;font-weight:bold">bestpackage.xpkg</span>: c2hhMjU2Ojc5ZDYxYWIxODUxNmNhZTZmZj...
-
-</code></pre></div><p>That&rsquo;s pretty simple! Now how do we get that into Crossplane? Fortunately,
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">apiVersion</span>: v1
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">kind</span>: ConfigMap
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">name</span>: package-cache
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">namespace</span>: crossplane-system
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">binaryData</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">bestpackage.xpkg</span>: c2hhMjU2Ojc5ZDYxYWIxODUxNmNhZTZmZj...
+</span></span></code></pre></div><p>That&rsquo;s pretty simple! Now how do we get that into Crossplane? Fortunately,
 Kubernetes lets us mount <code>ConfigMaps</code> as a volume on a <code>Pod</code>, so we can just
 replace the <code>emptyDir</code> in the <a href="https://github.com/crossplane/crossplane/blob/6622b161b25658e82f2d17db2b2511ecaec31dee/cluster/charts/crossplane/templates/deployment.yaml#L86">core
 Crossplane</a>
 <code>Deployment</code> with our <code>ConfigMap</code>:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">
-    <span style="color:#fff;font-weight:bold">volumeMounts</span>:
-      - <span style="color:#fff;font-weight:bold">mountPath</span>: /cache
-        <span style="color:#fff;font-weight:bold">name</span>: package-cache
-...
-<span style="color:#fff;font-weight:bold">volumes</span>:
-  - <span style="color:#fff;font-weight:bold">name</span>: package-cache
-    <span style="color:#fff;font-weight:bold">configMap</span>:
-        <span style="color:#fff;font-weight:bold">name</span>: package-cache
-
-</code></pre></div><p>Now, when we install a <code>Configuration</code> with a source image that matches an
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">volumeMounts</span>:
+</span></span><span style="display:flex;"><span>      - <span style="font-weight:bold">mountPath</span>: /cache
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">name</span>: package-cache
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">volumes</span>:
+</span></span><span style="display:flex;"><span>  - <span style="font-weight:bold">name</span>: package-cache
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">configMap</span>:
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">name</span>: package-cache
+</span></span></code></pre></div><p>Now, when we install a <code>Configuration</code> with a source image that matches an
 identifier that is already in our package cache, and a <code>packagePullPolicy: Never</code>, Crossplane will look at the <code>ConfigMap</code>, see that our package is
 present, and read its contents to install it.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">
-<span style="color:#fff;font-weight:bold">apiVersion</span>: pkg.crossplane.io/v1
-<span style="color:#fff;font-weight:bold">kind</span>: Configuration
-<span style="color:#fff;font-weight:bold">metadata</span>:
-  <span style="color:#fff;font-weight:bold">name</span>: best-package
-<span style="color:#fff;font-weight:bold">spec</span>:
-  <span style="color:#fff;font-weight:bold">package</span>: bestpackage
-  <span style="color:#fff;font-weight:bold">packagePullPolicy</span>: Never
-
-</code></pre></div><p>This is great, and updating our <code>ConfigMap</code> will even be reflected in our
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">apiVersion</span>: pkg.crossplane.io/v1
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">kind</span>: Configuration
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">name</span>: best-package
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">package</span>: bestpackage
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">packagePullPolicy</span>: Never
+</span></span></code></pre></div><p>This is great, and updating our <code>ConfigMap</code> will even be reflected in our
 mounted volume path in the core Crossplane container, so we can update the
 package contents on the fly, or add new ones.</p>
 <p>But this has to be too good to be true right? Well, besides the fact that
@@ -217,7 +280,7 @@ install a package from a registry, Crossplane will fail to cache its contents
 because the path will not be writeable. This is especially a problem when the
 package we loaded into the cache has dependencies on packages that are not in
 the cache.</li>
-<li><code>ConfigMaps</code> have a size limit of <code>1 MiB</code><sup id="fnref:4"><a href="posts/config-map-oci-image-cache/#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup>. Even with our tiny Crossplane
+<li><code>ConfigMaps</code> have a size limit of <code>1 MiB</code><sup id="fnref:4"><a href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup>. Even with our tiny Crossplane
 packages, we can run up on that quite quickly.</li>
 </ol>
 <p>That being said, this workflow is only for development, so these limitations may
@@ -233,7 +296,6 @@ requiring that we actually use a <code>ConfigMap</code> as our long-term cache. 
 automated with something like <a href="https://github.com/upbound/up"><code>up</code></a>, this is
 quite a pleasant experience.</p>
 <!-- raw HTML omitted -->
-<script id="asciicast-415681" src="https://asciinema.org/a/415681.js" async></script>
 <p>You&rsquo;ll notice that the package we install, <code>bestpackage</code>, has a source of
 <code>bestpackage</code>, which is the data we loaded using our <code>ConfigMap</code> and
 <code>initContainer</code>. However, it declares dependencies on <code>provider-aws</code> and
@@ -241,7 +303,13 @@ quite a pleasant experience.</p>
 Registry</a> and stored in our <code>emptyDir</code> package
 cache. This gives us the best of both worlds as we don&rsquo;t have to manually load a
 package&rsquo;s whole dependency tree when we are only developing at its layer.</p>
-<h2 id="closing-thoughts">Closing Thoughts</h2>
+<h2 id="closing-thoughts">
+  Closing Thoughts
+  <a class="heading-link" href="#closing-thoughts">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>While using a <code>ConfigMap</code> as any meaningful form of storage is ill-advised,
 hacks such as this one help us rethink how the tools we interact with every day
 actually work. It also serves as a demonstration of the many ways in which
@@ -249,43 +317,67 @@ Crossplane is built to be extended, something I hope to explore further in
 coming posts.</p>
 <p>Send me a message <a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter for any
 questions or comments!</p>
-<section class="footnotes" role="doc-endnotes">
+<div class="footnotes" role="doc-endnotes">
 <hr>
 <ol>
-<li id="fn:1" role="doc-endnote">
-<p>Downloading package images directly also means that we have more control over what &ldquo;pulling a package&rdquo; means, once again providing an interface that enables multiple implementations behind the API line. But that&rsquo;s a story for another day ;) <a href="posts/config-map-oci-image-cache/#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<li id="fn:1">
+<p>Downloading package images directly also means that we have more control over what &ldquo;pulling a package&rdquo; means, once again providing an interface that enables multiple implementations behind the API line. But that&rsquo;s a story for another day ;)&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:2" role="doc-endnote">
-<p>And potentially <a href="https://www.cvedetails.com/cve/CVE-2019-1002101/#:~:text=Vulnerability%20Details%20%3A%20CVE%2D2019%2D,containers%20and%20the%20user%20machine.&amp;text=An%20attacker%20could%20use%20this,permissions%20of%20the%20local%20user.">horrifingly dangerous</a>&hellip; <a href="posts/config-map-oci-image-cache/#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<li id="fn:2">
+<p>And potentially <a href="https://www.cvedetails.com/cve/CVE-2019-1002101/#:~:text=Vulnerability%20Details%20%3A%20CVE%2D2019%2D,containers%20and%20the%20user%20machine.&amp;text=An%20attacker%20could%20use%20this,permissions%20of%20the%20local%20user.">horrifingly dangerous</a>&hellip;&#160;<a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:3" role="doc-endnote">
-<p>It was in the title, but we could all use some extra wins these days! <a href="posts/config-map-oci-image-cache/#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<li id="fn:3">
+<p>It was in the title, but we could all use some extra wins these days!&#160;<a href="#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:4" role="doc-endnote">
-<p>Ah yes, the good ol&rsquo; Megabyte (MB) vs Mebibyte (MiB) <a href="https://blog.digilentinc.com/mib-vs-mb-whats-the-difference/">distinction</a>. I hate this just as much as you do, but I&rsquo;m just glad we can all agree that numbers should <a href="http://gph.is/2hwqCGg">always be represented as base 2</a>. <a href="posts/config-map-oci-image-cache/#fnref:4" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<li id="fn:4">
+<p>Ah yes, the good ol&rsquo; Megabyte (MB) vs Mebibyte (MiB) <a href="https://blog.digilentinc.com/mib-vs-mb-whats-the-difference/">distinction</a>. I hate this just as much as you do, but I&rsquo;m just glad we can all agree that numbers should <a href="http://gph.is/2hwqCGg">always be represented as base 2</a>.&#160;<a href="#fnref:4" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 </ol>
-</section>
-
-  </article>
-
-  <br/>
-
-  
-  
-</section>
+</div>
 
       </div>
 
-      <footer class="footer">
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
   <section class="container">
-     © 2022  
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
   </section>
 </footer>
 
-    </main>
+  </main>
 
-    
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {
@@ -299,7 +391,19 @@ if (!doNotTrack) {
 }
 </script>
 
+  
 
-  </body>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
 
 </html>

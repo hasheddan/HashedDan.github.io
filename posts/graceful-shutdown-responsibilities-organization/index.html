@@ -1,99 +1,173 @@
 <!DOCTYPE html>
 <html lang="en">
-
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <meta name="author" content="Daniel Mangum">
-    <meta name="description" content="Daniel Mangum&#39;s personal website">
-    <meta name="keywords" content="blog,developer,personal">
-
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:site" content="@hasheddan" />
-    <meta name="twitter:title" content="Graceful Shutdown of Responsibilities in a Growing Organization"/>
-    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
-
-    <base href="https://danielmangum.com">
     <title>
   Graceful Shutdown of Responsibilities in a Growing Organization · Daniel Mangum
 </title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
 
-    <link rel="canonical" href="https://danielmangum.com/posts/graceful-shutdown-responsibilities-organization/">
 
-    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
-    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
-    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
 
-    
 
-    
-      <link rel="stylesheet" href="https://danielmangum.com/css/custom.css">
-    
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="I usually write about deep technical topics, frequently going into extreme detail about how systems work. I love a good technical challenge, but recently the most challenging thing I have been working on at my day job has not been technical.
+Achieving Outsized Impact Link to heading I joined Upbound essentially straight out of college after working on the open source Crossplane project on nights and weekends. The team was quite small and quite senior at that point, making me a bit of an anomaly in the organization.">
+<meta name="keywords" content="blog,developer,personal">
 
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Graceful Shutdown of Responsibilities in a Growing Organization"/>
+<meta name="twitter:description" content="I usually write about deep technical topics, frequently going into extreme detail about how systems work. I love a good technical challenge, but recently the most challenging thing I have been working on at my day job has not been technical.
+Achieving Outsized Impact Link to heading I joined Upbound essentially straight out of college after working on the open source Crossplane project on nights and weekends. The team was quite small and quite senior at that point, making me a bit of an anomaly in the organization."/>
 
-    
+<meta property="og:title" content="Graceful Shutdown of Responsibilities in a Growing Organization" />
+<meta property="og:description" content="I usually write about deep technical topics, frequently going into extreme detail about how systems work. I love a good technical challenge, but recently the most challenging thing I have been working on at my day job has not been technical.
+Achieving Outsized Impact Link to heading I joined Upbound essentially straight out of college after working on the open source Crossplane project on nights and weekends. The team was quite small and quite senior at that point, making me a bit of an anomaly in the organization." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/graceful-shutdown-responsibilities-organization/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-02-13T00:10:34-06:00" />
+<meta property="article:modified_time" content="2022-02-13T00:10:34-06:00" />
 
-    <meta name="generator" content="Hugo 0.68.3" />
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/graceful-shutdown-responsibilities-organization/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.109.0">
+
+
+
+
+
   </head>
 
-  <body class="">
-    <main class="wrapper">
-      <nav class="navigation">
+
+
+
+<body class="preload-transitions colorscheme-light">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
   <section class="container">
-    <a class="navigation-title" href="https://danielmangum.com">
+    <a class="navigation-title" href="https://danielmangum.com/">
       Daniel Mangum
     </a>
     
-    <ul class="navigation-list  float-right ">
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
-      </li>
-      
-    </ul>
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
     
   </section>
 </nav>
 
 
-      <div class="content">
-        
-  <section class="container post">
-  <article>
-    <header>
-      <h1 class="title">Graceful Shutdown of Responsibilities in a Growing Organization</h1>
-      <h2 class="date">February 13, 2022</h2>
-      <style>
-        .twitter-tweet-rendered {
-          display:block;
-          margin-left:auto;
-          margin-right:auto;
-        }
-      </style>
-
+    <div class="content">
       
-    </header>
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/graceful-shutdown-responsibilities-organization/">
+              Graceful Shutdown of Responsibilities in a Growing Organization
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2022-02-13T00:10:34-06:00">
+                February 13, 2022
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              8-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
 
-    <p>I usually write about deep technical topics, frequently going into extreme
+      <div class="post-content">
+        
+        <p>I usually write about deep technical topics, frequently going into extreme
 detail about how systems work. I love a good technical challenge, but recently
 the most challenging thing I have been working on at my day job has not been
 technical.</p>
-<h2 id="achieving-outsized-impact">Achieving Outsized Impact</h2>
+<h2 id="achieving-outsized-impact">
+  Achieving Outsized Impact
+  <a class="heading-link" href="#achieving-outsized-impact">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>I joined <a href="https://www.upbound.io/">Upbound</a> essentially straight out of college
 after working on the open source
 <a href="https://github.com/crossplane/crossplane">Crossplane</a> project on nights and
@@ -119,7 +193,13 @@ continued to grow and I was formally promoted a few times, eventually landing at
 a staff engineer role. Additionally, because of my penchant for sharing things
 publicly, the external perception of my impact at Upbound also continued to
 grow.</p>
-<h2 id="success-leads-to-growth">Success Leads to Growth</h2>
+<h2 id="success-leads-to-growth">
+  Success Leads to Growth
+  <a class="heading-link" href="#success-leads-to-growth">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>A few months ago, we
 <a href="https://blog.upbound.io/upbound-raises-60m-in-funding-to-advance-its-universal-cloud-platform/">raised</a>
 a large (in my limited experience) Series B round of funding. This is one area
@@ -152,7 +232,13 @@ of the company continues to decline as I am included in less conversations and
 work is more equitably distributed to the growing number of contributors. While
 I am most familiar with my own experience, I know the same is true for other
 folks who have been at the company for any significant period of time.</p>
-<h2 id="it-doesnt-happen-overnight">It Doesn&rsquo;t Happen Overnight</h2>
+<h2 id="it-doesnt-happen-overnight">
+  It Doesn&rsquo;t Happen Overnight
+  <a class="heading-link" href="#it-doesnt-happen-overnight">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>Despite growing very quickly, this reduction of ownership and involvement
 doesn&rsquo;t happen overnight. It typically looks like being removed from an invite
 here and there, seeing the result of things happening without being involved in
@@ -164,7 +250,13 @@ this process, particularly if you care deeply about the folks that work
 alongside you. One of the things I have been thinking about a lot during this
 time is how to transition out of responsibilities well. Being an engineer, I
 like to call it <em>graceful shutdown</em>.</p>
-<h2 id="a-philosophy-for-graceful-shutdown">A Philosophy for Graceful Shutdown</h2>
+<h2 id="a-philosophy-for-graceful-shutdown">
+  A Philosophy for Graceful Shutdown
+  <a class="heading-link" href="#a-philosophy-for-graceful-shutdown">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>As I navigate this constantly evolving environment, and serve as tech lead of a
 team of engineers that are doing the same, I have started to gravitate towards a
 two-pronged approach for shifting responsibilities from one individual or group
@@ -203,7 +295,13 @@ built something has lunch and reminisces on some of the milestones and efforts
 that went into the project. The point is that people feel celebrated in
 different ways, and it is your responsibility as a teammate to learn about how
 your colleagues want to be affirmed.</p>
-<h2 id="less-ownership-doesnt-have-to-mean-less-influence">Less Ownership Doesn&rsquo;t Have to Mean Less Influence</h2>
+<h2 id="less-ownership-doesnt-have-to-mean-less-influence">
+  Less Ownership Doesn&rsquo;t Have to Mean Less Influence
+  <a class="heading-link" href="#less-ownership-doesnt-have-to-mean-less-influence">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>When you are giving up ownership of tasks and initiatives, it can feel like you
 are losing influence that you once had. While this may be true in a given area,
 it typically means that your influence can grow in others. In theory, your net
@@ -225,7 +323,13 @@ continuing to grow them. While I certainly would not take responsibility for the
 efforts they are pushing today, I do feel pride and joy in the work that I have
 done to make some of those efforts possible. In the same way, I know folks who
 came before me in working on Crossplane feel that way about the work that I did.</p>
-<h2 id="closing-thoughts">Closing Thoughts</h2>
+<h2 id="closing-thoughts">
+  Closing Thoughts
+  <a class="heading-link" href="#closing-thoughts">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>As you can tell from this post, these are somewhat uncharted waters for me, but
 I do have the privilege of getting to participate in handoffs where I am playing
 each of the roles described above, and experiencing each has taught me more
@@ -239,25 +343,49 @@ not
 <p>If you have any questions or comments, please feel free to send me a message
 <a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter!</p>
 
-  </article>
-
-  <br/>
-
-  
-  
-</section>
-
       </div>
 
-      <footer class="footer">
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
   <section class="container">
-     © 2022  
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
   </section>
 </footer>
 
-    </main>
+  </main>
 
-    
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {
@@ -271,7 +399,19 @@ if (!doNotTrack) {
 }
 </script>
 
+  
 
-  </body>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
 
 </html>

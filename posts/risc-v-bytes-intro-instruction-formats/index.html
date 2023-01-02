@@ -1,95 +1,166 @@
 <!DOCTYPE html>
 <html lang="en">
-
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <meta name="author" content="Daniel Mangum">
-    <meta name="description" content="Daniel Mangum&#39;s personal website">
-    <meta name="keywords" content="blog,developer,personal">
-
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:site" content="@hasheddan" />
-    <meta name="twitter:title" content="RISC-V Bytes: Introduction to Instruction Formats"/>
-    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
-
-    <base href="https://danielmangum.com">
     <title>
   RISC-V Bytes: Introduction to Instruction Formats · Daniel Mangum
 </title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
 
-    <link rel="canonical" href="https://danielmangum.com/posts/risc-v-bytes-intro-instruction-formats/">
 
-    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
-    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
-    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
 
-    
 
-    
-      <link rel="stylesheet" href="https://danielmangum.com/css/custom.css">
-    
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="This is part of a series on the blog where we explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
+So far in this series, we have been looking at the assembly generated when compiling relatively simple programs. At this point, we have seen instructions that perform a wide variety of operations. Let&rsquo;s take another look at our minimal example from the Passing on the Stack post:">
+<meta name="keywords" content="blog,developer,personal">
 
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="RISC-V Bytes: Introduction to Instruction Formats"/>
+<meta name="twitter:description" content="This is part of a series on the blog where we explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
+So far in this series, we have been looking at the assembly generated when compiling relatively simple programs. At this point, we have seen instructions that perform a wide variety of operations. Let&rsquo;s take another look at our minimal example from the Passing on the Stack post:"/>
 
-    
+<meta property="og:title" content="RISC-V Bytes: Introduction to Instruction Formats" />
+<meta property="og:description" content="This is part of a series on the blog where we explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
+So far in this series, we have been looking at the assembly generated when compiling relatively simple programs. At this point, we have seen instructions that perform a wide variety of operations. Let&rsquo;s take another look at our minimal example from the Passing on the Stack post:" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/risc-v-bytes-intro-instruction-formats/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2021-07-12T00:10:34-06:00" />
+<meta property="article:modified_time" content="2021-07-12T00:10:34-06:00" />
 
-    <meta name="generator" content="Hugo 0.68.3" />
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/risc-v-bytes-intro-instruction-formats/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.109.0">
+
+
+
+
+
   </head>
 
-  <body class="">
-    <main class="wrapper">
-      <nav class="navigation">
+
+
+
+<body class="preload-transitions colorscheme-light">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
   <section class="container">
-    <a class="navigation-title" href="https://danielmangum.com">
+    <a class="navigation-title" href="https://danielmangum.com/">
       Daniel Mangum
     </a>
     
-    <ul class="navigation-list  float-right ">
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
-      </li>
-      
-    </ul>
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
     
   </section>
 </nav>
 
 
-      <div class="content">
-        
-  <section class="container post">
-  <article>
-    <header>
-      <h1 class="title">RISC-V Bytes: Introduction to Instruction Formats</h1>
-      <h2 class="date">July 12, 2021</h2>
-      <style>
-        .twitter-tweet-rendered {
-          display:block;
-          margin-left:auto;
-          margin-right:auto;
-        }
-      </style>
-
+    <div class="content">
       
-    </header>
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/risc-v-bytes-intro-instruction-formats/">
+              RISC-V Bytes: Introduction to Instruction Formats
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2021-07-12T00:10:34-06:00">
+                July 12, 2021
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              24-minute read
+            </span>
+          </div>
+          
+          <div class="categories">
+  <i class="fa fa-folder" aria-hidden="true"></i>
+    <a href="https://danielmangum.com/categories/risc-v-bytes/">RISC-V Bytes</a></div>
 
-    <blockquote>
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <blockquote>
 <p>This is part of a series on the blog where we explore
 <a href="https://riscv.org/">RISC-V</a> by breaking down real programs and explaining how
 they work. You can view all posts in this series on the <a href="https://danielmangum.com/categories/risc-v-bytes">RISC-V Bytes
@@ -101,19 +172,18 @@ that perform a wide variety of operations. Let&rsquo;s take another look at our
 minimal example from the <a href="https://danielmangum.com/posts/risc-v-bytes-passing-on-the-stack/">Passing on the Stack
 post</a>:</p>
 <p><code>minimal.c</code></p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">
-<span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;stdio.h&gt;</span><span style="color:#0f0;font-weight:bold">
-</span><span style="color:#0f0;font-weight:bold"></span>
-<span style="color:#fff;font-weight:bold">int</span> sum(<span style="color:#fff;font-weight:bold">int</span> one, <span style="color:#fff;font-weight:bold">int</span> two) {
-    <span style="color:#fff;font-weight:bold">return</span> one + two;
-}
-
-<span style="color:#fff;font-weight:bold">int</span> main() {
-    printf(<span style="color:#0ff;font-weight:bold">&#34;The sum is: %d</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>, sum(<span style="color:#ff0;font-weight:bold">1</span>, <span style="color:#ff0;font-weight:bold">2</span>));
-    <span style="color:#fff;font-weight:bold">return</span> <span style="color:#ff0;font-weight:bold">0</span>;
-}
-
-</code></pre></div><p><code>riscv64-unknown-elf-gcc -O3 -fno-inline -march=rv64g minimal.c</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;stdio.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">int</span> sum(<span style="color:#fff;font-weight:bold">int</span> one, <span style="color:#fff;font-weight:bold">int</span> two) {
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> one + two;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">int</span> main() {
+</span></span><span style="display:flex;"><span>    printf(<span style="color:#0ff;font-weight:bold">&#34;The sum is: %d</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>, sum(<span style="color:#ff0;font-weight:bold">1</span>, <span style="color:#ff0;font-weight:bold">2</span>));
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><code>riscv64-unknown-elf-gcc -O3 -fno-inline -march=rv64g minimal.c</code></p>
 <blockquote>
 <p>Hold up a minute, what is that <code>-march=rv64g</code> doing in there? We didn&rsquo;t
 compile with that flag in the last post, but we are providing it here to
@@ -124,68 +194,63 @@ a future post we will explore how compression improves code size and why it
 makes our generated assembly look different. You may already notice some
 changes in the output below!</p>
 </blockquote>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-(gdb) disass main
-Dump of assembler code for function main:
-   0x00000000000100b0 &lt;+0&gt;:         addi        sp,sp,-16
-   0x00000000000100b4 &lt;+4&gt;:         li          a1,2
-   0x00000000000100b8 &lt;+8&gt;:         li          a0,1
-   0x00000000000100bc &lt;+12&gt;:        sd          ra,8(sp)
-   0x00000000000100c0 &lt;+16&gt;:        jal         ra,0x101b8 &lt;sum&gt;
-   0x00000000000100c4 &lt;+20&gt;:        mv          a1,a0
-   0x00000000000100c8 &lt;+24&gt;:        lui         a0,0x21
-   0x00000000000100cc &lt;+28&gt;:        addi        a0,a0,-192 # 0x20f40
-   0x00000000000100d0 &lt;+32&gt;:        jal         ra,0x10418 &lt;printf&gt;
-   0x00000000000100d4 &lt;+36&gt;:        ld          ra,8(sp)
-   0x00000000000100d8 &lt;+40&gt;:        li          a0,0
-   0x00000000000100dc &lt;+44&gt;:        addi        sp,sp,16
-   0x00000000000100e0 &lt;+48&gt;:        ret
-End of assembler dump.
-(gdb) disass sum
-Dump of assembler code for function sum:
-   0x00000000000101b8 &lt;+0&gt;:         addw        a0,a0,a1
-   0x00000000000101bc &lt;+4&gt;:         ret
-End of assembler dump.
-
-</code></pre></div><p><a href="https://godbolt.org/z/najsrcG74">View on Compiler Explorer</a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) disass main
+</span></span><span style="display:flex;"><span>Dump of assembler code for function main:
+</span></span><span style="display:flex;"><span>   0x00000000000100b0 &lt;+0&gt;:         addi        sp,sp,-16
+</span></span><span style="display:flex;"><span>   0x00000000000100b4 &lt;+4&gt;:         li          a1,2
+</span></span><span style="display:flex;"><span>   0x00000000000100b8 &lt;+8&gt;:         li          a0,1
+</span></span><span style="display:flex;"><span>   0x00000000000100bc &lt;+12&gt;:        sd          ra,8(sp)
+</span></span><span style="display:flex;"><span>   0x00000000000100c0 &lt;+16&gt;:        jal         ra,0x101b8 &lt;sum&gt;
+</span></span><span style="display:flex;"><span>   0x00000000000100c4 &lt;+20&gt;:        mv          a1,a0
+</span></span><span style="display:flex;"><span>   0x00000000000100c8 &lt;+24&gt;:        lui         a0,0x21
+</span></span><span style="display:flex;"><span>   0x00000000000100cc &lt;+28&gt;:        addi        a0,a0,-192 # 0x20f40
+</span></span><span style="display:flex;"><span>   0x00000000000100d0 &lt;+32&gt;:        jal         ra,0x10418 &lt;printf&gt;
+</span></span><span style="display:flex;"><span>   0x00000000000100d4 &lt;+36&gt;:        ld          ra,8(sp)
+</span></span><span style="display:flex;"><span>   0x00000000000100d8 &lt;+40&gt;:        li          a0,0
+</span></span><span style="display:flex;"><span>   0x00000000000100dc &lt;+44&gt;:        addi        sp,sp,16
+</span></span><span style="display:flex;"><span>   0x00000000000100e0 &lt;+48&gt;:        ret
+</span></span><span style="display:flex;"><span>End of assembler dump.
+</span></span><span style="display:flex;"><span>(gdb) disass sum
+</span></span><span style="display:flex;"><span>Dump of assembler code for function sum:
+</span></span><span style="display:flex;"><span>   0x00000000000101b8 &lt;+0&gt;:         addw        a0,a0,a1
+</span></span><span style="display:flex;"><span>   0x00000000000101bc &lt;+4&gt;:         ret
+</span></span><span style="display:flex;"><span>End of assembler dump.
+</span></span></code></pre></div><p><a href="https://godbolt.org/z/najsrcG74">View on Compiler Explorer</a></p>
 <p>In just this small example, we see multiple different types of instructions, and
 their operands do not all look the same. Let&rsquo;s take a look at a few of them:</p>
 <ul>
 <li><code>addi</code>: we are using this in three different places in <code>&lt;main&gt;</code> to add or
 subtract a value from one register and store it in another.</li>
 </ul>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-&lt;+0&gt;:      addi        sp,sp,-16         # increase size of the stack frame by subtracting 16 bytes from stack pointer
-...
-&lt;+28&gt;:     addi        a0,a0,-192        # add -192 (base 10) to the value currently in a0
-...
-&lt;+44&gt;:     addi        sp,sp,16          # move stack pointer back to its location when we began the procedure
-
-</code></pre></div><ul>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>&lt;+0&gt;:      addi        sp,sp,-16         # increase size of the stack frame by subtracting 16 bytes from stack pointer
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>&lt;+28&gt;:     addi        a0,a0,-192        # add -192 (base 10) to the value currently in a0
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>&lt;+44&gt;:     addi        sp,sp,16          # move stack pointer back to its location when we began the procedure
+</span></span></code></pre></div><ul>
 <li><code>sd</code>: we are using this in <code>&lt;main&gt;</code> to store the
 <a href="https://danielmangum.com/posts/risc-v-bytes-caller-callee-registers/">caller-saved</a>
 return address (<code>ra</code>) to a memory location on the stack.</li>
 </ul>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-&lt;+12&gt;:    sd      ra,8(sp)
-
-</code></pre></div><ul>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>&lt;+12&gt;:    sd      ra,8(sp)
+</span></span></code></pre></div><ul>
 <li><code>lui</code>: we are using this in <code>&lt;main&gt;</code> to do . . . something?</li>
 </ul>
 <blockquote>
 <p>Don&rsquo;t worry, we are going to define &ldquo;something&rdquo; in a bit.</p>
 </blockquote>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-&lt;+14&gt;:    lui     a0,0x21
-
-</code></pre></div><ul>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>&lt;+14&gt;:    lui     a0,0x21
+</span></span></code></pre></div><ul>
 <li><code>addw</code>: we are using this in <code>&lt;sum&gt;</code> to add the values in <code>a0</code> and <code>a1</code> and
 store the result in <code>a0</code>.</li>
 </ul>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-&lt;+0&gt;:     addw    a0,a0,a1
-
-</code></pre></div><p>There are more instructions than these four, but you&rsquo;ll notice something
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>&lt;+0&gt;:     addw    a0,a0,a1
+</span></span></code></pre></div><p>There are more instructions than these four, but you&rsquo;ll notice something
 interesting about this group: all of them take operands in a slightly different
 manner. For instance, <code>addi</code> takes three operands, two of which are registers,
 and one of which is a decimal value (base 10). <code>sd</code> takes two operands, one
@@ -199,10 +264,16 @@ understands binary machine code. Therefore, each of these instructions, as well
 as all of their operands, must be encoded in binary in order to be interpreted.
 When different operations require varying numbers and types of operands, we must
 tell the processor how to interpret the operands that we provide.</p>
-<h2 id="risc-v-instruction-format-overview">RISC-V Instruction Format Overview</h2>
+<h2 id="risc-v-instruction-format-overview">
+  RISC-V Instruction Format Overview
+  <a class="heading-link" href="#risc-v-instruction-format-overview">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>The binary encoding of an operation is referred to as its instruction format.
 RISC-V has six core instruction formats:</p>
-<p><img src="../static/risc_v_inst_intro_1.png" alt="instructions"></p>
+<p><img src="../../static/risc_v_inst_intro_1.png" alt="instructions"></p>
 <blockquote>
 <p>The <code>B</code> format is variation of <code>S</code> and is sometimes referred to as <code>SB</code>.
 Similarly, the <code>J</code> format is a variation of <code>U</code> and is sometimes referred to
@@ -241,7 +312,13 @@ these formats. The four instructions we specifically identified map as follows:<
 </ul>
 <p>Let&rsquo;s take a look at each of these formats and explore why they are appropriate
 for different instruction types.</p>
-<h2 id="why-multiple-formats">Why Multiple Formats?</h2>
+<h2 id="why-multiple-formats">
+  Why Multiple Formats?
+  <a class="heading-link" href="#why-multiple-formats">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>We already answered this abstractly by saying that we need to encode operations
 in binary for the processor to understand them. However, what does that mean
 concretely? At its most basic level a CPU is a set of logic gates that are
@@ -249,7 +326,13 @@ composed together to offer higher-level abstractions (such as the instructions
 we write in assembly). In order to know what signals to pass to the various
 modules that perform data operations, the CPU must know what we are asking it to
 do.</p>
-<h4 id="a-metaphor-for-humans">A Metaphor for Humans</h4>
+<h4 id="a-metaphor-for-humans">
+  A Metaphor for Humans
+  <a class="heading-link" href="#a-metaphor-for-humans">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h4>
 <blockquote>
 <p>This brief section attempts to draw parallels to how two humans might
 communicate. If you are already familiar with how instructions are represented
@@ -311,7 +394,13 @@ class of task, our friend can know that if the first character is &ldquo;A&rdquo
 remainder of the message will contain an action, a recipient, and a single long
 modifier. If the first character is &ldquo;B&rdquo;, the message will contain an action, a
 recipient, and two shorter modifiers.</p>
-<h4 id="back-to-computers">Back to Computers</h4>
+<h4 id="back-to-computers">
+  Back to Computers
+  <a class="heading-link" href="#back-to-computers">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h4>
 <p>Similar to our strategy of encoding the type of task we are communicating to our
 friend with a single character, RISC-V defines the class of task (instruction
 format) using a fixed-length <code>opcode</code> in the 7 least significant bits of every
@@ -336,18 +425,23 @@ require the ability to pass a large constant value (<code>U</code> format instru
 a good example of this).</p>
 <p>The following sections describe how each instruction format caters to different
 types of operations we want to perform.</p>
-<h2 id="r-format">R Format</h2>
+<h2 id="r-format">
+  R Format
+  <a class="heading-link" href="#r-format">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p><code>R</code> format instructions are frequently thought of as the most &ldquo;simple&rdquo; because
 they typically include operations that map closely to the capabilities that we
 generally associate with a computer at the lowest level. Arithmetic operations,
 such as adding, subtracting, and bit shifting all fall into this category.</p>
 <p>We picked out <code>addw</code> as an instruction from our example that adheres to the <code>R</code>
 format. Let&rsquo;s take a look at the 4 bytes at that address in binary:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-(gdb) x/4bt  0x101b8           
-0x101b8 &lt;sum&gt;:      00111011    00000101    10110101    00000000
-
-</code></pre></div><p>RISC-V is a <a href="https://en.wikipedia.org/wiki/Endianness">little endian
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) x/4bt  0x101b8           
+</span></span><span style="display:flex;"><span>0x101b8 &lt;sum&gt;:      00111011    00000101    10110101    00000000
+</span></span></code></pre></div><p>RISC-V is a <a href="https://en.wikipedia.org/wiki/Endianness">little endian
 architecture</a>, meaning that the least
 significant byte is stored at the smallest memory address. If we take the 4
 bytes at <code>0x101b8</code>, which is the location of our <code>addw</code> instruction, we can
@@ -355,7 +449,7 @@ re-arrange the bytes so that the least significant bit (LSB) is on the right and
 the most significant bit (MSB) is on the right:</p>
 <p><code>00000000 10110101 00000101 00111011</code></p>
 <p>Now we can fit this into the <code>R</code> format we defined earlier:</p>
-<p><img src="../static/risc_v_inst_intro_2.png" alt="addw R Format"></p>
+<p><img src="../../static/risc_v_inst_intro_2.png" alt="addw R Format"></p>
 <p>Let&rsquo;s break down the components of this instruction. As is true for all of our
 core formats, the first 7 bits (<code>[6:0]</code>) represent our <code>opcode</code>. Here our opcode
 is <code>0111011</code>. This informs the CPU what format, and, depending on the
@@ -370,24 +464,24 @@ instruction, we can compare the three fields for <code>addw</code> and <code>sub
 <table>
 <thead>
 <tr>
-<th align="center">Instruction</th>
-<th align="center">opcode</th>
-<th align="center">funct3</th>
-<th align="center">funct7</th>
+<th style="text-align:center">Instruction</th>
+<th style="text-align:center">opcode</th>
+<th style="text-align:center">funct3</th>
+<th style="text-align:center">funct7</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td align="center"><code>addw</code></td>
-<td align="center"><code>0111011</code></td>
-<td align="center"><code>000</code></td>
-<td align="center"><code>0000000</code></td>
+<td style="text-align:center"><code>addw</code></td>
+<td style="text-align:center"><code>0111011</code></td>
+<td style="text-align:center"><code>000</code></td>
+<td style="text-align:center"><code>0000000</code></td>
 </tr>
 <tr>
-<td align="center"><code>subw</code></td>
-<td align="center"><code>0111011</code></td>
-<td align="center"><code>000</code></td>
-<td align="center"><code>0100000</code></td>
+<td style="text-align:center"><code>subw</code></td>
+<td style="text-align:center"><code>0111011</code></td>
+<td style="text-align:center"><code>000</code></td>
+<td style="text-align:center"><code>0100000</code></td>
 </tr>
 </tbody>
 </table>
@@ -428,7 +522,13 @@ reproduced below as a refresher:</p>
 </blockquote>
 <p>Likewise, the value of <code>rs2</code> (<code>01011</code>) is <code>11</code> when converted to decimal,
 corresponding to <code>x11</code>.</p>
-<h2 id="i-format">I Format</h2>
+<h2 id="i-format">
+  I Format
+  <a class="heading-link" href="#i-format">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p><code>I</code> format instructions eliminate the second register (<code>rs2</code>) and function
 (<code>funct7</code>) fields from the <code>R</code> format in favor of a large <em>immediate value</em>
 field. This format is specifically useful for supplying constants for arithmetic
@@ -438,13 +538,12 @@ both of those here.</p>
 example was <code>addi</code> (&ldquo;add immediate&rdquo;). We&rsquo;ll examine the first instance of the
 instruction, which is used to increase the size of the stack by decrementing the
 stack pointer <code>sp</code>:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-(gdb) x/4bt 0x100b0 
-0x100b0 &lt;main&gt;: 00010011    00000001    00000001    11111111
-
-</code></pre></div><p>Rearranging the bits and fitting into the <code>I</code> format gives us the following:</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) x/4bt 0x100b0 
+</span></span><span style="display:flex;"><span>0x100b0 &lt;main&gt;: 00010011    00000001    00000001    11111111
+</span></span></code></pre></div><p>Rearranging the bits and fitting into the <code>I</code> format gives us the following:</p>
 <p><code>11111111 00000001 00000001 00010011</code></p>
-<p><img src="../static/risc_v_inst_intro_3.png" alt="addi I Format"></p>
+<p><img src="../../static/risc_v_inst_intro_3.png" alt="addi I Format"></p>
 <p>Let&rsquo;s again look at a truncated table of RISC-V GPRs:</p>
 <table>
 <thead>
@@ -478,27 +577,26 @@ designers, but for the purposes of this post, we can make the simple observation
 that any binary number with a <code>1</code> in the most significant bit position
 (<code>imm[11]</code> in this case), is negative, and its decimal value can be ascertained
 by inverting all bits, converting to decimal, and adding 1. Let&rsquo;s do that here:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-# Invert bits
-111111110000 =&gt; 000000001111
-
-# Convert to decimal
-000000001111 = 1(1) + 1(2) + 1(4) + 1(8) = 15
-
-# Add 1
-15 + 1 = 16
-
-# Add sign
--16
-</code></pre></div><p>In summation, our instruction has specified that <code>-16</code> be added to the value in
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span># Invert bits
+</span></span><span style="display:flex;"><span>111111110000 =&gt; 000000001111
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span># Convert to decimal
+</span></span><span style="display:flex;"><span>000000001111 = 1(1) + 1(2) + 1(4) + 1(8) = 15
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span># Add 1
+</span></span><span style="display:flex;"><span>15 + 1 = 16
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span># Add sign
+</span></span><span style="display:flex;"><span>-16
+</span></span></code></pre></div><p>In summation, our instruction has specified that <code>-16</code> be added to the value in
 the <code>sp</code> register, and the result be stored in the <code>sp</code> register, effectively
 increasing the size of our downward growing stack.</p>
 <p>Before we move on to the next instruction format, let&rsquo;s look at another <code>I</code>
 format instruction from our example that looks fairly different than <code>addi</code>:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-0x00000000000100d4 &lt;+36&gt;:        ld          ra,8(sp)
-
-</code></pre></div><p>Here we are loading the contents of the memory location 8 bytes greater than the
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>0x00000000000100d4 &lt;+36&gt;:        ld          ra,8(sp)
+</span></span></code></pre></div><p>Here we are loading the contents of the memory location 8 bytes greater than the
 location stored in <code>sp</code> and storing it in the return address register (<code>ra</code>).
 The <code>8</code> in this instruction is frequently referred to as an <em>offset</em>. Let&rsquo;s look
 at the binary representation:</p>
@@ -506,13 +604,12 @@ at the binary representation:</p>
 <p>The <code>d</code> in <code>ld</code> stands for &ldquo;doubleword&rdquo; which indicates the size of the data
 at the memory location is 64 bits.</p>
 </blockquote>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-(gdb) x/4bt 0x100d4
-0x100d4 &lt;main+36&gt;:  10000011    00110000    10000001    00000000
-
-</code></pre></div><p>Rearranged: <code>00000000 10000001 00110000 10000011</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) x/4bt 0x100d4
+</span></span><span style="display:flex;"><span>0x100d4 &lt;main+36&gt;:  10000011    00110000    10000001    00000000
+</span></span></code></pre></div><p>Rearranged: <code>00000000 10000001 00110000 10000011</code></p>
 <p>Fit into <code>I</code> format:</p>
-<p><img src="../static/risc_v_inst_intro_4.png" alt="ld I Format"></p>
+<p><img src="../../static/risc_v_inst_intro_4.png" alt="ld I Format"></p>
 <p>The first thing you&rsquo;ll notice is that the <code>opcode</code> is different (though only by
 a single bit), and we are using the <code>funct3</code> field to further describe how the
 other fields should be interpreted. The rest of the instruction is similar to to
@@ -522,7 +619,13 @@ differences in these two instructions (<code>addi</code> and <code>ld</code>) de
 instruction format can be useful for multiple types of instructions, and we can
 indicate to the CPU how fields should be interpreted using our <code>opcode</code> and
 <code>funct</code> fields.</p>
-<h2 id="s-format">S Format</h2>
+<h2 id="s-format">
+  S Format
+  <a class="heading-link" href="#s-format">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>Next up is <code>S</code> format instructions, which reintroduce our second register
 operand (<code>rs2</code>), but eliminate the destination register <code>rd</code>. An important
 attribute to notice is that we don&rsquo;t simply change the bits used for <code>rd</code> to now
@@ -534,13 +637,12 @@ this strategy and the impact it has on complexity of the hardware design will
 become more apparent.</p>
 <p>Our chosen <code>S</code> format instruction is <code>sd</code> which is used to store a doubleword at
 a location in memory:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-(gdb) x/4bt 0x100bc
-0x100bc &lt;main+12&gt;:  00100011    00110100    00010001    00000000
-
-</code></pre></div><p>Rearranged: <code>00000000 00010001 00110100 00100011</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) x/4bt 0x100bc
+</span></span><span style="display:flex;"><span>0x100bc &lt;main+12&gt;:  00100011    00110100    00010001    00000000
+</span></span></code></pre></div><p>Rearranged: <code>00000000 00010001 00110100 00100011</code></p>
 <p>Fit into <code>S</code> format:</p>
-<p><img src="../static/risc_v_inst_intro_5.png" alt="sd S Format"></p>
+<p><img src="../../static/risc_v_inst_intro_5.png" alt="sd S Format"></p>
 <p>This looks somewhat similar to our <code>ld</code> instruction, but instead of storing the
 contents of a memory location in a register, we are storing the contents of a
 register in a memory location. In this case, the contents of <code>ra</code> are being
@@ -569,16 +671,14 @@ are also able to specify larger immediate values because we have 13 bits instead
 of just 12.</p>
 <p>Though we don&rsquo;t have any <code>B</code> format instructions in our example program, let&rsquo;s
 take a look at how we could decode a <code>blt</code> instruction if it existed:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-0x00000000000101b8 &lt;+0&gt;:    blt a1,a0,0x101c4 &lt;sum+12&gt;
-
-</code></pre></div><div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-(gdb) x/4bt 0x101b8
-0x101b8 &lt;sum&gt;:  01100011    11000110    10100101    00000000
-
-</code></pre></div><p>Rearranged: <code>00000000 10100101 11000110 01100011</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>0x00000000000101b8 &lt;+0&gt;:    blt a1,a0,0x101c4 &lt;sum+12&gt;
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) x/4bt 0x101b8
+</span></span><span style="display:flex;"><span>0x101b8 &lt;sum&gt;:  01100011    11000110    10100101    00000000
+</span></span></code></pre></div><p>Rearranged: <code>00000000 10100101 11000110 01100011</code></p>
 <p>Fit into <code>B</code> format:</p>
-<p><img src="../static/risc_v_inst_intro_6.png" alt="blt B Format"></p>
+<p><img src="../../static/risc_v_inst_intro_6.png" alt="blt B Format"></p>
 <p>Since we&rsquo;ve seen it a few times at this point, I&rsquo;ll leave the register decoding
 to you, but let&rsquo;s briefly evaluate our immediate. Remember that we infer a <code>0</code>
 in the least significant bit (<code>imm[0]</code>):</p>
@@ -592,7 +692,13 @@ mapping of bits in the instruction to bits in the immediate.</p>
 <p>Converting to decimal, we get a value of <code>12</code>, which, as we can see from our
 assembler directive above, is the number of bytes (i.e. offset) between the
 current instruction memory address (<code>0x101b8</code>) and <code>0x101c4</code>.</p>
-<h2 id="u-format">U Format</h2>
+<h2 id="u-format">
+  U Format
+  <a class="heading-link" href="#u-format">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>Our last instruction format is <code>U</code>, which we chose the <code>lui</code> instruction to
 demonstrate, but didn&rsquo;t specify its actual purpose. <code>lui</code> refers to &ldquo;load upper
 immediate&rdquo;, and now that we have looked at a few instructions that use immediate
@@ -606,13 +712,12 @@ address space that could be accessed in a single jump is limited. For this
 reason, conditional branching is frequently used for small, local jumps.</p>
 <p>Before we go farther, let&rsquo;s break our <code>lui</code> instruction down into its <code>U</code> format
 layout:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-(gdb) x/4bt 0x100c8
-0x100c8 &lt;main+24&gt;:  00110111    00010101    00000010    00000000
-
-</code></pre></div><p>Rearranged: <code>00000000 00000010 00010101 00110111</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) x/4bt 0x100c8
+</span></span><span style="display:flex;"><span>0x100c8 &lt;main+24&gt;:  00110111    00010101    00000010    00000000
+</span></span></code></pre></div><p>Rearranged: <code>00000000 00000010 00010101 00110111</code></p>
 <p>Fit into <code>U</code> format:</p>
-<p><img src="../static/risc_v_inst_intro_7.png" alt="lui U Format"></p>
+<p><img src="../../static/risc_v_inst_intro_7.png" alt="lui U Format"></p>
 <p>If we need to jump to or reference a farther away memory address, we have to
 build up our constant via multiple instructions. This is where <code>lui</code> comes in.
 The 20 bit immediate value in the <code>U</code> format instruction is placed in the upper
@@ -622,89 +727,88 @@ the lower bits of that constant using binary addition before using it to access
 that location in memory.</p>
 <p>In fact, in our example, <code>lui</code> is coupled with <code>addi</code> to build up the memory
 address of the format string that we pass to <code>printf</code>.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-   0x00000000000100c8 &lt;+24&gt;:        lui         a0,0x21
-   0x00000000000100cc &lt;+28&gt;:        addi        a0,a0,-192 # 0x20f40
-   0x00000000000100d0 &lt;+32&gt;:        jal         ra,0x10418 &lt;printf&gt;
-
-</code></pre></div><p>Let&rsquo;s step through these instructions to observe what is happening:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-(gdb) disass
-Dump of assembler code for function main:
-   0x00000000000100b0 &lt;+0&gt;: addi    sp,sp,-16
-   0x00000000000100b4 &lt;+4&gt;: li  a1,2
-   0x00000000000100b8 &lt;+8&gt;: li  a0,1
-   0x00000000000100bc &lt;+12&gt;:    sd  ra,8(sp)
-   0x00000000000100c0 &lt;+16&gt;:    jal ra,0x101b8 &lt;sum&gt;
-   0x00000000000100c4 &lt;+20&gt;:    mv  a1,a0
-=&gt; 0x00000000000100c8 &lt;+24&gt;:    lui a0,0x21
-   0x00000000000100cc &lt;+28&gt;:    addi    a0,a0,-192 # 0x20f40
-   0x00000000000100d0 &lt;+32&gt;:    jal ra,0x10418 &lt;printf&gt;
-   0x00000000000100d4 &lt;+36&gt;:    ld  ra,8(sp)
-   0x00000000000100d8 &lt;+40&gt;:    li  a0,0
-   0x00000000000100dc &lt;+44&gt;:    addi    sp,sp,16
-   0x00000000000100e0 &lt;+48&gt;:    ret
-End of assembler dump.
-(gdb) i r a0        
-a0             0x3  3
-
-</code></pre></div><p>At the start, the content of <code>a0</code> is <code>3</code>, which is the result from our <code>sum</code>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>   0x00000000000100c8 &lt;+24&gt;:        lui         a0,0x21
+</span></span><span style="display:flex;"><span>   0x00000000000100cc &lt;+28&gt;:        addi        a0,a0,-192 # 0x20f40
+</span></span><span style="display:flex;"><span>   0x00000000000100d0 &lt;+32&gt;:        jal         ra,0x10418 &lt;printf&gt;
+</span></span></code></pre></div><p>Let&rsquo;s step through these instructions to observe what is happening:</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) disass
+</span></span><span style="display:flex;"><span>Dump of assembler code for function main:
+</span></span><span style="display:flex;"><span>   0x00000000000100b0 &lt;+0&gt;: addi    sp,sp,-16
+</span></span><span style="display:flex;"><span>   0x00000000000100b4 &lt;+4&gt;: li  a1,2
+</span></span><span style="display:flex;"><span>   0x00000000000100b8 &lt;+8&gt;: li  a0,1
+</span></span><span style="display:flex;"><span>   0x00000000000100bc &lt;+12&gt;:    sd  ra,8(sp)
+</span></span><span style="display:flex;"><span>   0x00000000000100c0 &lt;+16&gt;:    jal ra,0x101b8 &lt;sum&gt;
+</span></span><span style="display:flex;"><span>   0x00000000000100c4 &lt;+20&gt;:    mv  a1,a0
+</span></span><span style="display:flex;"><span>=&gt; 0x00000000000100c8 &lt;+24&gt;:    lui a0,0x21
+</span></span><span style="display:flex;"><span>   0x00000000000100cc &lt;+28&gt;:    addi    a0,a0,-192 # 0x20f40
+</span></span><span style="display:flex;"><span>   0x00000000000100d0 &lt;+32&gt;:    jal ra,0x10418 &lt;printf&gt;
+</span></span><span style="display:flex;"><span>   0x00000000000100d4 &lt;+36&gt;:    ld  ra,8(sp)
+</span></span><span style="display:flex;"><span>   0x00000000000100d8 &lt;+40&gt;:    li  a0,0
+</span></span><span style="display:flex;"><span>   0x00000000000100dc &lt;+44&gt;:    addi    sp,sp,16
+</span></span><span style="display:flex;"><span>   0x00000000000100e0 &lt;+48&gt;:    ret
+</span></span><span style="display:flex;"><span>End of assembler dump.
+</span></span><span style="display:flex;"><span>(gdb) i r a0        
+</span></span><span style="display:flex;"><span>a0             0x3  3
+</span></span></code></pre></div><p>At the start, the content of <code>a0</code> is <code>3</code>, which is the result from our <code>sum</code>
 function. In binary this would look like: <code>00000000000000000000000000000011</code>.
 Now let&rsquo;s step into the <code>lui</code> instruction and examine the contents:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-(gdb) si
-0x00000000000100cc in main ()
-(gdb) i r a0
-a0             0x21000  135168
-
-</code></pre></div><p>After the <code>lui</code> instruction is executed, the upper 20 bits of <code>a0</code> are populated
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) si
+</span></span><span style="display:flex;"><span>0x00000000000100cc in main ()
+</span></span><span style="display:flex;"><span>(gdb) i r a0
+</span></span><span style="display:flex;"><span>a0             0x21000  135168
+</span></span></code></pre></div><p>After the <code>lui</code> instruction is executed, the upper 20 bits of <code>a0</code> are populated
 with the immediate value&rsquo;s bits (<code>0x21</code>), and the lower 12 bits are filled in
-with <code>0</code>'s. In binary, our immediate was <code>00000000000000100001</code>, and and adding
-12 <code>0</code>'s to the end gives us <code>00000000000000100001000000000000</code> (or <code>0x2100</code>).
+with <code>0</code>&rsquo;s. In binary, our immediate was <code>00000000000000100001</code>, and and adding
+12 <code>0</code>&rsquo;s to the end gives us <code>00000000000000100001000000000000</code> (or <code>0x2100</code>).
 Now let&rsquo;s step into the <code>addi</code> instruction:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-(gdb) si
-0x00000000000100d0 in main ()
-(gdb) i r a0
-a0             0x20f40  134976
-
-</code></pre></div><p>We can tell from the changed decimal representation that we have added <code>-192</code> to
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) si
+</span></span><span style="display:flex;"><span>0x00000000000100d0 in main ()
+</span></span><span style="display:flex;"><span>(gdb) i r a0
+</span></span><span style="display:flex;"><span>a0             0x20f40  134976
+</span></span></code></pre></div><p>We can tell from the changed decimal representation that we have added <code>-192</code> to
 <code>a0</code>, but visualizing the binary addition helps us understand how <code>lui</code> and
 <code>addi</code> are working together:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-  00000000000000100001000000000000 (contents of a0 = 135168)
-+ 11111111111111111111111101000000 (sign-extended immediate = -192)
-----------------------------------
-  00000000000000100000111101000000
-
-</code></pre></div><p>Now we pass this value in our <code>a0</code> argument register to <code>printf</code>, which points
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  00000000000000100001000000000000 (contents of a0 = 135168)
+</span></span><span style="display:flex;"><span>+ 11111111111111111111111101000000 (sign-extended immediate = -192)
+</span></span><span style="display:flex;"><span>----------------------------------
+</span></span><span style="display:flex;"><span>  00000000000000100000111101000000
+</span></span></code></pre></div><p>Now we pass this value in our <code>a0</code> argument register to <code>printf</code>, which points
 to the address of the first character in our format string. We can examine the
 contents of the memory address to be certain:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-(gdb) x/15bc 0x20f40
-0x20f40:    84 &#39;T&#39;  104 &#39;h&#39; 101 &#39;e&#39; 32 &#39; &#39;  115 &#39;s&#39; 117 &#39;u&#39; 109 &#39;m&#39; 32 &#39; &#39;
-0x20f48:    105 &#39;i&#39; 115 &#39;s&#39; 58 &#39;:&#39;  32 &#39; &#39;  37 &#39;%&#39;  100 &#39;d&#39; 10 &#39;\n&#39;
-
-</code></pre></div><p>Like the <code>S</code> and <code>B</code> formats, <code>U</code> and <code>J</code> are also quite similar. The immediate
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) x/15bc 0x20f40
+</span></span><span style="display:flex;"><span>0x20f40:    84 &#39;T&#39;  104 &#39;h&#39; 101 &#39;e&#39; 32 &#39; &#39;  115 &#39;s&#39; 117 &#39;u&#39; 109 &#39;m&#39; 32 &#39; &#39;
+</span></span><span style="display:flex;"><span>0x20f48:    105 &#39;i&#39; 115 &#39;s&#39; 58 &#39;:&#39;  32 &#39; &#39;  37 &#39;%&#39;  100 &#39;d&#39; 10 &#39;\n&#39;
+</span></span></code></pre></div><p>Like the <code>S</code> and <code>B</code> formats, <code>U</code> and <code>J</code> are also quite similar. The immediate
 in <code>J</code> is scrambled in a similar manner to <code>B</code> because it is also used for
 control flow instructions, which must use a memory address that is a multiple of
 2. In our example, <code>jal</code> (&ldquo;jump and link&rdquo;) is our only <code>J</code> format instruction,
 and is actually the only core instruction that uses the <code>J</code> format. Let&rsquo;s
 check out what it is doing:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-(gdb) x/4bt 0x100c0
-0x100c0 &lt;main+16&gt;:  11101111    00000000    10000000    00001111
-
-</code></pre></div><p>Rearranged: <code>00001111 10000000 00000000 11101111</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) x/4bt 0x100c0
+</span></span><span style="display:flex;"><span>0x100c0 &lt;main+16&gt;:  11101111    00000000    10000000    00001111
+</span></span></code></pre></div><p>Rearranged: <code>00001111 10000000 00000000 11101111</code></p>
 <p>Fit into <code>J</code> format:</p>
-<p><img src="../static/risc_v_inst_intro_8.png" alt="jal J Format"></p>
+<p><img src="../../static/risc_v_inst_intro_8.png" alt="jal J Format"></p>
 <p>The <code>jal</code> instruction populates the register specified in <code>rd</code> (in this case
 <code>ra</code>) with the memory address in the program counter (<code>pc</code>) register plus 4,
 then jumps to the address by populating <code>pc</code> with the immediate value. In this
 specific example, we are transferring control to the <code>sum</code> function, but making
 sure that <code>ra</code> points to the instruction right after <code>jal</code> so that <code>sum</code> knows
 where to return after completing its operations.</p>
-<h2 id="what-is-going-on-with-mv-and-ret">What is going on with <code>mv</code> and <code>ret</code>?</h2>
+<h2 id="what-is-going-on-with-mv-and-ret">
+  What is going on with <code>mv</code> and <code>ret</code>?
+  <a class="heading-link" href="#what-is-going-on-with-mv-and-ret">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>Before we conclude, I want to briefly touch on two instructions in our example
 that we have not yet covered. You may have already noticed <code>ret</code> as it has no
 operands, which would exclude it from all of the formats we have looked at.
@@ -727,7 +831,13 @@ future post.</p>
 <p>There are more pseudoinstructions that the assembler implements than these two,
 some of which encompass multiple underlying instructions, but <code>mv</code> and <code>ret</code> are
 ones that you will see often.</p>
-<h2 id="concluding-thoughts">Concluding Thoughts</h2>
+<h2 id="concluding-thoughts">
+  Concluding Thoughts
+  <a class="heading-link" href="#concluding-thoughts">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>This has been our longest post in the series so far, but it provides a strong
 grounding for future topics we will cover. Specifically, there are a number of
 design decisions that were only briefly mentioned or alluded to that we will
@@ -740,25 +850,49 @@ can do a better job of reaching that goal, or you have any questions or
 comments, please feel free to send me a message
 <a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter!</p>
 
-  </article>
-
-  <br/>
-
-  
-  
-</section>
-
       </div>
 
-      <footer class="footer">
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
   <section class="container">
-     © 2022  
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
   </section>
 </footer>
 
-    </main>
+  </main>
 
-    
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {
@@ -772,7 +906,19 @@ if (!doNotTrack) {
 }
 </script>
 
+  
 
-  </body>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
 
 </html>

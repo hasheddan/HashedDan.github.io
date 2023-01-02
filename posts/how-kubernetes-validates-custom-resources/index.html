@@ -1,95 +1,160 @@
 <!DOCTYPE html>
 <html lang="en">
-
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <meta name="author" content="Daniel Mangum">
-    <meta name="description" content="Daniel Mangum&#39;s personal website">
-    <meta name="keywords" content="blog,developer,personal">
-
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:site" content="@hasheddan" />
-    <meta name="twitter:title" content="How Kubernetes Validates Custom Resources"/>
-    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
-
-    <base href="https://danielmangum.com">
     <title>
   How Kubernetes Validates Custom Resources · Daniel Mangum
 </title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
 
-    <link rel="canonical" href="https://danielmangum.com/posts/how-kubernetes-validates-custom-resources/">
 
-    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
-    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
-    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
 
-    
 
-    
-      <link rel="stylesheet" href="https://danielmangum.com/css/custom.css">
-    
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="This post references the Kubernetes codebase at commit d92a443ca7 and kube-openapi at commit ee342a809c, but should remain mostly applicable for an extended period of time barring any massive refactor to Kubernetes internals. This is also intended to be a very active read and a reference to come back to over time. There are a lot of links to source code that is not embedded because the post would have become even more unwieldy than it already is.">
+<meta name="keywords" content="blog,developer,personal">
 
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="How Kubernetes Validates Custom Resources"/>
+<meta name="twitter:description" content="This post references the Kubernetes codebase at commit d92a443ca7 and kube-openapi at commit ee342a809c, but should remain mostly applicable for an extended period of time barring any massive refactor to Kubernetes internals. This is also intended to be a very active read and a reference to come back to over time. There are a lot of links to source code that is not embedded because the post would have become even more unwieldy than it already is."/>
 
-    
+<meta property="og:title" content="How Kubernetes Validates Custom Resources" />
+<meta property="og:description" content="This post references the Kubernetes codebase at commit d92a443ca7 and kube-openapi at commit ee342a809c, but should remain mostly applicable for an extended period of time barring any massive refactor to Kubernetes internals. This is also intended to be a very active read and a reference to come back to over time. There are a lot of links to source code that is not embedded because the post would have become even more unwieldy than it already is." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/how-kubernetes-validates-custom-resources/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2021-11-08T01:41:34-06:00" />
+<meta property="article:modified_time" content="2021-11-08T01:41:34-06:00" />
 
-    <meta name="generator" content="Hugo 0.68.3" />
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/how-kubernetes-validates-custom-resources/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.109.0">
+
+
+
+
+
   </head>
 
-  <body class="">
-    <main class="wrapper">
-      <nav class="navigation">
+
+
+
+<body class="preload-transitions colorscheme-light">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
   <section class="container">
-    <a class="navigation-title" href="https://danielmangum.com">
+    <a class="navigation-title" href="https://danielmangum.com/">
       Daniel Mangum
     </a>
     
-    <ul class="navigation-list  float-right ">
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
-      </li>
-      
-    </ul>
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
     
   </section>
 </nav>
 
 
-      <div class="content">
-        
-  <section class="container post">
-  <article>
-    <header>
-      <h1 class="title">How Kubernetes Validates Custom Resources</h1>
-      <h2 class="date">November 8, 2021</h2>
-      <style>
-        .twitter-tweet-rendered {
-          display:block;
-          margin-left:auto;
-          margin-right:auto;
-        }
-      </style>
-
+    <div class="content">
       
-    </header>
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/how-kubernetes-validates-custom-resources/">
+              How Kubernetes Validates Custom Resources
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2021-11-08T01:41:34-06:00">
+                November 8, 2021
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              25-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
 
-    <blockquote>
+      <div class="post-content">
+        
+        <blockquote>
 <p>This post references the Kubernetes codebase at commit
 <a href="https://github.com/kubernetes/kubernetes/tree/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7">d92a443ca7</a>
 and <a href="https://github.com/kubernetes/kube-openapi">kube-openapi</a> at commit
@@ -114,26 +179,32 @@ validating custom resources, I have provided a few different options for how you
 can go about extracting the exact information you want.</p>
 <p><strong>Options for Reading This Post</strong></p>
 <ul>
-<li><em>&ldquo;Give me all the words!&quot;</em> - Go right ahead to the <a href="https://danielmangum.com/posts/how-kubernetes-validates-custom-resources#a-big-idea">next
+<li><em>&ldquo;Give me all the words!&rdquo;</em> - Go right ahead to the <a href="https://danielmangum.com/posts/how-kubernetes-validates-custom-resources#a-big-idea">next
 section</a>.
 You have been warned.</li>
-<li><em>&ldquo;I don&rsquo;t care about your life story.&quot;</em> - Harsh, but fair. Skip to <a href="https://danielmangum.com/posts/how-kubernetes-validates-custom-resources#a-starting-point">A Starting
+<li><em>&ldquo;I don&rsquo;t care about your life story.&rdquo;</em> - Harsh, but fair. Skip to <a href="https://danielmangum.com/posts/how-kubernetes-validates-custom-resources#a-starting-point">A Starting
 Point</a>.</li>
-<li><em>&ldquo;If it&rsquo;s not answering the title of this post, I don&rsquo;t want it.&quot;</em> - If you
+<li><em>&ldquo;If it&rsquo;s not answering the title of this post, I don&rsquo;t want it.&rdquo;</em> - If you
 are primarily interested in the literal validation, rather than when it is
 invoked, skip to <a href="https://danielmangum.com/posts/how-kubernetes-validates-custom-resources#performing-validation">Performing
 Validation</a>.</li>
-<li><em>&ldquo;I need to validate a custom resource, I don&rsquo;t care how it works.&quot;</em> - If you
+<li><em>&ldquo;I need to validate a custom resource, I don&rsquo;t care how it works.&rdquo;</em> - If you
 just want to know how you can perform offline validation with the same
 machinery used in upstream Kubernetes, head on over to the <a href="https://github.com/hasheddan/k8s-cr-validator">minimal
 example</a> we use later on in
 this post.</li>
-<li><em>&ldquo;This looks long and boring.&quot;</em> - <a href="https://twitter.com/hasheddan">Send me a
+<li><em>&ldquo;This looks long and boring.&rdquo;</em> - <a href="https://twitter.com/hasheddan">Send me a
 message</a>! I am more than happy to join your
 livesteam, podcast, or just jump on Zoom call.</li>
 </ul>
-<p><img src="../static/k8s-resource-validation-0.png" alt="k8s-resource-validation-0"></p>
-<h2 id="a-big-idea">A Big Idea</h2>
+<p><img src="../../static/k8s-resource-validation-0.png" alt="k8s-resource-validation-0"></p>
+<h2 id="a-big-idea">
+  A Big Idea
+  <a class="heading-link" href="#a-big-idea">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>This all began because early Kubernetes creators / contributors noticed that
 this system designed for scheduling containerized workloads could support other
 use-cases, and naturally began to theorize about the feasibility of a plugin
@@ -161,7 +232,13 @@ analogous to defining a new type in your favorite programming language.</p>
 be <a href="https://crossplane.io/">to provision infrastructure</a>, <a href="https://cert-manager.io/">manage
 certificates</a>, or a whole host of other operations. At
 this point, they are a critical component of the Kubernetes ecosystem.</p>
-<h2 id="a-startling-realization">A Startling Realization</h2>
+<h2 id="a-startling-realization">
+  A Startling Realization
+  <a class="heading-link" href="#a-startling-realization">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>I am typically someone who likes to know <em>exactly</em> how almost everything works.
 I don&rsquo;t mean conceptually how it works; I want to know literally the exact
 operations that are performed in response to any event. Honestly, this is a bit
@@ -219,7 +296,13 @@ logic.&rdquo;</p>
 behaves as defined. I found myself needing to understand this, and I believe it
 is a net win for everyone if it more accessible to others as well. So here we
 go&hellip;</p>
-<h2 id="a-starting-point">A Starting Point</h2>
+<h2 id="a-starting-point">
+  A Starting Point
+  <a class="heading-link" href="#a-starting-point">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>Before we get into the actual validation logic, we need to understand where it
 is being called from. <code>CustomResourceDefinitions</code> are managed by the <a href="https://github.com/kubernetes/kubernetes/tree/d92a443ca7/staging/src/k8s.io/apiextensions-apiserver">API
 Extensions API
@@ -296,7 +379,13 @@ names</a>
 and <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_discovery_controller.go#L43">populating discovery
 caches</a>.</p>
 </blockquote>
-<h2 id="handling-requests">Handling Requests</h2>
+<h2 id="handling-requests">
+  Handling Requests
+  <a class="heading-link" href="#handling-requests">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p><a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L95">The
 <code>CustomResourceDefinitionHandler</code></a>
 is really where all of the interesting logic around dealing with custom
@@ -318,32 +407,32 @@ or, if it does not match paths for either one of those handlers, we pass it
 along to the delegate API server.</p>
 <p>Source:
 <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L242"><code>apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L242</code></a></p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">    <span style="color:#fff;font-weight:bold">if</span> !requestInfo.IsResourceRequest {
-        pathParts := splitPath(requestInfo.Path)
-        <span style="color:#007f7f">// only match /apis/&lt;group&gt;/&lt;version&gt;
-</span><span style="color:#007f7f"></span>        <span style="color:#007f7f">// only registered under /apis
-</span><span style="color:#007f7f"></span>        <span style="color:#fff;font-weight:bold">if</span> <span style="color:#fff;font-weight:bold">len</span>(pathParts) == <span style="color:#ff0;font-weight:bold">3</span> {
-            <span style="color:#fff;font-weight:bold">if</span> !r.hasSynced() {
-                responsewriters.ErrorNegotiated(serverStartingError(), Codecs, schema.GroupVersion{Group: requestInfo.APIGroup, Version: requestInfo.APIVersion}, w, req)
-                <span style="color:#fff;font-weight:bold">return</span>
-            }
-            r.versionDiscoveryHandler.ServeHTTP(w, req)
-            <span style="color:#fff;font-weight:bold">return</span>
-        }
-        <span style="color:#007f7f">// only match /apis/&lt;group&gt;
-</span><span style="color:#007f7f"></span>        <span style="color:#fff;font-weight:bold">if</span> <span style="color:#fff;font-weight:bold">len</span>(pathParts) == <span style="color:#ff0;font-weight:bold">2</span> {
-            <span style="color:#fff;font-weight:bold">if</span> !r.hasSynced() {
-                responsewriters.ErrorNegotiated(serverStartingError(), Codecs, schema.GroupVersion{Group: requestInfo.APIGroup, Version: requestInfo.APIVersion}, w, req)
-                <span style="color:#fff;font-weight:bold">return</span>
-            }
-            r.groupDiscoveryHandler.ServeHTTP(w, req)
-            <span style="color:#fff;font-weight:bold">return</span>
-        }
-
-        r.delegate.ServeHTTP(w, req)
-        <span style="color:#fff;font-weight:bold">return</span>
-    }
-</code></pre></div><p>You&rsquo;ll see this pattern of passing along to the delegate across servers that use
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> !requestInfo.IsResourceRequest {
+</span></span><span style="display:flex;"><span>        pathParts := splitPath(requestInfo.Path)
+</span></span><span style="display:flex;"><span>        <span style="color:#007f7f">// only match /apis/&lt;group&gt;/&lt;version&gt;
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>        <span style="color:#007f7f">// only registered under /apis
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>        <span style="color:#fff;font-weight:bold">if</span> <span style="color:#fff;font-weight:bold">len</span>(pathParts) == <span style="color:#ff0;font-weight:bold">3</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">if</span> !r.hasSynced() {
+</span></span><span style="display:flex;"><span>                responsewriters.ErrorNegotiated(serverStartingError(), Codecs, schema.GroupVersion{Group: requestInfo.APIGroup, Version: requestInfo.APIVersion}, w, req)
+</span></span><span style="display:flex;"><span>                <span style="color:#fff;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>            r.versionDiscoveryHandler.ServeHTTP(w, req)
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#007f7f">// only match /apis/&lt;group&gt;
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>        <span style="color:#fff;font-weight:bold">if</span> <span style="color:#fff;font-weight:bold">len</span>(pathParts) == <span style="color:#ff0;font-weight:bold">2</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">if</span> !r.hasSynced() {
+</span></span><span style="display:flex;"><span>                responsewriters.ErrorNegotiated(serverStartingError(), Codecs, schema.GroupVersion{Group: requestInfo.APIGroup, Version: requestInfo.APIVersion}, w, req)
+</span></span><span style="display:flex;"><span>                <span style="color:#fff;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>            r.groupDiscoveryHandler.ServeHTTP(w, req)
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        r.delegate.ServeHTTP(w, req)
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>You&rsquo;ll see this pattern of passing along to the delegate across servers that use
 the generic API server. This is what allows the server chaining we discussed
 earlier, though with the API Extensions API Server being last in the chain, its
 delegate is just the <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/cmd/kube-apiserver/app/server.go#L200"><code>notFound</code>
@@ -371,33 +460,33 @@ checks</a>
 to ensure that the request is valid:</p>
 <p>Source:
 <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L275"><code>apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L275</code></a></p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">    <span style="color:#007f7f">// if the scope in the CRD and the scope in request differ (with exception of the verbs in possiblyAcrossAllNamespacesVerbs
-</span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// for namespaced resources), pass request to the delegate, which is supposed to lead to a 404.
-</span><span style="color:#007f7f"></span>    namespacedCRD, namespacedReq := crd.Spec.Scope == apiextensionsv1.NamespaceScoped, <span style="color:#fff;font-weight:bold">len</span>(requestInfo.Namespace) &gt; <span style="color:#ff0;font-weight:bold">0</span>
-    <span style="color:#fff;font-weight:bold">if</span> !namespacedCRD &amp;&amp; namespacedReq {
-        r.delegate.ServeHTTP(w, req)
-        <span style="color:#fff;font-weight:bold">return</span>
-    }
-    <span style="color:#fff;font-weight:bold">if</span> namespacedCRD &amp;&amp; !namespacedReq &amp;&amp; !possiblyAcrossAllNamespacesVerbs.Has(requestInfo.Verb) {
-        r.delegate.ServeHTTP(w, req)
-        <span style="color:#fff;font-weight:bold">return</span>
-    }
-
-    <span style="color:#fff;font-weight:bold">if</span> !apiextensionshelpers.HasServedCRDVersion(crd, requestInfo.APIVersion) {
-        r.delegate.ServeHTTP(w, req)
-        <span style="color:#fff;font-weight:bold">return</span>
-    }
-
-    <span style="color:#007f7f">// There is a small chance that a CRD is being served because NamesAccepted condition is true,
-</span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// but it becomes &#34;unserved&#34; because another names update leads to a conflict
-</span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// and EstablishingController wasn&#39;t fast enough to put the CRD into the Established condition.
-</span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// We accept this as the problem is small and self-healing.
-</span><span style="color:#007f7f"></span>    <span style="color:#fff;font-weight:bold">if</span> !apiextensionshelpers.IsCRDConditionTrue(crd, apiextensionsv1.NamesAccepted) &amp;&amp;
-        !apiextensionshelpers.IsCRDConditionTrue(crd, apiextensionsv1.Established) {
-        r.delegate.ServeHTTP(w, req)
-        <span style="color:#fff;font-weight:bold">return</span>
-    }
-</code></pre></div><p>Assuming the request is valid, we now have to <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L304">fetch the serving information for
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>    <span style="color:#007f7f">// if the scope in the CRD and the scope in request differ (with exception of the verbs in possiblyAcrossAllNamespacesVerbs
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// for namespaced resources), pass request to the delegate, which is supposed to lead to a 404.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    namespacedCRD, namespacedReq := crd.Spec.Scope == apiextensionsv1.NamespaceScoped, <span style="color:#fff;font-weight:bold">len</span>(requestInfo.Namespace) &gt; <span style="color:#ff0;font-weight:bold">0</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> !namespacedCRD &amp;&amp; namespacedReq {
+</span></span><span style="display:flex;"><span>        r.delegate.ServeHTTP(w, req)
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> namespacedCRD &amp;&amp; !namespacedReq &amp;&amp; !possiblyAcrossAllNamespacesVerbs.Has(requestInfo.Verb) {
+</span></span><span style="display:flex;"><span>        r.delegate.ServeHTTP(w, req)
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> !apiextensionshelpers.HasServedCRDVersion(crd, requestInfo.APIVersion) {
+</span></span><span style="display:flex;"><span>        r.delegate.ServeHTTP(w, req)
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#007f7f">// There is a small chance that a CRD is being served because NamesAccepted condition is true,
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// but it becomes &#34;unserved&#34; because another names update leads to a conflict
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// and EstablishingController wasn&#39;t fast enough to put the CRD into the Established condition.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// We accept this as the problem is small and self-healing.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    <span style="color:#fff;font-weight:bold">if</span> !apiextensionshelpers.IsCRDConditionTrue(crd, apiextensionsv1.NamesAccepted) &amp;&amp;
+</span></span><span style="display:flex;"><span>        !apiextensionshelpers.IsCRDConditionTrue(crd, apiextensionsv1.Established) {
+</span></span><span style="display:flex;"><span>        r.delegate.ServeHTTP(w, req)
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>Assuming the request is valid, we now have to <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L304">fetch the serving information for
 the
 CRD</a>
 that defines the custom resource type. This
@@ -423,18 +512,18 @@ the <code>validator</code> for each
 version</a>:</p>
 <p>Source:
 <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L733"><code>apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L733</code></a></p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">        <span style="color:#fff;font-weight:bold">var</span> internalValidationSchema *apiextensionsinternal.CustomResourceValidation
-        <span style="color:#fff;font-weight:bold">if</span> validationSchema != <span style="color:#fff;font-weight:bold">nil</span> {
-            internalValidationSchema = &amp;apiextensionsinternal.CustomResourceValidation{}
-            <span style="color:#fff;font-weight:bold">if</span> err := apiextensionsv1.Convert_v1_CustomResourceValidation_To_apiextensions_CustomResourceValidation(validationSchema, internalValidationSchema, <span style="color:#fff;font-weight:bold">nil</span>); err != <span style="color:#fff;font-weight:bold">nil</span> {
-                <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>, fmt.Errorf(<span style="color:#0ff;font-weight:bold">&#34;failed to convert CRD validation to internal version: %v&#34;</span>, err)
-            }
-        }
-        validator, _, err := apiservervalidation.NewSchemaValidator(internalValidationSchema)
-        <span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
-            <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>, err
-        }
-</code></pre></div><p>This <code>validator</code> is what will be used to ensure that all custom resources that
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">var</span> internalValidationSchema *apiextensionsinternal.CustomResourceValidation
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">if</span> validationSchema != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>            internalValidationSchema = &amp;apiextensionsinternal.CustomResourceValidation{}
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">if</span> err := apiextensionsv1.Convert_v1_CustomResourceValidation_To_apiextensions_CustomResourceValidation(validationSchema, internalValidationSchema, <span style="color:#fff;font-weight:bold">nil</span>); err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>                <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>, fmt.Errorf(<span style="color:#0ff;font-weight:bold">&#34;failed to convert CRD validation to internal version: %v&#34;</span>, err)
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        validator, _, err := apiservervalidation.NewSchemaValidator(internalValidationSchema)
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>, err
+</span></span><span style="display:flex;"><span>        }
+</span></span></code></pre></div><p>This <code>validator</code> is what will be used to ensure that all custom resources that
 are created conform to the <code>openAPIV3Schema</code> defined in the CRD. It is <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L793">passed
 to
 <code>NewStrategy()</code></a>,
@@ -450,20 +539,20 @@ of request is being
 made</a>:</p>
 <p>Source:
 <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L349"><code>apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L349</code></a></p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">    <span style="color:#fff;font-weight:bold">switch</span> {
-    <span style="color:#fff;font-weight:bold">case</span> subresource == <span style="color:#0ff;font-weight:bold">&#34;status&#34;</span> &amp;&amp; subresources != <span style="color:#fff;font-weight:bold">nil</span> &amp;&amp; subresources.Status != <span style="color:#fff;font-weight:bold">nil</span>:
-        handlerFunc = r.serveStatus(w, req, requestInfo, crdInfo, terminating, supportedTypes)
-    <span style="color:#fff;font-weight:bold">case</span> subresource == <span style="color:#0ff;font-weight:bold">&#34;scale&#34;</span> &amp;&amp; subresources != <span style="color:#fff;font-weight:bold">nil</span> &amp;&amp; subresources.Scale != <span style="color:#fff;font-weight:bold">nil</span>:
-        handlerFunc = r.serveScale(w, req, requestInfo, crdInfo, terminating, supportedTypes)
-    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#fff;font-weight:bold">len</span>(subresource) == <span style="color:#ff0;font-weight:bold">0</span>:
-        handlerFunc = r.serveResource(w, req, requestInfo, crdInfo, crd, terminating, supportedTypes)
-    <span style="color:#fff;font-weight:bold">default</span>:
-        responsewriters.ErrorNegotiated(
-            apierrors.NewNotFound(schema.GroupResource{Group: requestInfo.APIGroup, Resource: requestInfo.Resource}, requestInfo.Name),
-            Codecs, schema.GroupVersion{Group: requestInfo.APIGroup, Version: requestInfo.APIVersion}, w, req,
-        )
-    }
-</code></pre></div><p>We are primarily interested in the main resource as opposed to any subresources.
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">switch</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">case</span> subresource == <span style="color:#0ff;font-weight:bold">&#34;status&#34;</span> &amp;&amp; subresources != <span style="color:#fff;font-weight:bold">nil</span> &amp;&amp; subresources.Status != <span style="color:#fff;font-weight:bold">nil</span>:
+</span></span><span style="display:flex;"><span>        handlerFunc = r.serveStatus(w, req, requestInfo, crdInfo, terminating, supportedTypes)
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">case</span> subresource == <span style="color:#0ff;font-weight:bold">&#34;scale&#34;</span> &amp;&amp; subresources != <span style="color:#fff;font-weight:bold">nil</span> &amp;&amp; subresources.Scale != <span style="color:#fff;font-weight:bold">nil</span>:
+</span></span><span style="display:flex;"><span>        handlerFunc = r.serveScale(w, req, requestInfo, crdInfo, terminating, supportedTypes)
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#fff;font-weight:bold">len</span>(subresource) == <span style="color:#ff0;font-weight:bold">0</span>:
+</span></span><span style="display:flex;"><span>        handlerFunc = r.serveResource(w, req, requestInfo, crdInfo, crd, terminating, supportedTypes)
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">default</span>:
+</span></span><span style="display:flex;"><span>        responsewriters.ErrorNegotiated(
+</span></span><span style="display:flex;"><span>            apierrors.NewNotFound(schema.GroupResource{Group: requestInfo.APIGroup, Resource: requestInfo.Resource}, requestInfo.Name),
+</span></span><span style="display:flex;"><span>            Codecs, schema.GroupVersion{Group: requestInfo.APIGroup, Version: requestInfo.APIVersion}, w, req,
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>We are primarily interested in the main resource as opposed to any subresources.
 In the <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L371"><code>serveResource</code>
 method</a>,
 we use the <code>crdInfo</code> to acquire the storage for the relevant CRD version, then
@@ -472,48 +561,48 @@ handler</a>
 based on the request verb:</p>
 <p>Source:
 <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L375"><code>apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L375</code></a></p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">    <span style="color:#fff;font-weight:bold">switch</span> requestInfo.Verb {
-    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;get&#34;</span>:
-        <span style="color:#fff;font-weight:bold">return</span> handlers.GetResource(storage, requestScope)
-    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;list&#34;</span>:
-        forceWatch := <span style="color:#fff;font-weight:bold">false</span>
-        <span style="color:#fff;font-weight:bold">return</span> handlers.ListResource(storage, storage, requestScope, forceWatch, r.minRequestTimeout)
-    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;watch&#34;</span>:
-        forceWatch := <span style="color:#fff;font-weight:bold">true</span>
-        <span style="color:#fff;font-weight:bold">return</span> handlers.ListResource(storage, storage, requestScope, forceWatch, r.minRequestTimeout)
-    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;create&#34;</span>:
-        <span style="color:#007f7f">// we want to track recently created CRDs so that in HA environments we don&#39;t have server A allow a create and server B
-</span><span style="color:#007f7f"></span>        <span style="color:#007f7f">// not have observed the established, so a followup get,update,delete results in a 404. We&#39;ve observed about 800ms
-</span><span style="color:#007f7f"></span>        <span style="color:#007f7f">// delay in some CI environments.  Two seconds looks long enough and reasonably short for hot retriers.
-</span><span style="color:#007f7f"></span>        justCreated := time.Since(apiextensionshelpers.FindCRDCondition(crd, apiextensionsv1.Established).LastTransitionTime.Time) &lt; <span style="color:#ff0;font-weight:bold">2</span>*time.Second
-        <span style="color:#fff;font-weight:bold">if</span> justCreated {
-            time.Sleep(<span style="color:#ff0;font-weight:bold">2</span> * time.Second)
-        }
-        <span style="color:#fff;font-weight:bold">if</span> terminating {
-            err := apierrors.NewMethodNotSupported(schema.GroupResource{Group: requestInfo.APIGroup, Resource: requestInfo.Resource}, requestInfo.Verb)
-            err.ErrStatus.Message = fmt.Sprintf(<span style="color:#0ff;font-weight:bold">&#34;%v not allowed while custom resource definition is terminating&#34;</span>, requestInfo.Verb)
-            responsewriters.ErrorNegotiated(err, Codecs, schema.GroupVersion{Group: requestInfo.APIGroup, Version: requestInfo.APIVersion}, w, req)
-            <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>
-        }
-        <span style="color:#fff;font-weight:bold">return</span> handlers.CreateResource(storage, requestScope, r.admission)
-    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;update&#34;</span>:
-        <span style="color:#fff;font-weight:bold">return</span> handlers.UpdateResource(storage, requestScope, r.admission)
-    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;patch&#34;</span>:
-        <span style="color:#fff;font-weight:bold">return</span> handlers.PatchResource(storage, requestScope, r.admission, supportedTypes)
-    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;delete&#34;</span>:
-        allowsOptions := <span style="color:#fff;font-weight:bold">true</span>
-        <span style="color:#fff;font-weight:bold">return</span> handlers.DeleteResource(storage, allowsOptions, requestScope, r.admission)
-    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;deletecollection&#34;</span>:
-        checkBody := <span style="color:#fff;font-weight:bold">true</span>
-        <span style="color:#fff;font-weight:bold">return</span> handlers.DeleteCollection(storage, checkBody, requestScope, r.admission)
-    <span style="color:#fff;font-weight:bold">default</span>:
-        responsewriters.ErrorNegotiated(
-            apierrors.NewMethodNotSupported(schema.GroupResource{Group: requestInfo.APIGroup, Resource: requestInfo.Resource}, requestInfo.Verb),
-            Codecs, schema.GroupVersion{Group: requestInfo.APIGroup, Version: requestInfo.APIVersion}, w, req,
-        )
-        <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>
-    }
-</code></pre></div><p>Upon matching to the correct verb, we invoke the generic verb handler, which is
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">switch</span> requestInfo.Verb {
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;get&#34;</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span> handlers.GetResource(storage, requestScope)
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;list&#34;</span>:
+</span></span><span style="display:flex;"><span>        forceWatch := <span style="color:#fff;font-weight:bold">false</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span> handlers.ListResource(storage, storage, requestScope, forceWatch, r.minRequestTimeout)
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;watch&#34;</span>:
+</span></span><span style="display:flex;"><span>        forceWatch := <span style="color:#fff;font-weight:bold">true</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span> handlers.ListResource(storage, storage, requestScope, forceWatch, r.minRequestTimeout)
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;create&#34;</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#007f7f">// we want to track recently created CRDs so that in HA environments we don&#39;t have server A allow a create and server B
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>        <span style="color:#007f7f">// not have observed the established, so a followup get,update,delete results in a 404. We&#39;ve observed about 800ms
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>        <span style="color:#007f7f">// delay in some CI environments.  Two seconds looks long enough and reasonably short for hot retriers.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>        justCreated := time.Since(apiextensionshelpers.FindCRDCondition(crd, apiextensionsv1.Established).LastTransitionTime.Time) &lt; <span style="color:#ff0;font-weight:bold">2</span>*time.Second
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">if</span> justCreated {
+</span></span><span style="display:flex;"><span>            time.Sleep(<span style="color:#ff0;font-weight:bold">2</span> * time.Second)
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">if</span> terminating {
+</span></span><span style="display:flex;"><span>            err := apierrors.NewMethodNotSupported(schema.GroupResource{Group: requestInfo.APIGroup, Resource: requestInfo.Resource}, requestInfo.Verb)
+</span></span><span style="display:flex;"><span>            err.ErrStatus.Message = fmt.Sprintf(<span style="color:#0ff;font-weight:bold">&#34;%v not allowed while custom resource definition is terminating&#34;</span>, requestInfo.Verb)
+</span></span><span style="display:flex;"><span>            responsewriters.ErrorNegotiated(err, Codecs, schema.GroupVersion{Group: requestInfo.APIGroup, Version: requestInfo.APIVersion}, w, req)
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span> handlers.CreateResource(storage, requestScope, r.admission)
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;update&#34;</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span> handlers.UpdateResource(storage, requestScope, r.admission)
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;patch&#34;</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span> handlers.PatchResource(storage, requestScope, r.admission, supportedTypes)
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;delete&#34;</span>:
+</span></span><span style="display:flex;"><span>        allowsOptions := <span style="color:#fff;font-weight:bold">true</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span> handlers.DeleteResource(storage, allowsOptions, requestScope, r.admission)
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">case</span> <span style="color:#0ff;font-weight:bold">&#34;deletecollection&#34;</span>:
+</span></span><span style="display:flex;"><span>        checkBody := <span style="color:#fff;font-weight:bold">true</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span> handlers.DeleteCollection(storage, checkBody, requestScope, r.admission)
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">default</span>:
+</span></span><span style="display:flex;"><span>        responsewriters.ErrorNegotiated(
+</span></span><span style="display:flex;"><span>            apierrors.NewMethodNotSupported(schema.GroupResource{Group: requestInfo.APIGroup, Resource: requestInfo.Resource}, requestInfo.Verb),
+</span></span><span style="display:flex;"><span>            Codecs, schema.GroupVersion{Group: requestInfo.APIGroup, Version: requestInfo.APIVersion}, w, req,
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>Upon matching to the correct verb, we invoke the generic verb handler, which is
 provided by the generic API server, with the CRD version&rsquo;s storage
 implementation, along with other relevant information, such as admission
 criteria. The <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go#L51"><code>CreateResource()</code>
@@ -524,45 +613,45 @@ performs some generic option validation and conversion, before eventually
 which is a method on the wrapped <code>storage</code> we passed to the handler.</p>
 <p>Source:
 <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiserver/pkg/endpoints/handlers/create.go#L153"><code>apiserver/pkg/endpoints/handlers/create.go#L153</code></a></p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">        requestFunc := <span style="color:#fff;font-weight:bold">func</span>() (runtime.Object, <span style="color:#fff;font-weight:bold">error</span>) {
-            <span style="color:#fff;font-weight:bold">return</span> r.Create(
-                ctx,
-                name,
-                obj,
-                rest.AdmissionToValidateObjectFunc(admit, admissionAttributes, scope),
-                options,
-            )
-        }
-        <span style="color:#007f7f">// Dedup owner references before updating managed fields
-</span><span style="color:#007f7f"></span>        dedupOwnerReferencesAndAddWarning(obj, req.Context(), <span style="color:#fff;font-weight:bold">false</span>)
-        result, err := finisher.FinishRequest(ctx, <span style="color:#fff;font-weight:bold">func</span>() (runtime.Object, <span style="color:#fff;font-weight:bold">error</span>) {
-            <span style="color:#fff;font-weight:bold">if</span> scope.FieldManager != <span style="color:#fff;font-weight:bold">nil</span> {
-                liveObj, err := scope.Creater.New(scope.Kind)
-                <span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
-                    <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>, fmt.Errorf(<span style="color:#0ff;font-weight:bold">&#34;failed to create new object (Create for %v): %v&#34;</span>, scope.Kind, err)
-                }
-                obj = scope.FieldManager.UpdateNoErrors(liveObj, obj, managerOrUserAgent(options.FieldManager, req.UserAgent()))
-                admit = fieldmanager.NewManagedFieldsValidatingAdmissionController(admit)
-            }
-            <span style="color:#fff;font-weight:bold">if</span> mutatingAdmission, ok := admit.(admission.MutationInterface); ok &amp;&amp; mutatingAdmission.Handles(admission.Create) {
-                <span style="color:#fff;font-weight:bold">if</span> err := mutatingAdmission.Admit(ctx, admissionAttributes, scope); err != <span style="color:#fff;font-weight:bold">nil</span> {
-                    <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>, err
-                }
-            }
-            <span style="color:#007f7f">// Dedup owner references again after mutating admission happens
-</span><span style="color:#007f7f"></span>            dedupOwnerReferencesAndAddWarning(obj, req.Context(), <span style="color:#fff;font-weight:bold">true</span>)
-            result, err := requestFunc()
-            <span style="color:#007f7f">// If the object wasn&#39;t committed to storage because it&#39;s serialized size was too large,
-</span><span style="color:#007f7f"></span>            <span style="color:#007f7f">// it is safe to remove managedFields (which can be large) and try again.
-</span><span style="color:#007f7f"></span>            <span style="color:#fff;font-weight:bold">if</span> isTooLargeError(err) {
-                <span style="color:#fff;font-weight:bold">if</span> accessor, accessorErr := meta.Accessor(obj); accessorErr == <span style="color:#fff;font-weight:bold">nil</span> {
-                    accessor.SetManagedFields(<span style="color:#fff;font-weight:bold">nil</span>)
-                    result, err = requestFunc()
-                }
-            }
-            <span style="color:#fff;font-weight:bold">return</span> result, err
-        })
-</code></pre></div><p>So where does our validation against the CRD schema happen? If we go back to
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>        requestFunc := <span style="color:#fff;font-weight:bold">func</span>() (runtime.Object, <span style="color:#fff;font-weight:bold">error</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">return</span> r.Create(
+</span></span><span style="display:flex;"><span>                ctx,
+</span></span><span style="display:flex;"><span>                name,
+</span></span><span style="display:flex;"><span>                obj,
+</span></span><span style="display:flex;"><span>                rest.AdmissionToValidateObjectFunc(admit, admissionAttributes, scope),
+</span></span><span style="display:flex;"><span>                options,
+</span></span><span style="display:flex;"><span>            )
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#007f7f">// Dedup owner references before updating managed fields
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>        dedupOwnerReferencesAndAddWarning(obj, req.Context(), <span style="color:#fff;font-weight:bold">false</span>)
+</span></span><span style="display:flex;"><span>        result, err := finisher.FinishRequest(ctx, <span style="color:#fff;font-weight:bold">func</span>() (runtime.Object, <span style="color:#fff;font-weight:bold">error</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">if</span> scope.FieldManager != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>                liveObj, err := scope.Creater.New(scope.Kind)
+</span></span><span style="display:flex;"><span>                <span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>                    <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>, fmt.Errorf(<span style="color:#0ff;font-weight:bold">&#34;failed to create new object (Create for %v): %v&#34;</span>, scope.Kind, err)
+</span></span><span style="display:flex;"><span>                }
+</span></span><span style="display:flex;"><span>                obj = scope.FieldManager.UpdateNoErrors(liveObj, obj, managerOrUserAgent(options.FieldManager, req.UserAgent()))
+</span></span><span style="display:flex;"><span>                admit = fieldmanager.NewManagedFieldsValidatingAdmissionController(admit)
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">if</span> mutatingAdmission, ok := admit.(admission.MutationInterface); ok &amp;&amp; mutatingAdmission.Handles(admission.Create) {
+</span></span><span style="display:flex;"><span>                <span style="color:#fff;font-weight:bold">if</span> err := mutatingAdmission.Admit(ctx, admissionAttributes, scope); err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>                    <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>, err
+</span></span><span style="display:flex;"><span>                }
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>            <span style="color:#007f7f">// Dedup owner references again after mutating admission happens
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>            dedupOwnerReferencesAndAddWarning(obj, req.Context(), <span style="color:#fff;font-weight:bold">true</span>)
+</span></span><span style="display:flex;"><span>            result, err := requestFunc()
+</span></span><span style="display:flex;"><span>            <span style="color:#007f7f">// If the object wasn&#39;t committed to storage because it&#39;s serialized size was too large,
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>            <span style="color:#007f7f">// it is safe to remove managedFields (which can be large) and try again.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>            <span style="color:#fff;font-weight:bold">if</span> isTooLargeError(err) {
+</span></span><span style="display:flex;"><span>                <span style="color:#fff;font-weight:bold">if</span> accessor, accessorErr := meta.Accessor(obj); accessorErr == <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>                    accessor.SetManagedFields(<span style="color:#fff;font-weight:bold">nil</span>)
+</span></span><span style="display:flex;"><span>                    result, err = requestFunc()
+</span></span><span style="display:flex;"><span>                }
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">return</span> result, err
+</span></span><span style="display:flex;"><span>        })
+</span></span></code></pre></div><p>So where does our validation against the CRD schema happen? If we go back to
 when we called <code>NewStrategy()</code>, you&rsquo;ll see that <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/registry/customresource/strategy.go#L43">the <code>customResourceStrategy</code> we
 create</a>
 has a <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/registry/customresource/strategy.go#L148"><code>Validate()</code>
@@ -570,23 +659,23 @@ method</a>,
 which calls the underlying <code>validator</code> we passed.</p>
 <p>Source:
 <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/registry/customresource/strategy.go#L148"><code>apiextensions-apiserver/pkg/registry/customresource/strategy.go#L148</code></a></p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#007f7f">// Validate validates a new CustomResource.
-</span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">func</span> (a customResourceStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
-    <span style="color:#fff;font-weight:bold">var</span> errs field.ErrorList
-    errs = <span style="color:#fff;font-weight:bold">append</span>(errs, a.validator.Validate(ctx, obj, a.scale)...)
-
-    <span style="color:#007f7f">// validate embedded resources
-</span><span style="color:#007f7f"></span>    <span style="color:#fff;font-weight:bold">if</span> u, ok := obj.(*unstructured.Unstructured); ok {
-        v := obj.GetObjectKind().GroupVersionKind().Version
-        errs = <span style="color:#fff;font-weight:bold">append</span>(errs, schemaobjectmeta.Validate(<span style="color:#fff;font-weight:bold">nil</span>, u.Object, a.structuralSchemas[v], <span style="color:#fff;font-weight:bold">false</span>)...)
-
-        <span style="color:#007f7f">// validate x-kubernetes-list-type &#34;map&#34; and &#34;set&#34; invariant
-</span><span style="color:#007f7f"></span>        errs = <span style="color:#fff;font-weight:bold">append</span>(errs, structurallisttype.ValidateListSetsAndMaps(<span style="color:#fff;font-weight:bold">nil</span>, a.structuralSchemas[v], u.Object)...)
-    }
-
-    <span style="color:#fff;font-weight:bold">return</span> errs
-}
-</code></pre></div><p>This <code>customResourceStrategy</code> is passed to <code>NewStorage()</code>, where we can see that
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#007f7f">// Validate validates a new CustomResource.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">func</span> (a customResourceStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">var</span> errs field.ErrorList
+</span></span><span style="display:flex;"><span>    errs = <span style="color:#fff;font-weight:bold">append</span>(errs, a.validator.Validate(ctx, obj, a.scale)...)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#007f7f">// validate embedded resources
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    <span style="color:#fff;font-weight:bold">if</span> u, ok := obj.(*unstructured.Unstructured); ok {
+</span></span><span style="display:flex;"><span>        v := obj.GetObjectKind().GroupVersionKind().Version
+</span></span><span style="display:flex;"><span>        errs = <span style="color:#fff;font-weight:bold">append</span>(errs, schemaobjectmeta.Validate(<span style="color:#fff;font-weight:bold">nil</span>, u.Object, a.structuralSchemas[v], <span style="color:#fff;font-weight:bold">false</span>)...)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#007f7f">// validate x-kubernetes-list-type &#34;map&#34; and &#34;set&#34; invariant
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>        errs = <span style="color:#fff;font-weight:bold">append</span>(errs, structurallisttype.ValidateListSetsAndMaps(<span style="color:#fff;font-weight:bold">nil</span>, a.structuralSchemas[v], u.Object)...)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> errs
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>This <code>customResourceStrategy</code> is passed to <code>NewStorage()</code>, where we can see that
 a <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/registry/customresource/etcd.go#L46"><code>REST</code> instance is
 constructed</a>,
 which <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/registry/customresource/etcd.go#L83">wraps the strategy in a
@@ -594,30 +683,30 @@ which <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1
 from the generic API server.</p>
 <p>Source:
 <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/registry/customresource/etcd.go#L83"><code>apiextensions-apiserver/pkg/registry/customresource/etcd.go#L83</code></a></p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">    store := &amp;genericregistry.Store{
-        NewFunc: <span style="color:#fff;font-weight:bold">func</span>() runtime.Object {
-            <span style="color:#007f7f">// set the expected group/version/kind in the new object as a signal to the versioning decoder
-</span><span style="color:#007f7f"></span>            ret := &amp;unstructured.Unstructured{}
-            ret.SetGroupVersionKind(kind)
-            <span style="color:#fff;font-weight:bold">return</span> ret
-        },
-        NewListFunc: <span style="color:#fff;font-weight:bold">func</span>() runtime.Object {
-            <span style="color:#007f7f">// lists are never stored, only manufactured, so stomp in the right kind
-</span><span style="color:#007f7f"></span>            ret := &amp;unstructured.UnstructuredList{}
-            ret.SetGroupVersionKind(listKind)
-            <span style="color:#fff;font-weight:bold">return</span> ret
-        },
-        PredicateFunc:            strategy.MatchCustomResourceDefinitionStorage,
-        DefaultQualifiedResource: resource,
-
-        CreateStrategy:      strategy,
-        UpdateStrategy:      strategy,
-        DeleteStrategy:      strategy,
-        ResetFieldsStrategy: strategy,
-
-        TableConvertor: tableConvertor,
-    }
-</code></pre></div><p>The generic store is what <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go#L366">implements the <code>r.Create()</code>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>    store := &amp;genericregistry.Store{
+</span></span><span style="display:flex;"><span>        NewFunc: <span style="color:#fff;font-weight:bold">func</span>() runtime.Object {
+</span></span><span style="display:flex;"><span>            <span style="color:#007f7f">// set the expected group/version/kind in the new object as a signal to the versioning decoder
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>            ret := &amp;unstructured.Unstructured{}
+</span></span><span style="display:flex;"><span>            ret.SetGroupVersionKind(kind)
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">return</span> ret
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        NewListFunc: <span style="color:#fff;font-weight:bold">func</span>() runtime.Object {
+</span></span><span style="display:flex;"><span>            <span style="color:#007f7f">// lists are never stored, only manufactured, so stomp in the right kind
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>            ret := &amp;unstructured.UnstructuredList{}
+</span></span><span style="display:flex;"><span>            ret.SetGroupVersionKind(listKind)
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">return</span> ret
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        PredicateFunc:            strategy.MatchCustomResourceDefinitionStorage,
+</span></span><span style="display:flex;"><span>        DefaultQualifiedResource: resource,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        CreateStrategy:      strategy,
+</span></span><span style="display:flex;"><span>        UpdateStrategy:      strategy,
+</span></span><span style="display:flex;"><span>        DeleteStrategy:      strategy,
+</span></span><span style="display:flex;"><span>        ResetFieldsStrategy: strategy,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        TableConvertor: tableConvertor,
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>The generic store is what <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go#L366">implements the <code>r.Create()</code>
 method</a>,
 and it <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiserver/pkg/registry/generic/registry/store.go#L380">calls the <code>rest.BeforeCreate()</code>
 method</a>
@@ -636,10 +725,16 @@ strategy&rsquo;s <code>Validate()</code>
 method</a>:</p>
 <p>Source:
 <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiserver/pkg/registry/rest/create.go#L128"><code>apiserver/pkg/registry/rest/create.go#L128</code></a></p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">    <span style="color:#fff;font-weight:bold">if</span> errs := strategy.Validate(ctx, obj); <span style="color:#fff;font-weight:bold">len</span>(errs) &gt; <span style="color:#ff0;font-weight:bold">0</span> {
-        <span style="color:#fff;font-weight:bold">return</span> errors.NewInvalid(kind.GroupKind(), objectMeta.GetName(), errs)
-    }
-</code></pre></div><h2 id="performing-validation">Performing Validation</h2>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> errs := strategy.Validate(ctx, obj); <span style="color:#fff;font-weight:bold">len</span>(errs) &gt; <span style="color:#ff0;font-weight:bold">0</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span> errors.NewInvalid(kind.GroupKind(), objectMeta.GetName(), errs)
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><h2 id="performing-validation">
+  Performing Validation
+  <a class="heading-link" href="#performing-validation">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>Well, it&rsquo;s been a wild ride, what do you say we actually move to the main topic
 of this post? Once we get to the point where we call <code>Validate()</code>, what happens?
 To understand, we&rsquo;ll need to go back to where we <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go#L740">constructed the
@@ -653,19 +748,19 @@ then <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c10
 <code>validate.SchemaValidator</code></a>:</p>
 <p>Source:
 <a href="https://github.com/kubernetes/kubernetes/blob/d92a443ca7867e0d2c1047b0502a7da42f1ac5e7/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/validation/validation.go#L42"><code>apiextensions-apiserver/pkg/apiserver/validation/validation.go#L42</code></a></p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#007f7f">// NewSchemaValidator creates an openapi schema validator for the given CRD validation.
-</span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">func</span> NewSchemaValidator(customResourceValidation *apiextensions.CustomResourceValidation) (*validate.SchemaValidator, *spec.Schema, <span style="color:#fff;font-weight:bold">error</span>) {
-    <span style="color:#007f7f">// Convert CRD schema to openapi schema
-</span><span style="color:#007f7f"></span>    openapiSchema := &amp;spec.Schema{}
-    <span style="color:#fff;font-weight:bold">if</span> customResourceValidation != <span style="color:#fff;font-weight:bold">nil</span> {
-        <span style="color:#007f7f">// TODO: replace with NewStructural(...).ToGoOpenAPI
-</span><span style="color:#007f7f"></span>        <span style="color:#fff;font-weight:bold">if</span> err := ConvertJSONSchemaPropsWithPostProcess(customResourceValidation.OpenAPIV3Schema, openapiSchema, StripUnsupportedFormatsPostProcess); err != <span style="color:#fff;font-weight:bold">nil</span> {
-            <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>, <span style="color:#fff;font-weight:bold">nil</span>, err
-        }
-    }
-    <span style="color:#fff;font-weight:bold">return</span> validate.NewSchemaValidator(openapiSchema, <span style="color:#fff;font-weight:bold">nil</span>, <span style="color:#0ff;font-weight:bold">&#34;&#34;</span>, strfmt.Default), openapiSchema, <span style="color:#fff;font-weight:bold">nil</span>
-}
-</code></pre></div><p>The schema and validator are both being consumed from the <a href="https://github.com/kubernetes/kube-openapi/tree/master/pkg/validation/validate"><code>validate</code>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#007f7f">// NewSchemaValidator creates an openapi schema validator for the given CRD validation.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">func</span> NewSchemaValidator(customResourceValidation *apiextensions.CustomResourceValidation) (*validate.SchemaValidator, *spec.Schema, <span style="color:#fff;font-weight:bold">error</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#007f7f">// Convert CRD schema to openapi schema
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    openapiSchema := &amp;spec.Schema{}
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> customResourceValidation != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#007f7f">// TODO: replace with NewStructural(...).ToGoOpenAPI
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>        <span style="color:#fff;font-weight:bold">if</span> err := ConvertJSONSchemaPropsWithPostProcess(customResourceValidation.OpenAPIV3Schema, openapiSchema, StripUnsupportedFormatsPostProcess); err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>, <span style="color:#fff;font-weight:bold">nil</span>, err
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> validate.NewSchemaValidator(openapiSchema, <span style="color:#fff;font-weight:bold">nil</span>, <span style="color:#0ff;font-weight:bold">&#34;&#34;</span>, strfmt.Default), openapiSchema, <span style="color:#fff;font-weight:bold">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The schema and validator are both being consumed from the <a href="https://github.com/kubernetes/kube-openapi/tree/master/pkg/validation/validate"><code>validate</code>
 package</a>
 in <a href="https://github.com/kubernetes/kube-openapi">kube-openapi</a> (remember when we
 were talking about that ages ago!?). This codebase is interesting as a large
@@ -693,58 +788,58 @@ A <code>SchemaValidator</code> instance itself contains:</p>
 </ul>
 <p>Source:
 <a href="https://github.com/kubernetes/kube-openapi/blob/ee342a809c29ce286ab48cea8442ef9cd0ab8c1c/pkg/validation/validate/schema.go#L58"><code>kube-openapi/pkg/validation/validate/schema.go#L58</code></a></p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#fff;font-weight:bold">func</span> NewSchemaValidator(schema *spec.Schema, rootSchema <span style="color:#fff;font-weight:bold">interface</span>{}, root <span style="color:#fff;font-weight:bold">string</span>, formats strfmt.Registry, options ...Option) *SchemaValidator {
-    <span style="color:#fff;font-weight:bold">if</span> schema == <span style="color:#fff;font-weight:bold">nil</span> {
-        <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>
-    }
-
-    <span style="color:#fff;font-weight:bold">if</span> rootSchema == <span style="color:#fff;font-weight:bold">nil</span> {
-        rootSchema = schema
-    }
-
-    <span style="color:#fff;font-weight:bold">if</span> ref := schema.Ref.String(); ref != <span style="color:#0ff;font-weight:bold">&#34;&#34;</span> {
-        <span style="color:#fff;font-weight:bold">panic</span>(fmt.Sprintf(<span style="color:#0ff;font-weight:bold">&#34;schema references not supported: %s&#34;</span>, ref))
-    }
-
-    s := SchemaValidator{
-        Path:         root,
-        in:           <span style="color:#0ff;font-weight:bold">&#34;body&#34;</span>,
-        Schema:       schema,
-        Root:         rootSchema,
-        KnownFormats: formats,
-        Options:      SchemaValidatorOptions{}}
-    <span style="color:#fff;font-weight:bold">for</span> _, o := <span style="color:#fff;font-weight:bold">range</span> options {
-        o(&amp;s.Options)
-    }
-    s.validators = []valueValidator{
-        s.typeValidator(),
-        s.schemaPropsValidator(),
-        s.stringValidator(),
-        s.formatValidator(),
-        s.numberValidator(),
-        s.sliceValidator(),
-        s.commonValidator(),
-        s.objectValidator(),
-    }
-    <span style="color:#fff;font-weight:bold">return</span> &amp;s
-}
-</code></pre></div><p>Each of these validators implements the <a href="https://github.com/kubernetes/kube-openapi/blob/ee342a809c29ce286ab48cea8442ef9cd0ab8c1c/pkg/validation/validate/validator.go#L25"><code>validator</code>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> NewSchemaValidator(schema *spec.Schema, rootSchema <span style="color:#fff;font-weight:bold">interface</span>{}, root <span style="color:#fff;font-weight:bold">string</span>, formats strfmt.Registry, options ...Option) *SchemaValidator {
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> schema == <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> rootSchema == <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>        rootSchema = schema
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> ref := schema.Ref.String(); ref != <span style="color:#0ff;font-weight:bold">&#34;&#34;</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">panic</span>(fmt.Sprintf(<span style="color:#0ff;font-weight:bold">&#34;schema references not supported: %s&#34;</span>, ref))
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    s := SchemaValidator{
+</span></span><span style="display:flex;"><span>        Path:         root,
+</span></span><span style="display:flex;"><span>        in:           <span style="color:#0ff;font-weight:bold">&#34;body&#34;</span>,
+</span></span><span style="display:flex;"><span>        Schema:       schema,
+</span></span><span style="display:flex;"><span>        Root:         rootSchema,
+</span></span><span style="display:flex;"><span>        KnownFormats: formats,
+</span></span><span style="display:flex;"><span>        Options:      SchemaValidatorOptions{}}
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">for</span> _, o := <span style="color:#fff;font-weight:bold">range</span> options {
+</span></span><span style="display:flex;"><span>        o(&amp;s.Options)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    s.validators = []valueValidator{
+</span></span><span style="display:flex;"><span>        s.typeValidator(),
+</span></span><span style="display:flex;"><span>        s.schemaPropsValidator(),
+</span></span><span style="display:flex;"><span>        s.stringValidator(),
+</span></span><span style="display:flex;"><span>        s.formatValidator(),
+</span></span><span style="display:flex;"><span>        s.numberValidator(),
+</span></span><span style="display:flex;"><span>        s.sliceValidator(),
+</span></span><span style="display:flex;"><span>        s.commonValidator(),
+</span></span><span style="display:flex;"><span>        s.objectValidator(),
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> &amp;s
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Each of these validators implements the <a href="https://github.com/kubernetes/kube-openapi/blob/ee342a809c29ce286ab48cea8442ef9cd0ab8c1c/pkg/validation/validate/validator.go#L25"><code>validator</code>
 interface</a>
 (including <code>SchemaValidator</code>):</p>
 <p>Source:
 <a href="https://github.com/kubernetes/kube-openapi/blob/ee342a809c29ce286ab48cea8442ef9cd0ab8c1c/pkg/validation/validate/validator.go#L25"><code>kube-openapi/pkg/validation/validate/validator.go#L25</code></a></p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#fff;font-weight:bold">type</span> valueValidator <span style="color:#fff;font-weight:bold">interface</span> {
-    <span style="color:#007f7f">// SetPath sets the exact path of the validator prior to calling Validate.
-</span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// The exact path contains the map keys and array indices to locate the
-</span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// value to be validated from the root data element.
-</span><span style="color:#007f7f"></span>    SetPath(path <span style="color:#fff;font-weight:bold">string</span>)
-    <span style="color:#007f7f">// Applies returns true if the validator applies to the valueKind
-</span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// from source. Validate will be called if and only if Applies returns true.
-</span><span style="color:#007f7f"></span>    Applies(source <span style="color:#fff;font-weight:bold">interface</span>{}, valueKind reflect.Kind) <span style="color:#fff;font-weight:bold">bool</span>
-    <span style="color:#007f7f">// Validate validates the value.
-</span><span style="color:#007f7f"></span>    Validate(value <span style="color:#fff;font-weight:bold">interface</span>{}) *Result
-}
-</code></pre></div><p>Without even looking at the algorithm implementation, you can likely guess what
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">type</span> valueValidator <span style="color:#fff;font-weight:bold">interface</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#007f7f">// SetPath sets the exact path of the validator prior to calling Validate.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// The exact path contains the map keys and array indices to locate the
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// value to be validated from the root data element.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    SetPath(path <span style="color:#fff;font-weight:bold">string</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#007f7f">// Applies returns true if the validator applies to the valueKind
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// from source. Validate will be called if and only if Applies returns true.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    Applies(source <span style="color:#fff;font-weight:bold">interface</span>{}, valueKind reflect.Kind) <span style="color:#fff;font-weight:bold">bool</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#007f7f">// Validate validates the value.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    Validate(value <span style="color:#fff;font-weight:bold">interface</span>{}) *Result
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Without even looking at the algorithm implementation, you can likely guess what
 we are going to be doing here: check if a validator applies to a given value
 and, if it does, run its validation. This is not wildly complex, but it can
 start to get more confusing once we realize that some of these underlying
@@ -774,17 +869,17 @@ string and we have provided an integer
 <a href="https://github.com/hasheddan/k8s-cr-validator/blob/ec2034199f200f5c678d0952b5a6ced472c317f1/cr.yaml#L44">field</a>)</li>
 </ul>
 <p>If we execute <code>go run main.go</code>, we see that these two violations are reported.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">$ go run main.go 
-Validation Error 0 (apiextensions.crossplane.io/v1, Kind=Composition)(xpostgresqlinstances.gcp.database.example.org): spec.resources.patches.transforms.type in body is required
-Validation Error 1 (apiextensions.crossplane.io/v1, Kind=Composition)(xpostgresqlinstances.gcp.database.example.org): spec.resources.connectionDetails.fromConnectionSecretKey in body must be of type string: &#34;number&#34;
-</code></pre></div><blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ go run main.go 
+</span></span><span style="display:flex;"><span>Validation Error 0 (apiextensions.crossplane.io/v1, Kind=Composition)(xpostgresqlinstances.gcp.database.example.org): spec.resources.patches.transforms.type in body is required
+</span></span><span style="display:flex;"><span>Validation Error 1 (apiextensions.crossplane.io/v1, Kind=Composition)(xpostgresqlinstances.gcp.database.example.org): spec.resources.connectionDetails.fromConnectionSecretKey in body must be of type string: &#34;number&#34;
+</span></span></code></pre></div><blockquote>
 <p>You might notice a small bug here, more on this in a bit.</p>
 </blockquote>
 <p>It works! This is a fairly complex resource in terms of nested schema, which
 makes it a great example to evaluate. Let&rsquo;s start by setting some breakpoints in
 the <a href="https://github.com/kubernetes/kube-openapi/blob/ee342a809c29ce286ab48cea8442ef9cd0ab8c1c/pkg/validation/validate/schema.go#L106"><code>SchemaValidator.Validate()</code>
 method</a>:</p>
-<p><img src="../static/k8s-resource-validation-1.png" alt="k8s-resource-validation-1"></p>
+<p><img src="../../static/k8s-resource-validation-1.png" alt="k8s-resource-validation-1"></p>
 <p>This will stop us on every call to the underlying validators&rsquo; <code>Applies()</code> and
 <code>Validate()</code> methods, which we can step into to get a deeper understanding of
 what is going on. One thing we have skipped over is the <a href="https://github.com/kubernetes/kube-openapi/blob/ee342a809c29ce286ab48cea8442ef9cd0ab8c1c/pkg/validation/validate/schema.go#L118">reflection performed
@@ -812,7 +907,7 @@ that it was the first that was <a href="https://github.com/kubernetes/kube-opena
 slice</a>
 in the call to <code>NewSchemaValidator()</code>.</li>
 </ul>
-<p><img src="../static/k8s-resource-validation-2.png" alt="k8s-resource-validation-2"></p>
+<p><img src="../../static/k8s-resource-validation-2.png" alt="k8s-resource-validation-2"></p>
 <p>Let&rsquo;s step into this call. Here the <code>typeValidator</code> is specifying that it only
 applies to schema types when <code>Type</code> or <code>Format</code> are specified. Though <code>Type</code> is
 <em>technically</em> <a href="https://github.com/OAI/OpenAPI-Specification/issues/1657">not required in the OpenAPI
@@ -828,7 +923,7 @@ from <code>kube-openapi</code>, but <a href="https://github.com/go-openapi/valid
 exist</a>
 in <code>go-openapi/validate</code>.</p>
 </blockquote>
-<p><img src="../static/k8s-resource-validation-3.png" alt="k8s-resource-validation-3"></p>
+<p><img src="../../static/k8s-resource-validation-3.png" alt="k8s-resource-validation-3"></p>
 <p>We won&rsquo;t go into extensive detail on the validation logic for the
 <code>typeValidator</code> (though feel free to walk through it yourself) because we are
 primarily interested in how we get into validating nested schemas, and the
@@ -836,19 +931,19 @@ primarily interested in how we get into validating nested schemas, and the
 get to the <code>objectValidator</code>. This validator does take into account the kind of
 data passed, only reporting that it applies when the type is a struct or map.
 Our top-level data is in fact a struct, so we will run object validation.</p>
-<p><img src="../static/k8s-resource-validation-4.png" alt="k8s-resource-validation-4"></p>
+<p><img src="../../static/k8s-resource-validation-4.png" alt="k8s-resource-validation-4"></p>
 <p>Once we reach validation, we run a few check on the number of properties, but
 eventually get to the point where we are iterating through each of the
 properties defined for the object, at which point we extract the path name and
 schema for the property, then call <code>NewSchemaValidator()</code> with those values.</p>
-<p><img src="../static/k8s-resource-validation-5.png" alt="k8s-resource-validation-5"></p>
+<p><img src="../../static/k8s-resource-validation-5.png" alt="k8s-resource-validation-5"></p>
 <p>Knowing that we don&rsquo;t have any validation errors in our <code>metadata</code> block, let&rsquo;s
 continue until we reach <code>spec</code>. We&rsquo;ll set a breakpoint on the call to
 <code>NewSchemaValidator()</code> so that we make sure to break there after the previous
 schema validators return. When we get there, our path will be updated to <code>spec</code>
 and the data we pass for validation is a map of the fields nested beneath the
 <code>spec</code>. Now we&rsquo;ll step into the new schema validator.</p>
-<p><img src="../static/k8s-resource-validation-6.png" alt="k8s-resource-validation-6"></p>
+<p><img src="../../static/k8s-resource-validation-6.png" alt="k8s-resource-validation-6"></p>
 <p>When we hit the validation loop inside the nested schema validator, we can see
 the updated path, as well as the nested data, which is now being passed to each
 of the child validators. We have three nested fields within this <code>spec</code>, each of
@@ -862,14 +957,14 @@ a different type:</p>
 child object validator of the <code>spec</code> schema validator, we will once again create
 new nested schema validators for each (and in turn for each of their properties,
 and so on). We can view recursion depth by taking a look at our call stack.</p>
-<p><img src="../static/k8s-resource-validation-7.png" alt="k8s-resource-validation-7"></p>
+<p><img src="../../static/k8s-resource-validation-7.png" alt="k8s-resource-validation-7"></p>
 <p>Once again, we&rsquo;ll continue until we get to <code>resources</code>, as we know that is where
 our validation errors exist. This will be the first schema validator for which
 the slice validator applies, meaning that we will need to create a new schema
 validator for each item in the set of <code>resources</code>. Each item adheres to the same
 schema, so we create one schema validator, then repeatedly update the path with
 the index of the item in the slice and call <code>Validate()</code> on its data.</p>
-<p><img src="../static/k8s-resource-validation-8.png" alt="k8s-resource-validation-8"></p>
+<p><img src="../../static/k8s-resource-validation-8.png" alt="k8s-resource-validation-8"></p>
 <hr>
 <hr>
 <p><em>A Brief Aside</em></p>
@@ -884,23 +979,23 @@ issue</a> describing this
 behavior in detail, and though not the most elegant solution, this can be
 mitigated by updating the schema validator&rsquo;s <code>SetPath()</code> implementation to also
 call <code>SetPath()</code> on each of its child validators.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">--- a/pkg/validation/validate/schema.<span style="color:#fff;font-weight:bold">go</span>
-+++ b/pkg/validation/validate/schema.<span style="color:#fff;font-weight:bold">go</span>
-<span style="color:#f00">@@</span> -<span style="color:#ff0;font-weight:bold">99</span>,<span style="color:#ff0;font-weight:bold">6</span> +<span style="color:#ff0;font-weight:bold">99</span>,<span style="color:#ff0;font-weight:bold">9</span> <span style="color:#f00">@@</span> <span style="color:#fff;font-weight:bold">func</span> NewSchemaValidator(schema *spec.Schema, rootSchema <span style="color:#fff;font-weight:bold">interface</span>{}, root <span style="color:#fff;font-weight:bold">string</span>
- <span style="color:#007f7f">// SetPath sets the path for this schema validator
-</span><span style="color:#007f7f"></span> <span style="color:#fff;font-weight:bold">func</span> (s *SchemaValidator) SetPath(path <span style="color:#fff;font-weight:bold">string</span>) {
-        s.Path = path
-+       <span style="color:#fff;font-weight:bold">for</span> _, v := <span style="color:#fff;font-weight:bold">range</span> s.validators {
-+               v.SetPath(path)
-+       }
- }
-</code></pre></div><p>You can observe this bug in the API server today by installing a CRD and then
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>--- a/pkg/validation/validate/schema.<span style="color:#fff;font-weight:bold">go</span>
+</span></span><span style="display:flex;"><span>+++ b/pkg/validation/validate/schema.<span style="color:#fff;font-weight:bold">go</span>
+</span></span><span style="display:flex;"><span><span style="color:#f00">@@</span> -<span style="color:#ff0;font-weight:bold">99</span>,<span style="color:#ff0;font-weight:bold">6</span> +<span style="color:#ff0;font-weight:bold">99</span>,<span style="color:#ff0;font-weight:bold">9</span> <span style="color:#f00">@@</span> <span style="color:#fff;font-weight:bold">func</span> NewSchemaValidator(schema *spec.Schema, rootSchema <span style="color:#fff;font-weight:bold">interface</span>{}, root <span style="color:#fff;font-weight:bold">string</span>
+</span></span><span style="display:flex;"><span> <span style="color:#007f7f">// SetPath sets the path for this schema validator
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> <span style="color:#fff;font-weight:bold">func</span> (s *SchemaValidator) SetPath(path <span style="color:#fff;font-weight:bold">string</span>) {
+</span></span><span style="display:flex;"><span>        s.Path = path
+</span></span><span style="display:flex;"><span>+       <span style="color:#fff;font-weight:bold">for</span> _, v := <span style="color:#fff;font-weight:bold">range</span> s.validators {
+</span></span><span style="display:flex;"><span>+               v.SetPath(path)
+</span></span><span style="display:flex;"><span>+       }
+</span></span><span style="display:flex;"><span> }
+</span></span></code></pre></div><p>You can observe this bug in the API server today by installing a CRD and then
 creating an invalid custom resource with <code>kubectl create -f cr.yaml --validate=false</code>, which disables client-side validation.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">$ kubectl create -f cr.yaml --validate=false
-The Composition &#34;xpostgresqlinstances.gcp.database.example.org&#34; is invalid: 
-* spec.resources.connectionDetails.fromConnectionSecretKey: Invalid value: &#34;integer&#34;: spec.resources.connectionDetails.fromConnectionSecretKey in body must be of type string: &#34;integer&#34;
-* spec.resources.patches.transforms.type: Required value
-</code></pre></div><p>Anyway, back to your regularly scheduled programming&hellip;</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ kubectl create -f cr.yaml --validate=false
+</span></span><span style="display:flex;"><span>The Composition &#34;xpostgresqlinstances.gcp.database.example.org&#34; is invalid: 
+</span></span><span style="display:flex;"><span>* spec.resources.connectionDetails.fromConnectionSecretKey: Invalid value: &#34;integer&#34;: spec.resources.connectionDetails.fromConnectionSecretKey in body must be of type string: &#34;integer&#34;
+</span></span><span style="display:flex;"><span>* spec.resources.patches.transforms.type: Required value
+</span></span></code></pre></div><p>Anyway, back to your regularly scheduled programming&hellip;</p>
 <hr>
 <hr>
 <p>Both of our validation errors occur in slices nested within this item in the
@@ -912,18 +1007,24 @@ these fields are keys in a map, which has <a href="https://go.dev/blog/maps#iter
 Go</a>. Here you&rsquo;ll see the
 aforementioned bug, as the parent schema validator path contains the index, but
 the child does not, meaning that all subsequent children also will not.</p>
-<p><img src="../static/k8s-resource-validation-9.png" alt="k8s-resource-validation-9"></p>
+<p><img src="../../static/k8s-resource-validation-9.png" alt="k8s-resource-validation-9"></p>
 <p>Eventually we&rsquo;ll reach the type validator for
 <code>spec.resources[0].connectionDetails[1].fromConnectionSecretKey</code>, which as we
 saw before, is responsible for ensuring that values are of the correct type. In
 this case our value is a <code>float64</code> when a <code>string</code> was required, so we return an
 <code>InvalidType</code> error, which gets added to list of validation errors that
 eventually is returned all the way up to our top-level schema validator.</p>
-<p><img src="../static/k8s-resource-validation-10.png" alt="k8s-resource-validation-10"></p>
+<p><img src="../../static/k8s-resource-validation-10.png" alt="k8s-resource-validation-10"></p>
 <p>Those errors are then passed back to the <code>create</code> handler we saw in the generic
 API server and, just like that&hellip; we&rsquo;ve discovered how Kubernetes validates your
 custom resources!</p>
-<h2 id="concluding-thoughts">Concluding Thoughts</h2>
+<h2 id="concluding-thoughts">
+  Concluding Thoughts
+  <a class="heading-link" href="#concluding-thoughts">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>We covered <em>a lot</em> in this post, and, to be abundantly clear, it is certainly
 not a requirement to know what is going on behind the scenes in every area of
 Kubernetes to be a high-level user, or even high-level contributor for that
@@ -935,25 +1036,49 @@ If I can do a better job of reaching that goal, or you have any questions or
 comments, please feel free to send me a message
 <a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter!</p>
 
-  </article>
-
-  <br/>
-
-  
-  
-</section>
-
       </div>
 
-      <footer class="footer">
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
   <section class="container">
-     © 2022  
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
   </section>
 </footer>
 
-    </main>
+  </main>
 
-    
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {
@@ -967,7 +1092,19 @@ if (!doNotTrack) {
 }
 </script>
 
+  
 
-  </body>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
 
 </html>

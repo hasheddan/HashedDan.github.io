@@ -1,211 +1,281 @@
 <!DOCTYPE html>
 <html lang="en">
-
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <meta name="author" content="Daniel Mangum">
-    <meta name="description" content="Daniel Mangum&#39;s personal website">
-    <meta name="keywords" content="blog,developer,personal">
-
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:site" content="@hasheddan" />
-    <meta name="twitter:title" content="Understanding Non-Local Jumps (setjmp/longjmp) in RISC-V Assembly"/>
-    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
-
-    <base href="https://danielmangum.com">
     <title>
   Understanding Non-Local Jumps (setjmp/longjmp) in RISC-V Assembly · Daniel Mangum
 </title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
 
-    <link rel="canonical" href="https://danielmangum.com/posts/non-local-jumps-riscv/">
 
-    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
-    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
-    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
 
-    
 
-    
-      <link rel="stylesheet" href="https://danielmangum.com/css/custom.css">
-    
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="This post explores RISC-V assembly by examining the implementation of the setjmp and longjmp functions from the C standard library. I frequently find that I grasp concepts more quickly when I have actual code that I can disassemble because it allows me to connect information with intent. I believe RISC-V and similar efforts will fundamentally shift how computers are made and programmed. I hope that sharing my knowledge will inspire the same joy in others that I feel when imagining a future of open hardware.">
+<meta name="keywords" content="blog,developer,personal">
 
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Understanding Non-Local Jumps (setjmp/longjmp) in RISC-V Assembly"/>
+<meta name="twitter:description" content="This post explores RISC-V assembly by examining the implementation of the setjmp and longjmp functions from the C standard library. I frequently find that I grasp concepts more quickly when I have actual code that I can disassemble because it allows me to connect information with intent. I believe RISC-V and similar efforts will fundamentally shift how computers are made and programmed. I hope that sharing my knowledge will inspire the same joy in others that I feel when imagining a future of open hardware."/>
 
-    
+<meta property="og:title" content="Understanding Non-Local Jumps (setjmp/longjmp) in RISC-V Assembly" />
+<meta property="og:description" content="This post explores RISC-V assembly by examining the implementation of the setjmp and longjmp functions from the C standard library. I frequently find that I grasp concepts more quickly when I have actual code that I can disassemble because it allows me to connect information with intent. I believe RISC-V and similar efforts will fundamentally shift how computers are made and programmed. I hope that sharing my knowledge will inspire the same joy in others that I feel when imagining a future of open hardware." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/non-local-jumps-riscv/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2020-10-25T18:51:26-05:00" />
+<meta property="article:modified_time" content="2020-10-25T18:51:26-05:00" />
 
-    <meta name="generator" content="Hugo 0.68.3" />
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/non-local-jumps-riscv/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.109.0">
+
+
+
+
+
   </head>
 
-  <body class="">
-    <main class="wrapper">
-      <nav class="navigation">
+
+
+
+<body class="preload-transitions colorscheme-light">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
   <section class="container">
-    <a class="navigation-title" href="https://danielmangum.com">
+    <a class="navigation-title" href="https://danielmangum.com/">
       Daniel Mangum
     </a>
     
-    <ul class="navigation-list  float-right ">
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
-      </li>
-      
-    </ul>
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
     
   </section>
 </nav>
 
 
-      <div class="content">
-        
-  <section class="container post">
-  <article>
-    <header>
-      <h1 class="title">Understanding Non-Local Jumps (setjmp/longjmp) in RISC-V Assembly</h1>
-      <h2 class="date">October 25, 2020</h2>
-      <style>
-        .twitter-tweet-rendered {
-          display:block;
-          margin-left:auto;
-          margin-right:auto;
-        }
-      </style>
-
+    <div class="content">
       
-    </header>
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/non-local-jumps-riscv/">
+              Understanding Non-Local Jumps (setjmp/longjmp) in RISC-V Assembly
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2020-10-25T18:51:26-05:00">
+                October 25, 2020
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              12-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
 
-    <p>This post explores RISC-V assembly by examining the implementation of the <code>setjmp</code> and <code>longjmp</code> functions from the C standard library. I frequently find that I grasp concepts more quickly when I have actual code that I can disassemble because it allows me to connect information with intent. I believe RISC-V and similar efforts will fundamentally shift how computers are made and programmed. I hope that sharing my knowledge will inspire the same joy in others that I feel when imagining a future of open hardware.</p>
+      <div class="post-content">
+        
+        <p>This post explores RISC-V assembly by examining the implementation of the <code>setjmp</code> and <code>longjmp</code> functions from the C standard library. I frequently find that I grasp concepts more quickly when I have actual code that I can disassemble because it allows me to connect information with intent. I believe RISC-V and similar efforts will fundamentally shift how computers are made and programmed. I hope that sharing my knowledge will inspire the same joy in others that I feel when imagining a future of open hardware.</p>
 <p><em>Note: We will be using the RISC-V GNU toolchain throughout this post. If you would like to follow along, you can cross-compile the toolchain for a RISC-V target, or you can download a <a href="https://github.com/sifive/freedom-tools/releases">prebuilt toolchain and emulator</a>. You can also compile and run the programs using a different target toolchain, but the assembly dump will be specific to that architecture. If you are more familiar with a different ISA, this may be a useful way to learn about RISC-V!</em></p>
-<h2 id="a-look-at-local-jumps">A Look at Local Jumps</h2>
+<h2 id="a-look-at-local-jumps">
+  A Look at Local Jumps
+  <a class="heading-link" href="#a-look-at-local-jumps">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>Jumps are one of the fundamental components of control flow in programming. Nearly any <em>Instruction Set Architecture</em> (ISA) is going to have a jump instruction that lets you modify the program counter to execute the next instruction from the specified location in memory. We also see control flow statements in higher level languages that provide similar logic. An example of this would be the <code>goto</code> statement in C. Using <code>goto</code> is frowned upon by many C programmers due to the ability to create horribly complex code, but it does have useful applications, such as centralized executing of functions, as described in the <a href="https://www.kernel.org/doc/Documentation/process/coding-style.rst">Linux kernel coding style guide</a>. It allows you to define a label, then &ldquo;go to&rdquo; that place in your program and resume execution from there. For example, the following program will print <code>Here</code> followed by a newline character over and over again.</p>
 <p><code>goto.c</code></p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">
-<span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;stdio.h&gt;</span><span style="color:#0f0;font-weight:bold">
-</span><span style="color:#0f0;font-weight:bold"></span>
-<span style="color:#fff;font-weight:bold">int</span> main()
-{
-jumptome:
-    printf(<span style="color:#0ff;font-weight:bold">&#34;Here</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>);
-    <span style="color:#fff;font-weight:bold">goto</span> jumptome;
-}
-
-</code></pre></div><div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">gcc goto.c -o goto
-</code></pre></div><div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">./goto
-</code></pre></div><p>Let&rsquo;s take a look at the generated assembly for <code>main()</code> using <code>objdump</code>:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-0000000000010158 &lt;main&gt;:
-   10158:    1141                    addi   sp,sp,-16
-   1015a:    e406                    sd     ra,8(sp)
-   1015c:    e022                    sd     s0,0(sp)
-   1015e:    0800                    addi   s0,sp,16
-   10160:    67c9                    lui    a5,0x12
-   10162:    6c078513                addi   a0,a5,1728 # 126c0 &lt;__errno+0xe&gt;
-   10166:    1fc000ef                jal    ra,10362 &lt;puts&gt;
-   1016a:    bfdd                    j      10160 &lt;main+0x8&gt;
-
-</code></pre></div><p>As you can see, using <code>goto</code> in the program translates directly to the <code>j</code> RISC-V instruction, which jumps to memory address 10160, causing the processor to continuously execute our <code>printf</code> statement. It would be much more clear for us to use a <code>while</code> statement here, but we will actually get the exact same assembly output with an infinite loop:</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;stdio.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">int</span> main()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>jumptome:
+</span></span><span style="display:flex;"><span>    printf(<span style="color:#0ff;font-weight:bold">&#34;Here</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">goto</span> jumptome;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>gcc goto.c -o goto
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>./goto
+</span></span></code></pre></div><p>Let&rsquo;s take a look at the generated assembly for <code>main()</code> using <code>objdump</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>0000000000010158 &lt;main&gt;:
+</span></span><span style="display:flex;"><span>   10158:    1141                    addi   sp,sp,-16
+</span></span><span style="display:flex;"><span>   1015a:    e406                    sd     ra,8(sp)
+</span></span><span style="display:flex;"><span>   1015c:    e022                    sd     s0,0(sp)
+</span></span><span style="display:flex;"><span>   1015e:    0800                    addi   s0,sp,16
+</span></span><span style="display:flex;"><span>   10160:    67c9                    lui    a5,0x12
+</span></span><span style="display:flex;"><span>   10162:    6c078513                addi   a0,a5,1728 # 126c0 &lt;__errno+0xe&gt;
+</span></span><span style="display:flex;"><span>   10166:    1fc000ef                jal    ra,10362 &lt;puts&gt;
+</span></span><span style="display:flex;"><span>   1016a:    bfdd                    j      10160 &lt;main+0x8&gt;
+</span></span></code></pre></div><p>As you can see, using <code>goto</code> in the program translates directly to the <code>j</code> RISC-V instruction, which jumps to memory address 10160, causing the processor to continuously execute our <code>printf</code> statement. It would be much more clear for us to use a <code>while</code> statement here, but we will actually get the exact same assembly output with an infinite loop:</p>
 <p><code>while.c</code></p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">
-<span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;stdio.h&gt;</span><span style="color:#0f0;font-weight:bold">
-</span><span style="color:#0f0;font-weight:bold"></span>
-<span style="color:#fff;font-weight:bold">int</span> main()
-{
-    <span style="color:#fff;font-weight:bold">while</span> (<span style="color:#ff0;font-weight:bold">1</span>)
-    {
-        printf(<span style="color:#0ff;font-weight:bold">&#34;Here</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>);
-    }
-}
-
-</code></pre></div><div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">gcc while.c -o while
-</code></pre></div><div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">objdump -D while
-</code></pre></div><div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-0000000000010158 &lt;main&gt;:
-   10158:    1141                    addi    sp,sp,-16
-   1015a:    e406                    sd      ra,8(sp)
-   1015c:    e022                    sd      s0,0(sp)
-   1015e:    0800                    addi    s0,sp,16
-   10160:    67c9                    lui     a5,0x12
-   10162:    6c078513                addi    a0,a5,1728 # 126c0 &lt;__errno+0xe&gt;
-   10166:    1fc000ef                jal     ra,10362 &lt;puts&gt;
-   1016a:    bfdd                    j       10160 &lt;main+0x8&gt;
-
-</code></pre></div><p>However, <code>goto</code> can provide more functionality than a loop, and is specifically useful for breaking out of a set of deeply nested loops. The aforementioned Linux kernel style guide gives the following example for an appropriate use of <code>goto</code>:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">
-<span style="color:#fff;font-weight:bold">int</span> fun(<span style="color:#fff;font-weight:bold">int</span> a)
-{
-    <span style="color:#fff;font-weight:bold">int</span> result = <span style="color:#ff0;font-weight:bold">0</span>;
-    <span style="color:#fff;font-weight:bold">char</span> *buffer;
-
-    buffer = kmalloc(SIZE, GFP_KERNEL);
-    <span style="color:#fff;font-weight:bold">if</span> (!buffer)
-        <span style="color:#fff;font-weight:bold">return</span> -ENOMEM;
-
-    <span style="color:#fff;font-weight:bold">if</span> (condition1) {
-        <span style="color:#fff;font-weight:bold">while</span> (loop1) {
-            ...
-        }
-        result = <span style="color:#ff0;font-weight:bold">1</span>;
-        <span style="color:#fff;font-weight:bold">goto</span> out_free_buffer;
-    }
-    ...
-out_free_buffer:
-    kfree(buffer);
-    <span style="color:#fff;font-weight:bold">return</span> result;
-}
-
-</code></pre></div><p>In this case, a descriptive label is being used to define a specific error path. Though only a small part of the function body is included here, you can imagine that there could be multiple stages in which the allocated buffer could become full, all of which you would handle by freeing the memory and returning the result. While some may still advocate for never using <code>goto</code>, this demonstrates that there are some benefits, such has not needing to duplicate redundant code throughout the function body.</p>
-<h2 id="non-local-jumps">Non-Local Jumps</h2>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;stdio.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">int</span> main()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">while</span> (<span style="color:#ff0;font-weight:bold">1</span>)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        printf(<span style="color:#0ff;font-weight:bold">&#34;Here</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>gcc while.c -o while
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>objdump -D while
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>0000000000010158 &lt;main&gt;:
+</span></span><span style="display:flex;"><span>   10158:    1141                    addi    sp,sp,-16
+</span></span><span style="display:flex;"><span>   1015a:    e406                    sd      ra,8(sp)
+</span></span><span style="display:flex;"><span>   1015c:    e022                    sd      s0,0(sp)
+</span></span><span style="display:flex;"><span>   1015e:    0800                    addi    s0,sp,16
+</span></span><span style="display:flex;"><span>   10160:    67c9                    lui     a5,0x12
+</span></span><span style="display:flex;"><span>   10162:    6c078513                addi    a0,a5,1728 # 126c0 &lt;__errno+0xe&gt;
+</span></span><span style="display:flex;"><span>   10166:    1fc000ef                jal     ra,10362 &lt;puts&gt;
+</span></span><span style="display:flex;"><span>   1016a:    bfdd                    j       10160 &lt;main+0x8&gt;
+</span></span></code></pre></div><p>However, <code>goto</code> can provide more functionality than a loop, and is specifically useful for breaking out of a set of deeply nested loops. The aforementioned Linux kernel style guide gives the following example for an appropriate use of <code>goto</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">int</span> fun(<span style="color:#fff;font-weight:bold">int</span> a)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">int</span> result = <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">char</span> *buffer;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    buffer = kmalloc(SIZE, GFP_KERNEL);
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> (!buffer)
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span> -ENOMEM;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> (condition1) {
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">while</span> (loop1) {
+</span></span><span style="display:flex;"><span>            ...
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        result = <span style="color:#ff0;font-weight:bold">1</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">goto</span> out_free_buffer;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>out_free_buffer:
+</span></span><span style="display:flex;"><span>    kfree(buffer);
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> result;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>In this case, a descriptive label is being used to define a specific error path. Though only a small part of the function body is included here, you can imagine that there could be multiple stages in which the allocated buffer could become full, all of which you would handle by freeing the memory and returning the result. While some may still advocate for never using <code>goto</code>, this demonstrates that there are some benefits, such has not needing to duplicate redundant code throughout the function body.</p>
+<h2 id="non-local-jumps">
+  Non-Local Jumps
+  <a class="heading-link" href="#non-local-jumps">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>Unfortunately (or fortunately if you are a strong proponent of never using <code>goto</code>), it only is valid in a local context. You cannot jump to a label outside of the function in which you are currently executing. For this reason, <code>setjmp</code> and <code>longjmp</code> were added to the C standard library to support non-local jumps. Let&rsquo;s take a look at a minimal example of using these functions.</p>
 <p><code>minimal.c</code></p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c">
-<span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;stdio.h&gt;</span><span style="color:#0f0;font-weight:bold">
-</span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;setjmp.h&gt;</span><span style="color:#0f0;font-weight:bold">
-</span><span style="color:#0f0;font-weight:bold"></span>
-<span style="color:#fff;font-weight:bold">static</span> jmp_buf buf;
-
-<span style="color:#fff;font-weight:bold">void</span> b()
-{
-    printf(<span style="color:#0ff;font-weight:bold">&#34;in function b</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>);
-    longjmp(buf, <span style="color:#ff0;font-weight:bold">1</span>);
-}
-
-<span style="color:#fff;font-weight:bold">void</span> a()
-{
-    printf(<span style="color:#0ff;font-weight:bold">&#34;in function a</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>);
-    <span style="color:#fff;font-weight:bold">if</span> (setjmp(buf))
-        printf(<span style="color:#0ff;font-weight:bold">&#34;back in function a</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>);
-    <span style="color:#fff;font-weight:bold">else</span>
-        b();
-}
-
-<span style="color:#fff;font-weight:bold">int</span> main()
-{
-    a();
-}
-
-</code></pre></div><div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">gcc minimal.c -o minimal
-</code></pre></div><div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">./minimal
-</code></pre></div><div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-in function a
-in function b
-back in function a
-
-</code></pre></div><p>We can get a good understanding of what is going on here by taking a look at the <a href="https://www.man7.org/linux/man-pages/man3/setjmp.3.html">setjmp Linux manual page</a>. Specifically for this program, the following portions of the description are important:</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;stdio.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;setjmp.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> jmp_buf buf;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">void</span> b()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    printf(<span style="color:#0ff;font-weight:bold">&#34;in function b</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>);
+</span></span><span style="display:flex;"><span>    longjmp(buf, <span style="color:#ff0;font-weight:bold">1</span>);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">void</span> a()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    printf(<span style="color:#0ff;font-weight:bold">&#34;in function a</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> (setjmp(buf))
+</span></span><span style="display:flex;"><span>        printf(<span style="color:#0ff;font-weight:bold">&#34;back in function a</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">else</span>
+</span></span><span style="display:flex;"><span>        b();
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">int</span> main()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    a();
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>gcc minimal.c -o minimal
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>./minimal
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>in function a
+</span></span><span style="display:flex;"><span>in function b
+</span></span><span style="display:flex;"><span>back in function a
+</span></span></code></pre></div><p>We can get a good understanding of what is going on here by taking a look at the <a href="https://www.man7.org/linux/man-pages/man3/setjmp.3.html">setjmp Linux manual page</a>. Specifically for this program, the following portions of the description are important:</p>
 <blockquote>
 <p>In this case, setjmp() returns 0.</p>
 </blockquote>
@@ -216,39 +286,38 @@ back in function a
 <p>Following a successful longjmp(), execution continues as if setjmp() had returned for a second time.</p>
 </blockquote>
 <p>In the simplest of terms, these two functions allow us to save an address and return to it at a later point in execution. Behind the scenes, other values are also being saved into the <code>buf</code>, which we will look at momentarily. First, let&rsquo;s see what the actual assembly output for a 64-bit RISC-V target looks like.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">objdump -S minimal
-</code></pre></div><div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-00000000000103c4 &lt;setjmp&gt;:
-   103c4:    00153023              sd    ra,0(a0)
-   103c8:    e500                  sd    s0,8(a0)
-   103ca:    e904                  sd    s1,16(a0)
-   103cc:    01253c23              sd    s2,24(a0)
-   103d0:    03353023              sd    s3,32(a0)
-   103d4:    03453423              sd    s4,40(a0)
-   103d8:    03553823              sd    s5,48(a0)
-   103dc:    03653c23              sd    s6,56(a0)
-   103e0:    05753023              sd    s7,64(a0)
-   103e4:    05853423              sd    s8,72(a0)
-   103e8:    05953823              sd    s9,80(a0)
-   103ec:    05a53c23              sd    s10,88(a0)
-   103f0:    07b53023              sd    s11,96(a0)
-   103f4:    06253423              sd    sp,104(a0)
-   103f8:    b920                  fsd    fs0,112(a0)
-   103fa:    bd24                  fsd    fs1,120(a0)
-   103fc:    09253027              fsd    fs2,128(a0)
-   10400:    09353427              fsd    fs3,136(a0)
-   10404:    09453827              fsd    fs4,144(a0)
-   10408:    09553c27              fsd    fs5,152(a0)
-   1040c:    0b653027              fsd    fs6,160(a0)
-   10410:    0b753427              fsd    fs7,168(a0)
-   10414:    0b853827              fsd    fs8,176(a0)
-   10418:    0b953c27              fsd    fs9,184(a0)
-   1041c:    0da53027              fsd    fs10,192(a0)
-   10420:    0db53427              fsd    fs11,200(a0)
-   10424:    4501                  li    a0,0
-   10426:    8082                  ret
-
-</code></pre></div><p>Here is the implementation of <code>setjmp</code> in RISC-V assembly. Before diving too far in, it is important to understand the registers in the RISC-V architecture. Since we are using a 64-bit machine, each of the 32 general purpose registers is 64 bits wide. Though each of the registers is classified as general purpose, there are calling conventions that most compilers will adhere to.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>objdump -S minimal
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>00000000000103c4 &lt;setjmp&gt;:
+</span></span><span style="display:flex;"><span>   103c4:    00153023              sd    ra,0(a0)
+</span></span><span style="display:flex;"><span>   103c8:    e500                  sd    s0,8(a0)
+</span></span><span style="display:flex;"><span>   103ca:    e904                  sd    s1,16(a0)
+</span></span><span style="display:flex;"><span>   103cc:    01253c23              sd    s2,24(a0)
+</span></span><span style="display:flex;"><span>   103d0:    03353023              sd    s3,32(a0)
+</span></span><span style="display:flex;"><span>   103d4:    03453423              sd    s4,40(a0)
+</span></span><span style="display:flex;"><span>   103d8:    03553823              sd    s5,48(a0)
+</span></span><span style="display:flex;"><span>   103dc:    03653c23              sd    s6,56(a0)
+</span></span><span style="display:flex;"><span>   103e0:    05753023              sd    s7,64(a0)
+</span></span><span style="display:flex;"><span>   103e4:    05853423              sd    s8,72(a0)
+</span></span><span style="display:flex;"><span>   103e8:    05953823              sd    s9,80(a0)
+</span></span><span style="display:flex;"><span>   103ec:    05a53c23              sd    s10,88(a0)
+</span></span><span style="display:flex;"><span>   103f0:    07b53023              sd    s11,96(a0)
+</span></span><span style="display:flex;"><span>   103f4:    06253423              sd    sp,104(a0)
+</span></span><span style="display:flex;"><span>   103f8:    b920                  fsd    fs0,112(a0)
+</span></span><span style="display:flex;"><span>   103fa:    bd24                  fsd    fs1,120(a0)
+</span></span><span style="display:flex;"><span>   103fc:    09253027              fsd    fs2,128(a0)
+</span></span><span style="display:flex;"><span>   10400:    09353427              fsd    fs3,136(a0)
+</span></span><span style="display:flex;"><span>   10404:    09453827              fsd    fs4,144(a0)
+</span></span><span style="display:flex;"><span>   10408:    09553c27              fsd    fs5,152(a0)
+</span></span><span style="display:flex;"><span>   1040c:    0b653027              fsd    fs6,160(a0)
+</span></span><span style="display:flex;"><span>   10410:    0b753427              fsd    fs7,168(a0)
+</span></span><span style="display:flex;"><span>   10414:    0b853827              fsd    fs8,176(a0)
+</span></span><span style="display:flex;"><span>   10418:    0b953c27              fsd    fs9,184(a0)
+</span></span><span style="display:flex;"><span>   1041c:    0da53027              fsd    fs10,192(a0)
+</span></span><span style="display:flex;"><span>   10420:    0db53427              fsd    fs11,200(a0)
+</span></span><span style="display:flex;"><span>   10424:    4501                  li    a0,0
+</span></span><span style="display:flex;"><span>   10426:    8082                  ret
+</span></span></code></pre></div><p>Here is the implementation of <code>setjmp</code> in RISC-V assembly. Before diving too far in, it is important to understand the registers in the RISC-V architecture. Since we are using a 64-bit machine, each of the 32 general purpose registers is 64 bits wide. Though each of the registers is classified as general purpose, there are calling conventions that most compilers will adhere to.</p>
 <table>
 <thead>
 <tr>
@@ -341,94 +410,90 @@ back in function a
 </ul>
 <p><em>If you are interested in checking out all of the instructions available when writing RISC-V assembly, take a look at the <a href="https://github.com/riscv/riscv-asm-manual/blob/master/riscv-asm.md">programmer&rsquo;s manual</a>.</em></p>
 <p>So what exactly are we doing here? The behavior of <code>setjmp</code> is specified as storing information about the calling function&rsquo;s environment into the buffer. If you look back to the source code of <code>minimal.c</code>, you&rsquo;ll see that we are passing the buffer of type <code>jmp_buf</code> into the <code>setjmp</code> function in <code>a()</code>. If we look at the dump of <code>a()</code> you can see that we are jumping and linking (<code>jal</code>) to the address of the <code>setjmp</code> function:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-0000000000010174 &lt;a&gt;:
-   10174:    1141                    addi    sp,sp,-16
-   10176:    e406                    sd      ra,8(sp)
-   10178:    e022                    sd      s0,0(sp)
-   1017a:    0800                    addi    s0,sp,16
-   1017c:    67c9                    lui     a5,0x12
-   1017e:    7f078513                addi    a0,a5,2032 # 127f0 &lt;__errno+0x1a&gt;
-   10182:    238000ef                jal     ra,103ba &lt;puts&gt;
-   10186:    70018513                addi    a0,gp,1792 # 14830 &lt;buf&gt;
-   1018a:    23a000ef                jal     ra,103c4 &lt;setjmp&gt;
-   1018e:    87aa                    mv      a5,a0
-   10190:    c799                    beqz    a5,1019e &lt;a+0x2a&gt;
-   10192:    67cd                    lui     a5,0x13
-   10194:    80078513                addi    a0,a5,-2048 # 12800 &lt;__errno+0x2a&gt;
-   10198:    222000ef                jal     ra,103ba &lt;puts&gt;
-   1019c:    a019                    j       101a2 &lt;a+0x2e&gt;
-   1019e:    fbbff0ef                jal     ra,10158 &lt;b&gt;
-   101a2:    0001                    nop
-   101a4:    60a2                    ld      ra,8(sp)
-   101a6:    6402                    ld      s0,0(sp)
-   101a8:    0141                    addi    sp,sp,16
-   101aa:    8082                    ret
-
-</code></pre></div><p>Jump and link just means that after the function we are jumping to finishes execution that it will return to where it was called (this is achieved by storing the current address into register <code>x1</code> (<code>ra</code>), the return address register). When we jump to <code>setjmp</code> it is going to save information about the environment into <code>buf</code>, which will later be used to restore the environment when <code>longjmp</code> is called.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>0000000000010174 &lt;a&gt;:
+</span></span><span style="display:flex;"><span>   10174:    1141                    addi    sp,sp,-16
+</span></span><span style="display:flex;"><span>   10176:    e406                    sd      ra,8(sp)
+</span></span><span style="display:flex;"><span>   10178:    e022                    sd      s0,0(sp)
+</span></span><span style="display:flex;"><span>   1017a:    0800                    addi    s0,sp,16
+</span></span><span style="display:flex;"><span>   1017c:    67c9                    lui     a5,0x12
+</span></span><span style="display:flex;"><span>   1017e:    7f078513                addi    a0,a5,2032 # 127f0 &lt;__errno+0x1a&gt;
+</span></span><span style="display:flex;"><span>   10182:    238000ef                jal     ra,103ba &lt;puts&gt;
+</span></span><span style="display:flex;"><span>   10186:    70018513                addi    a0,gp,1792 # 14830 &lt;buf&gt;
+</span></span><span style="display:flex;"><span>   1018a:    23a000ef                jal     ra,103c4 &lt;setjmp&gt;
+</span></span><span style="display:flex;"><span>   1018e:    87aa                    mv      a5,a0
+</span></span><span style="display:flex;"><span>   10190:    c799                    beqz    a5,1019e &lt;a+0x2a&gt;
+</span></span><span style="display:flex;"><span>   10192:    67cd                    lui     a5,0x13
+</span></span><span style="display:flex;"><span>   10194:    80078513                addi    a0,a5,-2048 # 12800 &lt;__errno+0x2a&gt;
+</span></span><span style="display:flex;"><span>   10198:    222000ef                jal     ra,103ba &lt;puts&gt;
+</span></span><span style="display:flex;"><span>   1019c:    a019                    j       101a2 &lt;a+0x2e&gt;
+</span></span><span style="display:flex;"><span>   1019e:    fbbff0ef                jal     ra,10158 &lt;b&gt;
+</span></span><span style="display:flex;"><span>   101a2:    0001                    nop
+</span></span><span style="display:flex;"><span>   101a4:    60a2                    ld      ra,8(sp)
+</span></span><span style="display:flex;"><span>   101a6:    6402                    ld      s0,0(sp)
+</span></span><span style="display:flex;"><span>   101a8:    0141                    addi    sp,sp,16
+</span></span><span style="display:flex;"><span>   101aa:    8082                    ret
+</span></span></code></pre></div><p>Jump and link just means that after the function we are jumping to finishes execution that it will return to where it was called (this is achieved by storing the current address into register <code>x1</code> (<code>ra</code>), the return address register). When we jump to <code>setjmp</code> it is going to save information about the environment into <code>buf</code>, which will later be used to restore the environment when <code>longjmp</code> is called.</p>
 <p>In <code>setjmp</code>, we see a long sequence of store instructions (<code>sd</code> / <code>fd</code>). Each is taking a value from a register and storing it into <code>buf</code>, which is essentially a sequence of <code>long int</code> values, defined per target architecture in the C standard library. You can see the RISC-V implementation <a href="https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/riscv/bits/setjmp.h;h=9181b96f7cd2a5003ac049f797d7e320985d35b9;hb=HEAD">here</a> (you can also see where our <code>setjmp</code> and <code>longjmp</code> assembly is coming from <a href="https://sourceware.org/git/?p=glibc.git;a=tree;f=sysdeps/riscv;hb=HEAD">here</a>). Most of these store operations are just moving saved registers into <code>buf</code>, but three are of primary importance in our simple example:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-   103c4:    00153023              sd    ra,0(a0)
-   103c8:    e500                  sd    s0,8(a0)
-   ...
-   103f4:    06253423              sd    sp,104(a0)
-
-</code></pre></div><p>The first instruction is storing the <code>ra</code> register into the first entry in <code>buf</code> (the number preceding <code>(a0)</code> is the address offset in bytes; remember that <code>buf</code> values are stored sequentially). Our <code>jal</code> instruction in <code>a()</code> set <code>ra</code> to the calling address, meaning the first entry in <code>buf</code> will have the information to return execution to the exact location that we called <code>setjmp</code> in the future. The second two instructions are storing the frame pointer and the stack pointer into <code>buf</code>. This will be important because we will also want our stack restored when we return with <code>longjmp</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>   103c4:    00153023              sd    ra,0(a0)
+</span></span><span style="display:flex;"><span>   103c8:    e500                  sd    s0,8(a0)
+</span></span><span style="display:flex;"><span>   ...
+</span></span><span style="display:flex;"><span>   103f4:    06253423              sd    sp,104(a0)
+</span></span></code></pre></div><p>The first instruction is storing the <code>ra</code> register into the first entry in <code>buf</code> (the number preceding <code>(a0)</code> is the address offset in bytes; remember that <code>buf</code> values are stored sequentially). Our <code>jal</code> instruction in <code>a()</code> set <code>ra</code> to the calling address, meaning the first entry in <code>buf</code> will have the information to return execution to the exact location that we called <code>setjmp</code> in the future. The second two instructions are storing the frame pointer and the stack pointer into <code>buf</code>. This will be important because we will also want our stack restored when we return with <code>longjmp</code>.</p>
 <p>We finish up by setting the <code>a0</code> register to 0, as we previously saw detailed in the specification that <code>setjmp</code> must return with value 0 on direct invocation, then we return (<code>ret</code>), which will take us back to where we called <code>setjmp</code>.</p>
 <p>Our <code>a()</code> function will continue execution with an evaluation of the return value of <code>setjmp</code>. Since it is 0, our <code>if</code> statement will evaluate to <code>false</code>, and we will call <code>b()</code>.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">    ...
-    if (setjmp(buf))
-        printf(&#34;back in function a\n&#34;);
-    else
-        b();
-    ...
-
-</code></pre></div><p>Now in <code>b()</code>, we print our statement, then call <code>longjmp</code> with <code>buf</code> and our desired return value (1). Let&rsquo;s take a look at the assembly for <code>b()</code>:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">
-0000000000010158 &lt;b&gt;:
-   10158:    1141                    addi    sp,sp,-16
-   1015a:    e406                    sd      ra,8(sp)
-   1015c:    e022                    sd      s0,0(sp)
-   1015e:    0800                    addi    s0,sp,16
-   10160:    67c9                    lui     a5,0x12
-   10162:    7e078513                addi    a0,a5,2016 # 127e0 &lt;__errno+0xa&gt;
-   10166:    254000ef                jal     ra,103ba &lt;puts&gt;
-   1016a:    4585                    li      a1,1
-   1016c:    70018513                addi    a0,gp,1792 # 14830 &lt;buf&gt;
-   10170:    2b8000ef                jal     ra,10428 &lt;longjmp&gt;
-
-</code></pre></div><p>As you can see, the final instruction is to jump and link to <code>longjmp</code>. However, we will not return to the address that we called from because we are going to overwrite <code>ra</code> in <code>longjmp</code> (you can test that we do not return to <code>b()</code> by placing another print statement after the call to <code>longjmp</code>). Now let&rsquo;s take a closer look at our <code>longjmp</code> implementation.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">0000000000010428 &lt;longjmp&gt;:
-   10428:    00053083                  ld        ra,0(a0)
-   1042c:    6500                      ld        s0,8(a0)
-   1042e:    6904                      ld        s1,16(a0)
-   10430:    01853903                  ld        s2,24(a0)
-   10434:    02053983                  ld        s3,32(a0)
-   10438:    02853a03                  ld        s4,40(a0)
-   1043c:    03053a83                  ld        s5,48(a0)
-   10440:    03853b03                  ld        s6,56(a0)
-   10444:    04053b83                  ld        s7,64(a0)
-   10448:    04853c03                  ld        s8,72(a0)
-   1044c:    05053c83                  ld        s9,80(a0)
-   10450:    05853d03                  ld        s10,88(a0)
-   10454:    06053d83                  ld        s11,96(a0)
-   10458:    06853103                  ld        sp,104(a0)
-   1045c:    3920                      fld        fs0,112(a0)
-   1045e:    3d24                      fld        fs1,120(a0)
-   10460:    08053907                  fld        fs2,128(a0)
-   10464:    08853987                  fld        fs3,136(a0)
-   10468:    09053a07                  fld        fs4,144(a0)
-   1046c:    09853a87                  fld        fs5,152(a0)
-   10470:    0a053b07                  fld        fs6,160(a0)
-   10474:    0a853b87                  fld        fs7,168(a0)
-   10478:    0b053c07                  fld        fs8,176(a0)
-   1047c:    0b853c87                  fld        fs9,184(a0)
-   10480:    0c053d07                  fld        fs10,192(a0)
-   10484:    0c853d87                  fld        fs11,200(a0)
-   10488:    0015b513                  seqz       a0,a1
-   1048c:    952e                      add        a0,a0,a1
-   1048e:    8082                      ret
-</code></pre></div><p>It looks a lot like <code>setjmp</code>, but instead of storing into <code>buf</code>, we are now loading back into registers. Our return address will be set to <code>10198</code> (the first entry in <code>buf</code>, <code>0(a0)</code>), the point in <code>a()</code> where we originally called <code>setjmp</code>. Similarly, our stack pointer (<code>sp</code>) and frame pointer (<code>s0</code>) are going to point to the same addresses as they did when we initially called <code>setjmp</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>    if (setjmp(buf))
+</span></span><span style="display:flex;"><span>        printf(&#34;back in function a\n&#34;);
+</span></span><span style="display:flex;"><span>    else
+</span></span><span style="display:flex;"><span>        b();
+</span></span><span style="display:flex;"><span>    ...
+</span></span></code></pre></div><p>Now in <code>b()</code>, we print our statement, then call <code>longjmp</code> with <code>buf</code> and our desired return value (1). Let&rsquo;s take a look at the assembly for <code>b()</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>0000000000010158 &lt;b&gt;:
+</span></span><span style="display:flex;"><span>   10158:    1141                    addi    sp,sp,-16
+</span></span><span style="display:flex;"><span>   1015a:    e406                    sd      ra,8(sp)
+</span></span><span style="display:flex;"><span>   1015c:    e022                    sd      s0,0(sp)
+</span></span><span style="display:flex;"><span>   1015e:    0800                    addi    s0,sp,16
+</span></span><span style="display:flex;"><span>   10160:    67c9                    lui     a5,0x12
+</span></span><span style="display:flex;"><span>   10162:    7e078513                addi    a0,a5,2016 # 127e0 &lt;__errno+0xa&gt;
+</span></span><span style="display:flex;"><span>   10166:    254000ef                jal     ra,103ba &lt;puts&gt;
+</span></span><span style="display:flex;"><span>   1016a:    4585                    li      a1,1
+</span></span><span style="display:flex;"><span>   1016c:    70018513                addi    a0,gp,1792 # 14830 &lt;buf&gt;
+</span></span><span style="display:flex;"><span>   10170:    2b8000ef                jal     ra,10428 &lt;longjmp&gt;
+</span></span></code></pre></div><p>As you can see, the final instruction is to jump and link to <code>longjmp</code>. However, we will not return to the address that we called from because we are going to overwrite <code>ra</code> in <code>longjmp</code> (you can test that we do not return to <code>b()</code> by placing another print statement after the call to <code>longjmp</code>). Now let&rsquo;s take a closer look at our <code>longjmp</code> implementation.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>0000000000010428 &lt;longjmp&gt;:
+</span></span><span style="display:flex;"><span>   10428:    00053083                  ld        ra,0(a0)
+</span></span><span style="display:flex;"><span>   1042c:    6500                      ld        s0,8(a0)
+</span></span><span style="display:flex;"><span>   1042e:    6904                      ld        s1,16(a0)
+</span></span><span style="display:flex;"><span>   10430:    01853903                  ld        s2,24(a0)
+</span></span><span style="display:flex;"><span>   10434:    02053983                  ld        s3,32(a0)
+</span></span><span style="display:flex;"><span>   10438:    02853a03                  ld        s4,40(a0)
+</span></span><span style="display:flex;"><span>   1043c:    03053a83                  ld        s5,48(a0)
+</span></span><span style="display:flex;"><span>   10440:    03853b03                  ld        s6,56(a0)
+</span></span><span style="display:flex;"><span>   10444:    04053b83                  ld        s7,64(a0)
+</span></span><span style="display:flex;"><span>   10448:    04853c03                  ld        s8,72(a0)
+</span></span><span style="display:flex;"><span>   1044c:    05053c83                  ld        s9,80(a0)
+</span></span><span style="display:flex;"><span>   10450:    05853d03                  ld        s10,88(a0)
+</span></span><span style="display:flex;"><span>   10454:    06053d83                  ld        s11,96(a0)
+</span></span><span style="display:flex;"><span>   10458:    06853103                  ld        sp,104(a0)
+</span></span><span style="display:flex;"><span>   1045c:    3920                      fld        fs0,112(a0)
+</span></span><span style="display:flex;"><span>   1045e:    3d24                      fld        fs1,120(a0)
+</span></span><span style="display:flex;"><span>   10460:    08053907                  fld        fs2,128(a0)
+</span></span><span style="display:flex;"><span>   10464:    08853987                  fld        fs3,136(a0)
+</span></span><span style="display:flex;"><span>   10468:    09053a07                  fld        fs4,144(a0)
+</span></span><span style="display:flex;"><span>   1046c:    09853a87                  fld        fs5,152(a0)
+</span></span><span style="display:flex;"><span>   10470:    0a053b07                  fld        fs6,160(a0)
+</span></span><span style="display:flex;"><span>   10474:    0a853b87                  fld        fs7,168(a0)
+</span></span><span style="display:flex;"><span>   10478:    0b053c07                  fld        fs8,176(a0)
+</span></span><span style="display:flex;"><span>   1047c:    0b853c87                  fld        fs9,184(a0)
+</span></span><span style="display:flex;"><span>   10480:    0c053d07                  fld        fs10,192(a0)
+</span></span><span style="display:flex;"><span>   10484:    0c853d87                  fld        fs11,200(a0)
+</span></span><span style="display:flex;"><span>   10488:    0015b513                  seqz       a0,a1
+</span></span><span style="display:flex;"><span>   1048c:    952e                      add        a0,a0,a1
+</span></span><span style="display:flex;"><span>   1048e:    8082                      ret
+</span></span></code></pre></div><p>It looks a lot like <code>setjmp</code>, but instead of storing into <code>buf</code>, we are now loading back into registers. Our return address will be set to <code>10198</code> (the first entry in <code>buf</code>, <code>0(a0)</code>), the point in <code>a()</code> where we originally called <code>setjmp</code>. Similarly, our stack pointer (<code>sp</code>) and frame pointer (<code>s0</code>) are going to point to the same addresses as they did when we initially called <code>setjmp</code>.</p>
 <p><em>Note: Resetting the frame and stack pointers can cause surprising behavior. Think about how returning from the function that calls <code>setjmp</code> before returning to execution inside of it could lead to errors on the stack. When a function returns, the stack pointer is restored to the frame pointer, meaning values stored on the stack can be overwritten. In fact, our minimal example is susceptible to this behavior, but it does not appear because our two functions&rsquo; behavior is not dependent on the stack.</em></p>
 <p>The last three instructions once again implement part of the specification in the Linux manual page:</p>
 <blockquote>
@@ -440,29 +505,59 @@ back in function a
 <li><code>add</code>: add (sets value of first operand to the sum of the second two)</li>
 </ul>
 <p>These effectively work together to make sure that <code>longjmp</code> either returns the <code>int</code> passed to it (in register <code>a1</code>) or 1. If <code>a1</code> is equal to 0, the <code>seqz</code> will set <code>a0</code> to 1, then <code>add</code> will add <code>a0</code> (1) and <code>a1</code> (0) and store the result (1) in <code>a0</code>. If <code>a1</code> does not equal 0, <code>seqz</code> will set <code>a0</code> to 0, then <code>add</code> will add <code>a0</code> (0) and <code>a1</code> (passed value) and store the result (passed value) in <code>a0</code>. Then we will return to the address specified in <code>ra</code>, which we restored from <code>buf</code>.</p>
-<h2 id="wrapping-up">Wrapping Up</h2>
+<h2 id="wrapping-up">
+  Wrapping Up
+  <a class="heading-link" href="#wrapping-up">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>Non-local jumps are not likely to be used extensively in most projects. However, they do a suitable job of demonstrating how higher-level programming concepts translate to machine code. They also introduce the beginning concepts of how concurrency can be implemented. In fact, <code>setjmp</code> and <code>longjmp</code> have been used to implement basic <a href="https://code.google.com/archive/p/libconcurrency/">coroutines</a>.</p>
 <p>Send me a message <a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter for any questions or comments!</p>
 
-  </article>
-
-  <br/>
-
-  
-  
-</section>
-
       </div>
 
-      <footer class="footer">
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
   <section class="container">
-     © 2022  
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
   </section>
 </footer>
 
-    </main>
+  </main>
 
-    
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {
@@ -476,7 +571,19 @@ if (!doNotTrack) {
 }
 </script>
 
+  
 
-  </body>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
 
 </html>

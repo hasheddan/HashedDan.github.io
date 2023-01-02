@@ -1,95 +1,166 @@
 <!DOCTYPE html>
 <html lang="en">
-
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <meta name="author" content="Daniel Mangum">
-    <meta name="description" content="Daniel Mangum&#39;s personal website">
-    <meta name="keywords" content="blog,developer,personal">
-
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:site" content="@hasheddan" />
-    <meta name="twitter:title" content="RISC-V Bytes: Caller and Callee Saved Registers"/>
-    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
-
-    <base href="https://danielmangum.com">
     <title>
   RISC-V Bytes: Caller and Callee Saved Registers · Daniel Mangum
 </title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
 
-    <link rel="canonical" href="https://danielmangum.com/posts/risc-v-bytes-caller-callee-registers/">
 
-    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
-    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
-    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
 
-    
 
-    
-      <link rel="stylesheet" href="https://danielmangum.com/css/custom.css">
-    
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="This is part of a new series I am starting on the blog where we’ll explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
+When looking at the generated assembly for a function, you may have noticed that the first few instructions involve moving values from registers to the stack, then loading those values back into the same registers before returning.">
+<meta name="keywords" content="blog,developer,personal">
 
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="RISC-V Bytes: Caller and Callee Saved Registers"/>
+<meta name="twitter:description" content="This is part of a new series I am starting on the blog where we’ll explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
+When looking at the generated assembly for a function, you may have noticed that the first few instructions involve moving values from registers to the stack, then loading those values back into the same registers before returning."/>
 
-    
+<meta property="og:title" content="RISC-V Bytes: Caller and Callee Saved Registers" />
+<meta property="og:description" content="This is part of a new series I am starting on the blog where we’ll explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
+When looking at the generated assembly for a function, you may have noticed that the first few instructions involve moving values from registers to the stack, then loading those values back into the same registers before returning." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/risc-v-bytes-caller-callee-registers/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2021-06-18T01:41:34-06:00" />
+<meta property="article:modified_time" content="2021-06-18T01:41:34-06:00" />
 
-    <meta name="generator" content="Hugo 0.68.3" />
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/risc-v-bytes-caller-callee-registers/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.109.0">
+
+
+
+
+
   </head>
 
-  <body class="">
-    <main class="wrapper">
-      <nav class="navigation">
+
+
+
+<body class="preload-transitions colorscheme-light">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
   <section class="container">
-    <a class="navigation-title" href="https://danielmangum.com">
+    <a class="navigation-title" href="https://danielmangum.com/">
       Daniel Mangum
     </a>
     
-    <ul class="navigation-list  float-right ">
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
-      </li>
-      
-    </ul>
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
     
   </section>
 </nav>
 
 
-      <div class="content">
-        
-  <section class="container post">
-  <article>
-    <header>
-      <h1 class="title">RISC-V Bytes: Caller and Callee Saved Registers</h1>
-      <h2 class="date">June 18, 2021</h2>
-      <style>
-        .twitter-tweet-rendered {
-          display:block;
-          margin-left:auto;
-          margin-right:auto;
-        }
-      </style>
-
+    <div class="content">
       
-    </header>
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/risc-v-bytes-caller-callee-registers/">
+              RISC-V Bytes: Caller and Callee Saved Registers
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2021-06-18T01:41:34-06:00">
+                June 18, 2021
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              8-minute read
+            </span>
+          </div>
+          
+          <div class="categories">
+  <i class="fa fa-folder" aria-hidden="true"></i>
+    <a href="https://danielmangum.com/categories/risc-v-bytes/">RISC-V Bytes</a></div>
 
-    <blockquote>
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <blockquote>
 <p>This is part of a new series I am starting on the blog where we’ll explore
 <a href="https://riscv.org/">RISC-V</a> by breaking down real programs and explaining how
 they work. You can view all posts in this series on the <a href="https://danielmangum.com/categories/risc-v-bytes">RISC-V Bytes
@@ -101,7 +172,13 @@ then loading those values back into the same registers before returning. In this
 post we&rsquo;ll explore why this is happening, why certain registers are used, and
 how behavior guarantees make life easier for compiler authors and enable
 software portability.</p>
-<h2 id="defining-terms">Defining Terms</h2>
+<h2 id="defining-terms">
+  Defining Terms
+  <a class="heading-link" href="#defining-terms">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>Before we dive into what is happening there, let&rsquo;s define some terms and take a
 look at the 32 general purpose registers supported in the RISC-V instruction
 set.</p>
@@ -202,7 +279,13 @@ what responsibilites a procedure has when interacting with them. In order for a
 register to be preserved across calls, the callee must make sure its value is
 the same when it returns to the caller as it was when the callee was, well,
 called!</p>
-<h2 id="an-example">An Example</h2>
+<h2 id="an-example">
+  An Example
+  <a class="heading-link" href="#an-example">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>The simplest example is the <code>main</code> function. You may be tempted to think that
 <code>main</code> would be an example of a procedure that is only a caller. In reality, it
 is called after some initial setup, which can very greatly depending on the
@@ -212,33 +295,33 @@ procedures</em> are not callers.</p>
 post</a> to show how
 registers are preserved. In this case, <code>main</code> is being called by <code>_start</code> and it
 calls <code>printf</code>.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-fallback" data-lang="fallback">(gdb) disass main
-Dump of assembler code for function main:
-   0x0000000000010158 &lt;+0&gt;:     addi       sp,sp,-32
-   0x000000000001015a &lt;+2&gt;:     sd         ra,24(sp)
-   0x000000000001015c &lt;+4&gt;:     sd         s0,16(sp)
-   0x000000000001015e &lt;+6&gt;:     addi       s0,sp,32
-   0x0000000000010160 &lt;+8&gt;:     li         a5,1
-   0x0000000000010162 &lt;+10&gt;:    sw         a5,-20(s0)
-   0x0000000000010166 &lt;+14&gt;:    li         a5,2
-   0x0000000000010168 &lt;+16&gt;:    sw         a5,-24(s0)
-   0x000000000001016c &lt;+20&gt;:    lw         a4,-20(s0)
-   0x0000000000010170 &lt;+24&gt;:    lw         a5,-24(s0)
-   0x0000000000010174 &lt;+28&gt;:    addw       a5,a5,a4
-   0x0000000000010176 &lt;+30&gt;:    sw         a5,-28(s0)
-   0x000000000001017a &lt;+34&gt;:    lw         a5,-28(s0)
-   0x000000000001017e &lt;+38&gt;:    mv         a1,a5
-   0x0000000000010180 &lt;+40&gt;:    lui        a5,0x1c
-   0x0000000000010182 &lt;+42&gt;:    addi       a0,a5,176 # 0x1c0b0
-   0x0000000000010186 &lt;+46&gt;:    jal        ra,0x10332 &lt;printf&gt;
-   0x000000000001018a &lt;+50&gt;:    li         a5,0
-   0x000000000001018c &lt;+52&gt;:    mv         a0,a5
-   0x000000000001018e &lt;+54&gt;:    ld         ra,24(sp)
-   0x0000000000010190 &lt;+56&gt;:    ld         s0,16(sp)
-   0x0000000000010192 &lt;+58&gt;:    addi       sp,sp,32
-   0x0000000000010194 &lt;+60&gt;:    ret
-End of assembler dump.
-</code></pre></div><blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>(gdb) disass main
+</span></span><span style="display:flex;"><span>Dump of assembler code for function main:
+</span></span><span style="display:flex;"><span>   0x0000000000010158 &lt;+0&gt;:     addi       sp,sp,-32
+</span></span><span style="display:flex;"><span>   0x000000000001015a &lt;+2&gt;:     sd         ra,24(sp)
+</span></span><span style="display:flex;"><span>   0x000000000001015c &lt;+4&gt;:     sd         s0,16(sp)
+</span></span><span style="display:flex;"><span>   0x000000000001015e &lt;+6&gt;:     addi       s0,sp,32
+</span></span><span style="display:flex;"><span>   0x0000000000010160 &lt;+8&gt;:     li         a5,1
+</span></span><span style="display:flex;"><span>   0x0000000000010162 &lt;+10&gt;:    sw         a5,-20(s0)
+</span></span><span style="display:flex;"><span>   0x0000000000010166 &lt;+14&gt;:    li         a5,2
+</span></span><span style="display:flex;"><span>   0x0000000000010168 &lt;+16&gt;:    sw         a5,-24(s0)
+</span></span><span style="display:flex;"><span>   0x000000000001016c &lt;+20&gt;:    lw         a4,-20(s0)
+</span></span><span style="display:flex;"><span>   0x0000000000010170 &lt;+24&gt;:    lw         a5,-24(s0)
+</span></span><span style="display:flex;"><span>   0x0000000000010174 &lt;+28&gt;:    addw       a5,a5,a4
+</span></span><span style="display:flex;"><span>   0x0000000000010176 &lt;+30&gt;:    sw         a5,-28(s0)
+</span></span><span style="display:flex;"><span>   0x000000000001017a &lt;+34&gt;:    lw         a5,-28(s0)
+</span></span><span style="display:flex;"><span>   0x000000000001017e &lt;+38&gt;:    mv         a1,a5
+</span></span><span style="display:flex;"><span>   0x0000000000010180 &lt;+40&gt;:    lui        a5,0x1c
+</span></span><span style="display:flex;"><span>   0x0000000000010182 &lt;+42&gt;:    addi       a0,a5,176 # 0x1c0b0
+</span></span><span style="display:flex;"><span>   0x0000000000010186 &lt;+46&gt;:    jal        ra,0x10332 &lt;printf&gt;
+</span></span><span style="display:flex;"><span>   0x000000000001018a &lt;+50&gt;:    li         a5,0
+</span></span><span style="display:flex;"><span>   0x000000000001018c &lt;+52&gt;:    mv         a0,a5
+</span></span><span style="display:flex;"><span>   0x000000000001018e &lt;+54&gt;:    ld         ra,24(sp)
+</span></span><span style="display:flex;"><span>   0x0000000000010190 &lt;+56&gt;:    ld         s0,16(sp)
+</span></span><span style="display:flex;"><span>   0x0000000000010192 &lt;+58&gt;:    addi       sp,sp,32
+</span></span><span style="display:flex;"><span>   0x0000000000010194 &lt;+60&gt;:    ret
+</span></span><span style="display:flex;"><span>End of assembler dump.
+</span></span></code></pre></div><blockquote>
 <p>You may be thinking to yourself: why do we need so many instructions that just
 store a register into memory, then immediately load it back? Good question! We
 don&rsquo;t! For simplicity here, we are compiling using <code>gcc</code> without any
@@ -259,7 +342,13 @@ that are necessary to conform to calling conventions.</p>
 <p>When we move the stack pointer, we are essentially incrementing or decrementing
 the size of our stack. In RISC-V, the stack grows downwards, so <code>addi sp, sp, -32</code> is increasing the size of our downward growing stack by changing the stack
 pointer to contain an address 32 bytes lower.</p>
-<h2 id="a-caller-saved-register">A Caller-Saved Register</h2>
+<h2 id="a-caller-saved-register">
+  A Caller-Saved Register
+  <a class="heading-link" href="#a-caller-saved-register">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>Next we want to store the contents of the saved registers onto the stack. Let&rsquo;s
 pause for a moment and think about why we need to do this. If the registers are
 designated as &ldquo;saved&rdquo;, can we not just leave them untouched throughout the body
@@ -281,7 +370,13 @@ look at our table of general purpose registers above, we&rsquo;ll notice that <c
 designated as <em>caller-saved</em> (i.e. it is <em>not</em> preserved across calls). This
 aligns with the behavior we see as <code>main</code>, as the caller, saves <code>ra</code> before
 calling <code>printf</code> and updating <code>ra</code> with the address of the next instruction.</p>
-<h2 id="a-callee-saved-register">A Callee-Saved Register</h2>
+<h2 id="a-callee-saved-register">
+  A Callee-Saved Register
+  <a class="heading-link" href="#a-callee-saved-register">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>You&rsquo;ll also notice that we are storing <code>s0</code> on the stack in the prologue
 (<code>&lt;+4&gt;</code>). Besides being designated as a <em>callee-saved</em> register, <code>s0</code> is <a href="https://github.com/riscv/riscv-elf-psabi-doc/blob/388954fc835e782cbedffcdb502cf816bd978771/riscv-elf.md#integer-register-convention-">used
 as the <em>frame pointer</em> if one
@@ -309,7 +404,13 @@ about storing the contents of <code>s0</code> or <code>sp</code> on the stack pr
 <code>printf</code> because it will adhere to the same conventions as a callee that <code>main</code>
 does for <code>_start</code>, ensuring that all of our <em>callee-saved</em> registers are
 unmodified when it returns.</p>
-<h2 id="concluding-thoughts">Concluding Thoughts</h2>
+<h2 id="concluding-thoughts">
+  Concluding Thoughts
+  <a class="heading-link" href="#concluding-thoughts">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>While we have only scratched the surface of the benefits of ABI-compatibility in
 this post, we can already begin to see its value. In future posts, we&rsquo;ll take a
 look at how a standardized ABI is even more important when depending on shared
@@ -320,25 +421,49 @@ general. If I can do a better job of reaching that goal, or you have any
 questions or comments, please feel free to send me a message
 <a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter!</p>
 
-  </article>
-
-  <br/>
-
-  
-  
-</section>
-
       </div>
 
-      <footer class="footer">
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
   <section class="container">
-     © 2022  
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
   </section>
 </footer>
 
-    </main>
+  </main>
 
-    
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {
@@ -352,7 +477,19 @@ if (!doNotTrack) {
 }
 </script>
 
+  
 
-  </body>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
 
 </html>

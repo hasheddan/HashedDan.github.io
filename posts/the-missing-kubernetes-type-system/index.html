@@ -1,95 +1,160 @@
 <!DOCTYPE html>
 <html lang="en">
-
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <meta name="author" content="Daniel Mangum">
-    <meta name="description" content="Daniel Mangum&#39;s personal website">
-    <meta name="keywords" content="blog,developer,personal">
-
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:site" content="@hasheddan" />
-    <meta name="twitter:title" content="The Missing Kubernetes Type System"/>
-    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
-
-    <base href="https://danielmangum.com">
     <title>
   The Missing Kubernetes Type System · Daniel Mangum
 </title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
 
-    <link rel="canonical" href="https://danielmangum.com/posts/the-missing-kubernetes-type-system/">
 
-    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
-    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
-    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
 
-    
 
-    
-      <link rel="stylesheet" href="https://danielmangum.com/css/custom.css">
-    
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="Sometimes I hear folks in the Crossplane community ask if they can just use Helm instead of opting into our package manager. The technical answer to this question is &ldquo;yes&rdquo;, but it typically represents a misinterpretation of what Crossplane is providing in a Kubernetes cluster. That being said, I completely understand why someone would ask this question, and quite frankly, I think the confusion is our fault. In Crossplane and across the Kubernetes community we lean in heavily to the idea that everything is &ldquo;just an object&rdquo;.">
+<meta name="keywords" content="blog,developer,personal">
 
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="The Missing Kubernetes Type System"/>
+<meta name="twitter:description" content="Sometimes I hear folks in the Crossplane community ask if they can just use Helm instead of opting into our package manager. The technical answer to this question is &ldquo;yes&rdquo;, but it typically represents a misinterpretation of what Crossplane is providing in a Kubernetes cluster. That being said, I completely understand why someone would ask this question, and quite frankly, I think the confusion is our fault. In Crossplane and across the Kubernetes community we lean in heavily to the idea that everything is &ldquo;just an object&rdquo;."/>
 
-    
+<meta property="og:title" content="The Missing Kubernetes Type System" />
+<meta property="og:description" content="Sometimes I hear folks in the Crossplane community ask if they can just use Helm instead of opting into our package manager. The technical answer to this question is &ldquo;yes&rdquo;, but it typically represents a misinterpretation of what Crossplane is providing in a Kubernetes cluster. That being said, I completely understand why someone would ask this question, and quite frankly, I think the confusion is our fault. In Crossplane and across the Kubernetes community we lean in heavily to the idea that everything is &ldquo;just an object&rdquo;." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/the-missing-kubernetes-type-system/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2022-02-07T00:10:34-06:00" />
+<meta property="article:modified_time" content="2022-02-07T00:10:34-06:00" />
 
-    <meta name="generator" content="Hugo 0.68.3" />
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/the-missing-kubernetes-type-system/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.109.0">
+
+
+
+
+
   </head>
 
-  <body class="">
-    <main class="wrapper">
-      <nav class="navigation">
+
+
+
+<body class="preload-transitions colorscheme-light">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
   <section class="container">
-    <a class="navigation-title" href="https://danielmangum.com">
+    <a class="navigation-title" href="https://danielmangum.com/">
       Daniel Mangum
     </a>
     
-    <ul class="navigation-list  float-right ">
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
-      </li>
-      
-    </ul>
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
     
   </section>
 </nav>
 
 
-      <div class="content">
-        
-  <section class="container post">
-  <article>
-    <header>
-      <h1 class="title">The Missing Kubernetes Type System</h1>
-      <h2 class="date">February 7, 2022</h2>
-      <style>
-        .twitter-tweet-rendered {
-          display:block;
-          margin-left:auto;
-          margin-right:auto;
-        }
-      </style>
-
+    <div class="content">
       
-    </header>
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/the-missing-kubernetes-type-system/">
+              The Missing Kubernetes Type System
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2022-02-07T00:10:34-06:00">
+                February 7, 2022
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              14-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
 
-    <p>Sometimes I hear folks in the <a href="https://crossplane.io/">Crossplane</a> community ask
+      <div class="post-content">
+        
+        <p>Sometimes I hear folks in the <a href="https://crossplane.io/">Crossplane</a> community ask
 if they can just use <a href="https://helm.sh/">Helm</a> instead of opting into <a href="https://crossplane.io/docs/v1.6/concepts/packages.html">our
 package manager</a>. The
 technical answer to this question is &ldquo;yes&rdquo;, but it typically represents a
@@ -109,7 +174,13 @@ majority of code that is written today is better off interfacing with the
 hardware through a level of abstraction that offers protection, whether via a
 runtime or the compiler. These abstractions are presented in the form of a type
 system.</p>
-<h2 id="what-is-a-type-system">What is a Type System?</h2>
+<h2 id="what-is-a-type-system">
+  What is a Type System?
+  <a class="heading-link" href="#what-is-a-type-system">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>I don&rsquo;t know how to tell you this, but types aren&rsquo;t real. Well, maybe a less
 controversial way to say that is that types are <em>artificial</em>. That is, they are
 a self-imposed limitation that we are layering on the fundamental constraints of
@@ -125,35 +196,33 @@ which offer a way to <em>define your own types</em> using the built-in types. Fo
 example, <a href="https://go.dev/">Go</a> allows you to create your own primitive types
 that add custom functionality, such as attaching methods to an <code>int</code>, as well as
 your own composite types by defining members and methods on a <code>struct</code>.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">
-<span style="color:#fff;font-weight:bold">type</span> CoolInteger <span style="color:#fff;font-weight:bold">int</span>
-
-<span style="color:#fff;font-weight:bold">func</span> (c CoolInteger) Print(w io.Writer) {
-	fmt.Fprintf(w, <span style="color:#0ff;font-weight:bold">&#34;Cool Integer: %d&#34;</span>, c)
-}
-
-<span style="color:#fff;font-weight:bold">type</span> CoolType <span style="color:#fff;font-weight:bold">struct</span> {
-	some  <span style="color:#fff;font-weight:bold">int</span>
-	built <span style="color:#fff;font-weight:bold">string</span>
-	in    <span style="color:#fff;font-weight:bold">bool</span>
-	types []<span style="color:#fff;font-weight:bold">float32</span>
-}
-
-</code></pre></div><p>When you define your own types, you are building on the constraints of the
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">type</span> CoolInteger <span style="color:#fff;font-weight:bold">int</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> (c CoolInteger) Print(w io.Writer) {
+</span></span><span style="display:flex;"><span>	fmt.Fprintf(w, <span style="color:#0ff;font-weight:bold">&#34;Cool Integer: %d&#34;</span>, c)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">type</span> CoolType <span style="color:#fff;font-weight:bold">struct</span> {
+</span></span><span style="display:flex;"><span>	some  <span style="color:#fff;font-weight:bold">int</span>
+</span></span><span style="display:flex;"><span>	built <span style="color:#fff;font-weight:bold">string</span>
+</span></span><span style="display:flex;"><span>	in    <span style="color:#fff;font-weight:bold">bool</span>
+</span></span><span style="display:flex;"><span>	types []<span style="color:#fff;font-weight:bold">float32</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>When you define your own types, you are building on the constraints of the
 built-in types to be able to safely express higher-level concepts. Almost all
 &ldquo;modern&rdquo; programming languages also support <em>abstract types</em>. An abstract type
 is one that is defined by its <em>behavior</em> rather than its <em>implementation</em>. Once
 again, a built-in type, such as an <code>interface</code>, allows us to define these for
 ourselves.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">
-<span style="color:#fff;font-weight:bold">type</span> CoolAbstractType <span style="color:#fff;font-weight:bold">interface</span> {
-	This()
-	Is() <span style="color:#fff;font-weight:bold">error</span>
-	My() <span style="color:#fff;font-weight:bold">int</span>
-	Behavior() <span style="color:#fff;font-weight:bold">string</span>
-}
-
-</code></pre></div><p>There are many other classifications of types, such as algebraic data types,
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">type</span> CoolAbstractType <span style="color:#fff;font-weight:bold">interface</span> {
+</span></span><span style="display:flex;"><span>	This()
+</span></span><span style="display:flex;"><span>	Is() <span style="color:#fff;font-weight:bold">error</span>
+</span></span><span style="display:flex;"><span>	My() <span style="color:#fff;font-weight:bold">int</span>
+</span></span><span style="display:flex;"><span>	Behavior() <span style="color:#fff;font-weight:bold">string</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>There are many other classifications of types, such as algebraic data types,
 references, functions, and more, but today we are going to focus in on
 primitive, composite, and abstract types. When we write a program with any
 complexity, we typically are doing a mix of <em>defining</em> types and <em>using</em> them.
@@ -162,7 +231,13 @@ activities.</p>
 <blockquote>
 <p>Somewhere a programming language theory graduate student is screaming at me.</p>
 </blockquote>
-<h3 id="a-note-on-safety">A Note on Safety</h3>
+<h3 id="a-note-on-safety">
+  A Note on Safety
+  <a class="heading-link" href="#a-note-on-safety">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
 <p>In the preceding section I used the term &ldquo;safely&rdquo; to describe how we implement
 higher-level logic. The degree of safety we get from a language is highly
 dependant on the type system. Safety guarantees are propagated from built-in
@@ -181,7 +256,7 @@ compiler) is inherently doing some unsafe things.</p>
 
 <div class="center-img">
   <img
-    src="../static/k8s-type-system-0.png"
+    src="../../static/k8s-type-system-0.png"
     alt="rust-ecosystem-safety"
   />
 </div>
@@ -194,7 +269,13 @@ the correctness of that small system, arbitrarily large systems can be built on
 top of it</strong>. This is the same premise behind hardware <a href="https://danielmangum.com/posts/risc-v-bytes-privilege-levels/">privilege
 levels</a> and the
 operating systems that utilize them.</p>
-<h2 id="the-kubernetes-type-system">The Kubernetes Type System</h2>
+<h2 id="the-kubernetes-type-system">
+  The Kubernetes Type System
+  <a class="heading-link" href="#the-kubernetes-type-system">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>Kubernetes allows you to add new types (<code>kind</code> in Kubernetes parlance) by
 <a href="https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/">creating a <code>CustomResourceDefinition</code>
 (CRD)</a>.
@@ -236,7 +317,7 @@ efficient use of time and resources.</p>
 
 <div class="center-img">
   <img
-    src="../static/k8s-type-system-1.png"
+    src="../../static/k8s-type-system-1.png"
     alt="kubernetes-bag-of-types"
   />
 </div>
@@ -258,7 +339,13 @@ even if you are small, that day will likely come sooner than you expect. So
 we&rsquo;ve found ourselves at an impasse: we need custom functionality, but the
 overhead (dare I say &ldquo;danger&rdquo;) of writing and maintaining our controllers is too
 great.</p>
-<h2 id="do-namespaces-address-this">Do Namespaces Address This?</h2>
+<h2 id="do-namespaces-address-this">
+  Do Namespaces Address This?
+  <a class="heading-link" href="#do-namespaces-address-this">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p><a href="https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/">Namespaces</a>
 are primarily used in Kubernetes for categorization and isolation via
 <a href="https://kubernetes.io/docs/reference/access-authn-authz/rbac/">role-based access control
@@ -287,7 +374,13 @@ or namespace-scoped types (or both if you are using Crossplane). Namespaces
 are an important part of the type system we want to build, they just aren&rsquo;t
 building it for us.</p>
 </blockquote>
-<h2 id="a-model-for-user-defined-types">A Model for User-Defined Types</h2>
+<h2 id="a-model-for-user-defined-types">
+  A Model for User-Defined Types
+  <a class="heading-link" href="#a-model-for-user-defined-types">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>If you ask anyone who is moderately familiar with Crossplane what its value
 proposition is they won&rsquo;t miss a beat: provisioning cloud infrastructure using
 the Kubernetes API. We even say so <a href="https://crossplane.io/">on the front page</a>.
@@ -342,7 +435,7 @@ abstractions.</p>
 
 <div class="center-img">
   <img
-    src="../static/k8s-type-system-2.png"
+    src="../../static/k8s-type-system-2.png"
     alt="built-in-and-user-defined"
   />
 </div>
@@ -361,7 +454,13 @@ hood, I wrote about packages
 and composition
 <a href="https://danielmangum.com/posts/crossplane-infrastructure-llvm/">here</a>.</p>
 </blockquote>
-<h3 id="flexibility-in-the-compiler">Flexibility in the Compiler</h3>
+<h3 id="flexibility-in-the-compiler">
+  Flexibility in the Compiler
+  <a class="heading-link" href="#flexibility-in-the-compiler">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
 <p>One of the first things we said about programming languages in this post is that
 we keep making new ones. A key attribute of successful languages is a fierce
 dedication to a set of values, while still providing escape hatches for
@@ -385,7 +484,13 @@ composite types can be expanded to cover additional use-cases. The point is that
 Crossplane is giving you the tools to build a type system, with some solid
 defaults, but it isn&rsquo;t forcing one on you. <strong>What we <em>would</em> like to do is force
 using <em>some</em> type system</strong>.</p>
-<h2 id="who-writes-the-controllers">Who Writes the Controllers?</h2>
+<h2 id="who-writes-the-controllers">
+  Who Writes the Controllers?
+  <a class="heading-link" href="#who-writes-the-controllers">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>To re-emphasize my earlier point, writing controllers is not about some skill
 level that one group has and another does not. Rather, it is simply about who
 has the time and resources to invest in writing them well, creating that smaller
@@ -410,7 +515,13 @@ building reference architectures in Configuration packages that help my
 customers compose their platforms safely. <strong>Expressive type systems allow for
 implementations to easily be switched out at each layer of abstraction. When
 users have this power, I want my implementation to be the best.</strong></p>
-<h2 id="final-thoughts">Final Thoughts</h2>
+<h2 id="final-thoughts">
+  Final Thoughts
+  <a class="heading-link" href="#final-thoughts">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>I hope the takeaway from this post is not that Crossplane solves all of your
 problems, but rather an acknowledgement that the language we use for programming
 our distributed systems is lacking key features &ndash; features that we have
@@ -420,25 +531,49 @@ between adhering to a set of values and offering needed flexibility is hard. If
 we are going to do this right, we need everyone&rsquo;s voice in the room. Come join
 us.</p>
 
-  </article>
-
-  <br/>
-
-  
-  
-</section>
-
       </div>
 
-      <footer class="footer">
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
   <section class="container">
-     © 2022  
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
   </section>
 </footer>
 
-    </main>
+  </main>
 
-    
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {
@@ -452,7 +587,19 @@ if (!doNotTrack) {
 }
 </script>
 
+  
 
-  </body>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
 
 </html>

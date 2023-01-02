@@ -1,95 +1,160 @@
 <!DOCTYPE html>
 <html lang="en">
-
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <meta name="author" content="Daniel Mangum">
-    <meta name="description" content="Daniel Mangum&#39;s personal website">
-    <meta name="keywords" content="blog,developer,personal">
-
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:site" content="@hasheddan" />
-    <meta name="twitter:title" content="Rate Limiting in controller-runtime and client-go"/>
-    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
-
-    <base href="https://danielmangum.com">
     <title>
   Rate Limiting in controller-runtime and client-go · Daniel Mangum
 </title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
 
-    <link rel="canonical" href="https://danielmangum.com/posts/controller-runtime-client-go-rate-limiting/">
 
-    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
-    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
-    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
 
-    
 
-    
-      <link rel="stylesheet" href="https://danielmangum.com/css/custom.css">
-    
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="If you have written a Kubernetes controller, you are likely familiar with controller-runtime, or at least client-go. controller-runtime is a framework for building controllers that allows consumers to setup multiple controllers that are all handled under a controller manager. Behind the the scenes, controller-runtime is using client-go to communicate with the Kubernetes API server to watch for changes on resources and pass them along to the relevant controllers. It handles a number of aspects of plumbing up these controllers, including caching, queuing, and more.">
+<meta name="keywords" content="blog,developer,personal">
 
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Rate Limiting in controller-runtime and client-go"/>
+<meta name="twitter:description" content="If you have written a Kubernetes controller, you are likely familiar with controller-runtime, or at least client-go. controller-runtime is a framework for building controllers that allows consumers to setup multiple controllers that are all handled under a controller manager. Behind the the scenes, controller-runtime is using client-go to communicate with the Kubernetes API server to watch for changes on resources and pass them along to the relevant controllers. It handles a number of aspects of plumbing up these controllers, including caching, queuing, and more."/>
 
-    
+<meta property="og:title" content="Rate Limiting in controller-runtime and client-go" />
+<meta property="og:description" content="If you have written a Kubernetes controller, you are likely familiar with controller-runtime, or at least client-go. controller-runtime is a framework for building controllers that allows consumers to setup multiple controllers that are all handled under a controller manager. Behind the the scenes, controller-runtime is using client-go to communicate with the Kubernetes API server to watch for changes on resources and pass them along to the relevant controllers. It handles a number of aspects of plumbing up these controllers, including caching, queuing, and more." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/controller-runtime-client-go-rate-limiting/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2021-02-14T01:41:34-06:00" />
+<meta property="article:modified_time" content="2021-02-14T01:41:34-06:00" />
 
-    <meta name="generator" content="Hugo 0.68.3" />
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/controller-runtime-client-go-rate-limiting/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.109.0">
+
+
+
+
+
   </head>
 
-  <body class="">
-    <main class="wrapper">
-      <nav class="navigation">
+
+
+
+<body class="preload-transitions colorscheme-light">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
   <section class="container">
-    <a class="navigation-title" href="https://danielmangum.com">
+    <a class="navigation-title" href="https://danielmangum.com/">
       Daniel Mangum
     </a>
     
-    <ul class="navigation-list  float-right ">
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
-      </li>
-      
-    </ul>
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
     
   </section>
 </nav>
 
 
-      <div class="content">
-        
-  <section class="container post">
-  <article>
-    <header>
-      <h1 class="title">Rate Limiting in controller-runtime and client-go</h1>
-      <h2 class="date">February 14, 2021</h2>
-      <style>
-        .twitter-tweet-rendered {
-          display:block;
-          margin-left:auto;
-          margin-right:auto;
-        }
-      </style>
-
+    <div class="content">
       
-    </header>
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/controller-runtime-client-go-rate-limiting/">
+              Rate Limiting in controller-runtime and client-go
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2021-02-14T01:41:34-06:00">
+                February 14, 2021
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              15-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
 
-    <p>If you have written a <a href="https://kubernetes.io/docs/concepts/architecture/controller/">Kubernetes
+      <div class="post-content">
+        
+        <p>If you have written a <a href="https://kubernetes.io/docs/concepts/architecture/controller/">Kubernetes
 controller</a>, you
 are likely <a href="https://github.com/kubernetes-sigs/controller-runtime">familiar with
 <code>controller-runtime</code></a>,
@@ -103,7 +168,13 @@ to watch for changes on resources and pass them along to the relevant
 controllers. It handles a number of aspects of plumbing up these controllers,
 including caching, queuing, and more. One of these components is <em>rate
 limiting</em>.</p>
-<h2 id="what-is-rate-limiting">What is rate limiting?</h2>
+<h2 id="what-is-rate-limiting">
+  What is rate limiting?
+  <a class="heading-link" href="#what-is-rate-limiting">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <blockquote>
 <p>This section is a very basic overview of rate limiting. You may skip it if you
 are already well versed in the concepts, but it may be useful for framing
@@ -154,7 +225,13 @@ systems.</p>
 <p>Because <code>controller-runtime</code> and <code>client-go</code> are frameworks to build Kubernetes
 controllers, which are <em>clients</em> of the Kubernetes API server, we will mostly be
 focusing on client-side rate limiting today.</p>
-<h2 id="whats-in-a-controller">What&rsquo;s in a controller?</h2>
+<h2 id="whats-in-a-controller">
+  What&rsquo;s in a controller?
+  <a class="heading-link" href="#whats-in-a-controller">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <blockquote>
 <p>Skip this section if you are already familiar with the basics of how
 <code>controller-runtime</code> works.</p>
@@ -167,13 +244,13 @@ that is implemented by the consumer and passed to the framework. Here is an
 example of a simple
 <a href="https://github.com/kubernetes-sigs/controller-runtime/blob/e1a725df2743147795e5dfc8275365f7ada24805/pkg/reconcile/reconcile.go#L89"><code>Reconciler</code></a>
 that could be passed to a <code>controller-runtime</code> controller:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#fff;font-weight:bold">type</span> Reconciler <span style="color:#fff;font-weight:bold">struct</span> {}
-
-<span style="color:#fff;font-weight:bold">func</span> (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, <span style="color:#fff;font-weight:bold">error</span>) {
-    fmt.Println(<span style="color:#0ff;font-weight:bold">&#34;Reconciling something!&#34;</span>)
-    <span style="color:#fff;font-weight:bold">return</span> reconcile.Result{}, <span style="color:#fff;font-weight:bold">nil</span>
-}
-</code></pre></div><blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">type</span> Reconciler <span style="color:#fff;font-weight:bold">struct</span> {}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, <span style="color:#fff;font-weight:bold">error</span>) {
+</span></span><span style="display:flex;"><span>    fmt.Println(<span style="color:#0ff;font-weight:bold">&#34;Reconciling something!&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> reconcile.Result{}, <span style="color:#fff;font-weight:bold">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><blockquote>
 <p>You can see a more sophisticated reconciliation loop
 <a href="https://github.com/crossplane/crossplane/blob/5f239dbb7c399a8d544518be2be23ad16f98a71d/internal/controller/pkg/manager/reconciler.go#L216">here</a>.</p>
 </blockquote>
@@ -182,11 +259,11 @@ pattern</a> implementation that
 allows a consumer to specify resources that should trigger this reconciliation
 to run. Here is an example of a controller that would be triggered by any CRUD
 operations on a <code>Pod</code>:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">ctrl.NewControllerManagedBy(mgr).
-    Named(<span style="color:#0ff;font-weight:bold">&#34;my-pod-controller&#34;</span>).
-    For(&amp;v1.Pod{}).
-    Complete(&amp;Reconciler{})
-</code></pre></div><p>Ignoring the controller manager (<code>mgr</code>) for a moment, you can see that we are
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>ctrl.NewControllerManagedBy(mgr).
+</span></span><span style="display:flex;"><span>    Named(<span style="color:#0ff;font-weight:bold">&#34;my-pod-controller&#34;</span>).
+</span></span><span style="display:flex;"><span>    For(&amp;v1.Pod{}).
+</span></span><span style="display:flex;"><span>    Complete(&amp;Reconciler{})
+</span></span></code></pre></div><p>Ignoring the controller manager (<code>mgr</code>) for a moment, you can see that we are
 passing a name for the controller (<code>my-pod-controller</code>), the type we want it to
 reconcile (<code>v1.Pod</code>), as well the <code>&amp;Reconciler{}</code> that will actually perform,
 well, the reconciliation. There are other options that we will explore later
@@ -202,19 +279,19 @@ to get the object from the API server using <code>client-go</code> or the
 <a href="https://github.com/kubernetes-sigs/controller-runtime/blob/e1a725df2743147795e5dfc8275365f7ada24805/pkg/client/interfaces.go#L100"><code>Client</code></a>
 abstraction exposed by <code>controller-runtime</code>. Let&rsquo;s expand our <code>Reconciler</code> a bit
 more:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#fff;font-weight:bold">type</span> Reconciler <span style="color:#fff;font-weight:bold">struct</span> {
-    client client.Client
-}
-
-<span style="color:#fff;font-weight:bold">func</span> (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, <span style="color:#fff;font-weight:bold">error</span>) {
-    p := &amp;v1.Pod{}
-    <span style="color:#fff;font-weight:bold">if</span> err := r.client.Get(ctx, req.NamespacedName, p); err != <span style="color:#fff;font-weight:bold">nil</span> {
-        reconcile.Result{}, err
-    }
-    fmt.Println(p.Name)
-    <span style="color:#fff;font-weight:bold">return</span> reconcile.Result{}, <span style="color:#fff;font-weight:bold">nil</span>
-}
-</code></pre></div><p>Now we use the
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">type</span> Reconciler <span style="color:#fff;font-weight:bold">struct</span> {
+</span></span><span style="display:flex;"><span>    client client.Client
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, <span style="color:#fff;font-weight:bold">error</span>) {
+</span></span><span style="display:flex;"><span>    p := &amp;v1.Pod{}
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> err := r.client.Get(ctx, req.NamespacedName, p); err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>        reconcile.Result{}, err
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    fmt.Println(p.Name)
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> reconcile.Result{}, <span style="color:#fff;font-weight:bold">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Now we use the
 <a href="https://github.com/kubernetes/apimachinery/blob/c93b0f84892eb6bcbc80b312ae70729d8168bc7e/pkg/types/namespacedname.go#L27"><code>NamespacedName</code></a>
 to get the object that triggered the reconciliation. We may fail to get the
 object from the API server, in which case we return <code>err</code>. Otherwise, we will
@@ -246,7 +323,7 @@ Tutorial</a>
 Blog</a>
 <ul>
 <li>An old but good post that goes a bit beyond &ldquo;pass this thing to
-<code>controller-runtime</code> and let the magic ensue!&quot;.</li>
+<code>controller-runtime</code> and let the magic ensue!&rdquo;.</li>
 </ul>
 </li>
 <li><a href="https://youtu.be/4ceaeaLYaPs">Building an Enterprise Infrastructure Control Plane on
@@ -273,22 +350,28 @@ in this area.</li>
 </ul>
 </li>
 </ul>
-<h2 id="what-happens-when-we-fail">What happens when we fail?</h2>
+<h2 id="what-happens-when-we-fail">
+  What happens when we fail?
+  <a class="heading-link" href="#what-happens-when-we-fail">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>This is not an existential question, we are just talking about when we return an
 error from our reconciliation loop. Like most things in software, and in life,
 the answer is: &ldquo;it depends&rdquo;. Let&rsquo;s take a look at the <a href="https://github.com/kubernetes-sigs/controller-runtime/blob/e1a725df2743147795e5dfc8275365f7ada24805/pkg/reconcile/reconcile.go#L27"><code>reconcile.Result</code>
 struct</a>
 and see what options we have for telling <code>controller-runtime</code> what to do next.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#007f7f">// Result contains the result of a Reconciler invocation.
-</span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">type</span> Result <span style="color:#fff;font-weight:bold">struct</span> {
-  <span style="color:#007f7f">// Requeue tells the Controller to requeue the reconcile key.  Defaults to false.
-</span><span style="color:#007f7f"></span>  Requeue <span style="color:#fff;font-weight:bold">bool</span>
-
-  <span style="color:#007f7f">// RequeueAfter if greater than 0, tells the Controller to requeue the reconcile key after the Duration.
-</span><span style="color:#007f7f"></span>  <span style="color:#007f7f">// Implies that Requeue is true, there is no need to set Requeue to true at the same time as RequeueAfter.
-</span><span style="color:#007f7f"></span>  RequeueAfter time.Duration
-}
-</code></pre></div><p>So we can either say requeue after some period of time, requeue immediately, or
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#007f7f">// Result contains the result of a Reconciler invocation.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">type</span> Result <span style="color:#fff;font-weight:bold">struct</span> {
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">// Requeue tells the Controller to requeue the reconcile key.  Defaults to false.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  Requeue <span style="color:#fff;font-weight:bold">bool</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">// RequeueAfter if greater than 0, tells the Controller to requeue the reconcile key after the Duration.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">// Implies that Requeue is true, there is no need to set Requeue to true at the same time as RequeueAfter.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  RequeueAfter time.Duration
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>So we can either say requeue after some period of time, requeue immediately, or
 don&rsquo;t requeue at all. Then there is also the <code>error</code> we return. The permutations
 of these values, and how <code>controller-runtime</code> will respond to them are outlined
 below (you can also look directly at the
@@ -296,36 +379,36 @@ below (you can also look directly at the
 <table>
 <thead>
 <tr>
-<th align="center">Requeue</th>
-<th align="center">RequeueAfter</th>
-<th align="center">Error</th>
-<th align="center">Result</th>
+<th style="text-align:center">Requeue</th>
+<th style="text-align:center">RequeueAfter</th>
+<th style="text-align:center">Error</th>
+<th style="text-align:center">Result</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td align="center">any</td>
-<td align="center">any</td>
-<td align="center">!nil</td>
-<td align="center">Requeue with rate limiting.</td>
+<td style="text-align:center">any</td>
+<td style="text-align:center">any</td>
+<td style="text-align:center">!nil</td>
+<td style="text-align:center">Requeue with rate limiting.</td>
 </tr>
 <tr>
-<td align="center">true</td>
-<td align="center">0</td>
-<td align="center">nil</td>
-<td align="center">Requeue with rate limiting.</td>
+<td style="text-align:center">true</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">nil</td>
+<td style="text-align:center">Requeue with rate limiting.</td>
 </tr>
 <tr>
-<td align="center">any</td>
-<td align="center">&gt;0</td>
-<td align="center">nil</td>
-<td align="center">Requeue after specified <code>RequeueAfter</code>.</td>
+<td style="text-align:center">any</td>
+<td style="text-align:center">&gt;0</td>
+<td style="text-align:center">nil</td>
+<td style="text-align:center">Requeue after specified <code>RequeueAfter</code>.</td>
 </tr>
 <tr>
-<td align="center">false</td>
-<td align="center">0</td>
-<td align="center">nil</td>
-<td align="center">Do not requeue.</td>
+<td style="text-align:center">false</td>
+<td style="text-align:center">0</td>
+<td style="text-align:center">nil</td>
+<td style="text-align:center">Do not requeue.</td>
 </tr>
 </tbody>
 </table>
@@ -335,7 +418,13 @@ self explanatory. Both of the first two essentially result in the same outcome
 being made is <code>c.Queue.AddRateLimited(req)</code>. This is similar to the
 <code>RequeueAfter</code> result except in that case the call is <code>c.Queue.AddAfter(req, result.RequeueAfter)</code> and we are passing the exact time to wait until the
 request is added back to queue. So how long do we wait in the rate limited case?</p>
-<h2 id="the-default-controller-rate-limiter">The Default Controller Rate Limiter</h2>
+<h2 id="the-default-controller-rate-limiter">
+  The Default Controller Rate Limiter
+  <a class="heading-link" href="#the-default-controller-rate-limiter">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>Earlier when we talked about rate limiting we honed in on the case where we
 wanted to be resilient to failed communication between a specific client and a
 specific server. You&rsquo;ll notice that <code>controller-runtime</code> does not have the
@@ -351,16 +440,16 @@ controller
 construction</a>.
 Let&rsquo;s hop over to the <code>client-go</code> codebase and see what this
 <code>workqueue.DefaultControllerRateLimiter()</code> looks like:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#007f7f">// DefaultControllerRateLimiter is a no-arg constructor for a default rate limiter for a workqueue.  It has
-</span><span style="color:#007f7f">// both overall and per-item rate limiting.  The overall is a token bucket and the per-item is exponential
-</span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">func</span> DefaultControllerRateLimiter() RateLimiter {
-  <span style="color:#fff;font-weight:bold">return</span> NewMaxOfRateLimiter(
-    NewItemExponentialFailureRateLimiter(<span style="color:#ff0;font-weight:bold">5</span>*time.Millisecond, <span style="color:#ff0;font-weight:bold">1000</span>*time.Second),
-    <span style="color:#007f7f">// 10 qps, 100 bucket size.  This is only for retry speed and its only the overall factor (not per item)
-</span><span style="color:#007f7f"></span>    &amp;BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(<span style="color:#ff0;font-weight:bold">10</span>), <span style="color:#ff0;font-weight:bold">100</span>)},
-  )
-}
-</code></pre></div><p>We can get a pretty good idea of what is going on by just looking at the
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#007f7f">// DefaultControllerRateLimiter is a no-arg constructor for a default rate limiter for a workqueue.  It has
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">// both overall and per-item rate limiting.  The overall is a token bucket and the per-item is exponential
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">func</span> DefaultControllerRateLimiter() RateLimiter {
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">return</span> NewMaxOfRateLimiter(
+</span></span><span style="display:flex;"><span>    NewItemExponentialFailureRateLimiter(<span style="color:#ff0;font-weight:bold">5</span>*time.Millisecond, <span style="color:#ff0;font-weight:bold">1000</span>*time.Second),
+</span></span><span style="display:flex;"><span>    <span style="color:#007f7f">// 10 qps, 100 bucket size.  This is only for retry speed and its only the overall factor (not per item)
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    &amp;BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(<span style="color:#ff0;font-weight:bold">10</span>), <span style="color:#ff0;font-weight:bold">100</span>)},
+</span></span><span style="display:flex;"><span>  )
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>We can get a pretty good idea of what is going on by just looking at the
 comments. It <a href="https://github.com/kubernetes/client-go/blob/20732a1bc198ab57de644af498fa75e73fa44c08/util/workqueue/default_rate_limiters.go#L191">returns a
 <code>MaxOfRateLimiter</code></a>,
 which, as you would guess, takes the value from each limiter passed to it and
@@ -378,16 +467,16 @@ internally has a <code>map</code> of failures, a base delay, and a max delay (al
 <code>failuresLock</code> mutex, which is necessary due to the fact that
 <code>controller-runtime</code> allows for concurrent reconciler invocations for a single
 controller).</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#007f7f">// ItemExponentialFailureRateLimiter does a simple baseDelay*2^&lt;num-failures&gt; limit
-</span><span style="color:#007f7f">// dealing with max failures and expiration are up to the caller
-</span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">type</span> ItemExponentialFailureRateLimiter <span style="color:#fff;font-weight:bold">struct</span> {
-  failuresLock sync.Mutex
-  failures     <span style="color:#fff;font-weight:bold">map</span>[<span style="color:#fff;font-weight:bold">interface</span>{}]<span style="color:#fff;font-weight:bold">int</span>
-
-  baseDelay time.Duration
-  maxDelay  time.Duration
-}
-</code></pre></div><p>The struct description goes so far to provide the actual formula that is used
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#007f7f">// ItemExponentialFailureRateLimiter does a simple baseDelay*2^&lt;num-failures&gt; limit
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">// dealing with max failures and expiration are up to the caller
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">type</span> ItemExponentialFailureRateLimiter <span style="color:#fff;font-weight:bold">struct</span> {
+</span></span><span style="display:flex;"><span>  failuresLock sync.Mutex
+</span></span><span style="display:flex;"><span>  failures     <span style="color:#fff;font-weight:bold">map</span>[<span style="color:#fff;font-weight:bold">interface</span>{}]<span style="color:#fff;font-weight:bold">int</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  baseDelay time.Duration
+</span></span><span style="display:flex;"><span>  maxDelay  time.Duration
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The struct description goes so far to provide the actual formula that is used
 for rate limiting: <code>baseDelay*2^&lt;num-failures&gt;</code>. This is an extremely common
 algorithm known as <strong>exponential backoff</strong>. It can be boiled down to &ldquo;for every
 consecutive failure we will double the amount of time we wait to try again&rdquo;. As
@@ -407,7 +496,7 @@ with a requeue backoff that looks like this:</p>
 we will backoff to only trying every <code>16.67m</code> (<code>1000s</code>), which is quite
 infrequent. Within the first second, where the delays are the shortest, we are
 only going to requeue ~7 times.</p>
-<p><img src="../static/rate_limit_item_requeue.png" alt="single-item-req"></p>
+<p><img src="../../static/rate_limit_item_requeue.png" alt="single-item-req"></p>
 <!-- raw HTML omitted -->
 <p>However, in a large cluster, such as one that is responsible for managing all of
 your organization&rsquo;s infrastructure as Kubernetes
@@ -427,7 +516,7 @@ Additionally, we are not considering enqueues that result from actual changes
 to the object as reported by informers. However, the concepts still hold, most
 notably that the upper limit is unbounded.</p>
 </blockquote>
-<p><img src="../static/rate_limit_many_requeue.png" alt="req-per-sec"></p>
+<p><img src="../../static/rate_limit_many_requeue.png" alt="req-per-sec"></p>
 <p>This is where the <code>BucketRateLimiter</code> comes into play. It is a wrapper around
 <a href="https://github.com/golang/time/blob/7e3f01d253248a0a5694eb5b7376dfea18b6397e/rate/rate.go#L55"><code>Limiter</code></a>
 from the golang
@@ -444,11 +533,11 @@ as the <em>maximum burst</em> as it the ceiling of requeues that can happen at t
 instant. Looking back at our 10,000 objects failing reconciliation at the same
 time example, using the <code>BucketRateLimiter</code> <em>alone</em> makes our graph look a lot
 more friendly.</p>
-<p><img src="../static/rate_limit_bucket.png" alt="token-bucket"></p>
+<p><img src="../../static/rate_limit_bucket.png" alt="token-bucket"></p>
 <p>As with most examples in this post, this is a contrived scenario, but it serves
 to represent the concept. At <code>t=0</code> the first 100 failed reconciliations requeue
 immediately because the token bucket has a token available, meaning they can be
-added back to the queue immediately (i.e. the call to the <code>BucketRateLimiter</code>'s
+added back to the queue immediately (i.e. the call to the <code>BucketRateLimiter</code>&rsquo;s
 <code>When()</code> method returns a delay of <code>0s</code>). The 101st failure goes to the token
 bucket only to find it empty, and is told wait for ~<code>.1s</code> for the next available
 token (because our rate is 10 tokens per second). The 102nd failure comes to the
@@ -482,20 +571,26 @@ it needs to wait <code>.1s</code> for a token to be available, but the
 failures at the same instant, and the requeues per second will look like a curve
 falling somewhere beneath the maximum controller requeue limit established by
 the <code>BucketRateLimiter</code>.</p>
-<h2 id="using-your-own-rate-limiter">Using Your Own Rate Limiter</h2>
+<h2 id="using-your-own-rate-limiter">
+  Using Your Own Rate Limiter
+  <a class="heading-link" href="#using-your-own-rate-limiter">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>Now that we have explored the default implementation, it is time to consider
 whether it is acceptable for your use case. If not, you can <a href="https://github.com/kubernetes-sigs/controller-runtime/issues/631">supply your own
 rate limiter</a>.
 The controller builder we used when constructing our toy controller allows us to
 override the <code>RateLimiter</code> controller option.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go">ctrl.NewControllerManagedBy(mgr).
-    Named(<span style="color:#0ff;font-weight:bold">&#34;my-pod-controller&#34;</span>).
-    WithOptions(controller.Options{
-        RateLimiter: coolpackage.NewAwesomeRateLimiter(), 
-    }).
-    For(&amp;v1.Pod{}).
-    Complete(&amp;Reconciler{})
-</code></pre></div><p>A few examples you of why you might want to pass your own rate limiter include:</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>ctrl.NewControllerManagedBy(mgr).
+</span></span><span style="display:flex;"><span>    Named(<span style="color:#0ff;font-weight:bold">&#34;my-pod-controller&#34;</span>).
+</span></span><span style="display:flex;"><span>    WithOptions(controller.Options{
+</span></span><span style="display:flex;"><span>        RateLimiter: coolpackage.NewAwesomeRateLimiter(), 
+</span></span><span style="display:flex;"><span>    }).
+</span></span><span style="display:flex;"><span>    For(&amp;v1.Pod{}).
+</span></span><span style="display:flex;"><span>    Complete(&amp;Reconciler{})
+</span></span></code></pre></div><p>A few examples you of why you might want to pass your own rate limiter include:</p>
 <ul>
 <li>Overriding the default values passed to the rate limiters that
 <code>controller-runtime</code> uses by default. For instance, you may want a more or
@@ -508,7 +603,13 @@ hitting the same external API and you want to limit the amount of times per
 second that can happen at the controller manager level. Passing the same
 <code>BucketRateLimiter</code> to all controllers would provide that effect.</li>
 </ul>
-<h2 id="wrapping-up">Wrapping Up</h2>
+<h2 id="wrapping-up">
+  Wrapping Up
+  <a class="heading-link" href="#wrapping-up">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
 <p>As Kubernetes controllers expand to cover more and more use cases, the default
 happy path is not necessarily the right answer in every scenario. Using
 different patterns, or even exposing the knobs to end users of the controllers
@@ -516,25 +617,49 @@ so they can tune them to their environments, might make sense.</p>
 <p>Send me a message <a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter for any
 questions or comments!</p>
 
-  </article>
-
-  <br/>
-
-  
-  
-</section>
-
       </div>
 
-      <footer class="footer">
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
   <section class="container">
-     © 2022  
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
   </section>
 </footer>
 
-    </main>
+  </main>
 
-    
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {
@@ -548,7 +673,19 @@ if (!doNotTrack) {
 }
 </script>
 
+  
 
-  </body>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
 
 </html>

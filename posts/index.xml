@@ -6,11 +6,7 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 27 Dec 2022 00:10:34 -0600</lastBuildDate>
-    
-	<atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Tue, 27 Dec 2022 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>RISC-V Bytes: Timer Interrupts</title>
       <link>https://danielmangum.com/posts/risc-v-bytes-timer-interrupts/</link>
@@ -18,8 +14,7 @@
       
       <guid>https://danielmangum.com/posts/risc-v-bytes-timer-interrupts/</guid>
       <description>Operating systems do great work, but sometimes they need a little bit of help to know when to switch from one task to another. Thankfully, hardware is there to help! Today we are going to take a look at how operating systems schedule reminders for themselves using timer interrupts.
-Sections  Don&amp;rsquo;t care about the why and just want to see the code? Jump ahead to The Full Picture.
-  Hardware Threads Exceptions, Interrupts, and Traps Memory-Mapped Registers Enabling Timer Interrupts  Step 0: Differentiating Machine and Supervisor Timer Interrupts Step 1: Enabling Global Interrupts Step 2: Enabling Timer Interrupts Step 3: Delegating Supervisor Timer Interrupts to Supervisor Mode   Setting the Timer Jumping to Supervisor Mode Setting Up a Supervisor Trap Handler The Full Picture Running Concluding Thoughts  Hardware Threads Before we can talk about how operating systems switch from doing one thing to another, we need to establish how many things they can do at a time.</description>
+Sections Link to heading Don&amp;rsquo;t care about the why and just want to see the code? Jump ahead to The Full Picture.</description>
     </item>
     
     <item>
@@ -66,7 +61,7 @@ Last week, Go 1.19 was officially released, and sure enough, tucked in the relea
       
       <guid>https://danielmangum.com/posts/graceful-shutdown-responsibilities-organization/</guid>
       <description>I usually write about deep technical topics, frequently going into extreme detail about how systems work. I love a good technical challenge, but recently the most challenging thing I have been working on at my day job has not been technical.
-Achieving Outsized Impact I joined Upbound essentially straight out of college after working on the open source Crossplane project on nights and weekends. The team was quite small and quite senior at that point, making me a bit of an anomaly in the organization.</description>
+Achieving Outsized Impact Link to heading I joined Upbound essentially straight out of college after working on the open source Crossplane project on nights and weekends. The team was quite small and quite senior at that point, making me a bit of an anomaly in the organization.</description>
     </item>
     
     <item>
@@ -85,7 +80,7 @@ Achieving Outsized Impact I joined Upbound essentially straight out of college a
       
       <guid>https://danielmangum.com/posts/risc-v-bytes-rust-cross-compilation/</guid>
       <description>This is part of a series on the blog where we explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
- Today we are going to take a brief detour from our previous posts in this series and look at Rust Cross-Compilation for RISC-V. This will be a shorter post focused on providing useful information about how rustc works, as well as offering exact steps and configuration to target RISC-V when compiling your Rust programs.</description>
+Today we are going to take a brief detour from our previous posts in this series and look at Rust Cross-Compilation for RISC-V. This will be a shorter post focused on providing useful information about how rustc works, as well as offering exact steps and configuration to target RISC-V when compiling your Rust programs.</description>
     </item>
     
     <item>
@@ -95,7 +90,7 @@ Achieving Outsized Impact I joined Upbound essentially straight out of college a
       
       <guid>https://danielmangum.com/posts/risc-v-bytes-privilege-levels/</guid>
       <description>This is part of a series on the blog where we explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
- It has been a bit since our last post, but today we are going to begin our journey into some of the more interesting areas of RISC-V systems. In the first post in the series, we installed our RISC-V toolchain, which included QEMU.</description>
+It has been a bit since our last post, but today we are going to begin our journey into some of the more interesting areas of RISC-V systems. In the first post in the series, we installed our RISC-V toolchain, which included QEMU.</description>
     </item>
     
     <item>
@@ -114,7 +109,7 @@ Achieving Outsized Impact I joined Upbound essentially straight out of college a
       
       <guid>https://danielmangum.com/posts/infrastructure-in-your-software-packages/</guid>
       <description>This post explores what a future of shipping infrastructure alongside software may look like by detailing where we are today, and evaluating how the delivery of software has evolved over time. If you just want the big ideas, skip to the final section: A New Kind of Software Marketplace.
- Almost all software depends on infrastructure. Installation documentation typically has a section detailing how to run with your favorite cloud provider managed services, and, if you&amp;rsquo;re lucky, may even include a script to provision that infrastructure for you.</description>
+Almost all software depends on infrastructure. Installation documentation typically has a section detailing how to run with your favorite cloud provider managed services, and, if you&amp;rsquo;re lucky, may even include a script to provision that infrastructure for you.</description>
     </item>
     
     <item>
@@ -124,7 +119,7 @@ Achieving Outsized Impact I joined Upbound essentially straight out of college a
       
       <guid>https://danielmangum.com/posts/risc-v-bytes-intro-instruction-formats/</guid>
       <description>This is part of a series on the blog where we explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
- So far in this series, we have been looking at the assembly generated when compiling relatively simple programs. At this point, we have seen instructions that perform a wide variety of operations. Let&amp;rsquo;s take another look at our minimal example from the Passing on the Stack post:</description>
+So far in this series, we have been looking at the assembly generated when compiling relatively simple programs. At this point, we have seen instructions that perform a wide variety of operations. Let&amp;rsquo;s take another look at our minimal example from the Passing on the Stack post:</description>
     </item>
     
     <item>
@@ -144,7 +139,7 @@ As evidenced by my recent posts and conference talks, I have been spending more 
       
       <guid>https://danielmangum.com/posts/risc-v-bytes-passing-on-the-stack/</guid>
       <description>This is part of a series on the blog where we explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
- I once took a class on compilers where my professor told us that a CPU is like a human brain: it can store important data and access it quickly, but there is a limit to the amount of data that can be stored.</description>
+I once took a class on compilers where my professor told us that a CPU is like a human brain: it can store important data and access it quickly, but there is a limit to the amount of data that can be stored.</description>
     </item>
     
     <item>
@@ -154,7 +149,7 @@ As evidenced by my recent posts and conference talks, I have been spending more 
       
       <guid>https://danielmangum.com/posts/stepping-away-upstream-kubernetes/</guid>
       <description>This post is adapted from my message sent to the Kubernetes SIG Release mailing list.
- I got involved in the Kubernetes community right after finishing school, primarily by working on the tooling used to test and release each of the components of the project. From the beginning, I was shown a tremendous amount of respect and care, and that has remained constant since. That being said, over the past two years I have seen my interests evolve rapidly.</description>
+I got involved in the Kubernetes community right after finishing school, primarily by working on the tooling used to test and release each of the components of the project. From the beginning, I was shown a tremendous amount of respect and care, and that has remained constant since. That being said, over the past two years I have seen my interests evolve rapidly.</description>
     </item>
     
     <item>
@@ -164,7 +159,7 @@ As evidenced by my recent posts and conference talks, I have been spending more 
       
       <guid>https://danielmangum.com/posts/risc-v-bytes-caller-callee-registers/</guid>
       <description>This is part of a new series I am starting on the blog where we’ll explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
- When looking at the generated assembly for a function, you may have noticed that the first few instructions involve moving values from registers to the stack, then loading those values back into the same registers before returning.</description>
+When looking at the generated assembly for a function, you may have noticed that the first few instructions involve moving values from registers to the stack, then loading those values back into the same registers before returning.</description>
     </item>
     
     <item>
@@ -174,7 +169,7 @@ As evidenced by my recent posts and conference talks, I have been spending more 
       
       <guid>https://danielmangum.com/posts/risc-v-bytes-qemu-gdb/</guid>
       <description>This is part of a new series I am starting on the blog where we&amp;rsquo;ll explore RISC-V by breaking down real programs and explaining how they work. You can view all posts in this series on the RISC-V Bytes page.
- To start of the series, we are just going to get setup to do some exploration. I am going to assume you will not primarily be using a RISC-V machine1, so we need to configure our local development environment for cross-platform compiling, emulation, and debugging.</description>
+To start of the series, we are just going to get setup to do some exploration. I am going to assume you will not primarily be using a RISC-V machine1, so we need to configure our local development environment for cross-platform compiling, emulation, and debugging.</description>
     </item>
     
     <item>
@@ -231,7 +226,7 @@ Controllers initialize metrics when started, and write to the registry at variou
       
       <guid>https://danielmangum.com/posts/kubecon-na-20-infra-control-plane/</guid>
       <description>I had the privilege of joining Steven Borrelli from Mastercard for a tutorial at Kubecon North America 2020 on building an enterprise infrastructure control plane on Kubernetes using Crossplane. Relevant links and the talk recording can be found below.
- Slide Deck Source Code Text Transcript    Please feel free to send me a message @hasheddan on Twitter with any questions or comments!</description>
+Slide Deck Source Code Text Transcript Please feel free to send me a message @hasheddan on Twitter with any questions or comments!</description>
     </item>
     
     <item>
@@ -416,8 +411,7 @@ This is where Docker can be helpful. You can create a container that has a consi
       
       <guid>https://danielmangum.com/posts/local-kong-go-web-server/</guid>
       <description>This guide will teach you how to run the Kong API gateway locally as a proxy server for a Golang API using Docker.
-The Go API The Golang standard library has a very simple http library that makes it very easy to spin up a web server. For now, we will build the simplest implementation of a web server. Start by creating a new directory in your go/src/.
-mkdir go-api &amp;amp;&amp;amp; cd $_ Then create a new file main.</description>
+The Go API Link to heading The Golang standard library has a very simple http library that makes it very easy to spin up a web server. For now, we will build the simplest implementation of a web server. Start by creating a new directory in your go/src/.</description>
     </item>
     
     <item>

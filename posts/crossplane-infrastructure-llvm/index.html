@@ -1,102 +1,167 @@
 <!DOCTYPE html>
 <html lang="en">
-
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <meta name="author" content="Daniel Mangum">
-    <meta name="description" content="Daniel Mangum&#39;s personal website">
-    <meta name="keywords" content="blog,developer,personal">
-
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:site" content="@hasheddan" />
-    <meta name="twitter:title" content="Is Crossplane the Infrastructure LLVM?"/>
-    <meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png" />
-
-    <base href="https://danielmangum.com">
     <title>
   Is Crossplane the Infrastructure LLVM? · Daniel Mangum
 </title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
 
-    <link rel="canonical" href="https://danielmangum.com/posts/crossplane-infrastructure-llvm/">
 
-    <link  rel="stylesheet" href="https://fonts.googleapis.com/css?family=Fira+Mono:400,700">
-    <link rel="stylesheet" href="//cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
-    <link rel="stylesheet" href="https://danielmangum.com/css/style.min.css">
 
-    
 
-    
-      <link rel="stylesheet" href="https://danielmangum.com/css/custom.css">
-    
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="If I was to explain LLVM in a painfully simple manner, I might say something like: &ldquo;LLVM is a framework that allows you to define a syntax for interacting with computers, and instantly have it work for all computers&rdquo;. This description does a colossal disservice to the scope of the project, but it serves to illustrate the basic idea: there are many languages (frontends) and many CPU architectures (backends) and we don&rsquo;t want to re-implement every translation permutation.">
+<meta name="keywords" content="blog,developer,personal">
 
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
-    <link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Is Crossplane the Infrastructure LLVM?"/>
+<meta name="twitter:description" content="If I was to explain LLVM in a painfully simple manner, I might say something like: &ldquo;LLVM is a framework that allows you to define a syntax for interacting with computers, and instantly have it work for all computers&rdquo;. This description does a colossal disservice to the scope of the project, but it serves to illustrate the basic idea: there are many languages (frontends) and many CPU architectures (backends) and we don&rsquo;t want to re-implement every translation permutation."/>
 
-    
+<meta property="og:title" content="Is Crossplane the Infrastructure LLVM?" />
+<meta property="og:description" content="If I was to explain LLVM in a painfully simple manner, I might say something like: &ldquo;LLVM is a framework that allows you to define a syntax for interacting with computers, and instantly have it work for all computers&rdquo;. This description does a colossal disservice to the scope of the project, but it serves to illustrate the basic idea: there are many languages (frontends) and many CPU architectures (backends) and we don&rsquo;t want to re-implement every translation permutation." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/crossplane-infrastructure-llvm/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2021-03-13T01:41:34-06:00" />
+<meta property="article:modified_time" content="2021-03-13T01:41:34-06:00" />
 
-    <meta name="generator" content="Hugo 0.68.3" />
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/crossplane-infrastructure-llvm/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.109.0">
+
+
+
+
+
   </head>
 
-  <body class="">
-    <main class="wrapper">
-      <nav class="navigation">
+
+
+
+<body class="preload-transitions colorscheme-light">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
   <section class="container">
-    <a class="navigation-title" href="https://danielmangum.com">
+    <a class="navigation-title" href="https://danielmangum.com/">
       Daniel Mangum
     </a>
     
-    <ul class="navigation-list  float-right ">
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
-      </li>
-      
-      <li class="navigation-item">
-        <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
-      </li>
-      
-    </ul>
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
     
   </section>
 </nav>
 
 
-      <div class="content">
-        
-  <section class="container post">
-  <article>
-    <header>
-      <h1 class="title">Is Crossplane the Infrastructure LLVM?</h1>
-      <h2 class="date">March 13, 2021</h2>
-      <style>
-        .twitter-tweet-rendered {
-          display:block;
-          margin-left:auto;
-          margin-right:auto;
-        }
-      </style>
-
+    <div class="content">
       
-    </header>
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/crossplane-infrastructure-llvm/">
+              Is Crossplane the Infrastructure LLVM?
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2021-03-13T01:41:34-06:00">
+                March 13, 2021
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              18-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
 
-    <p>If I was to explain <a href="https://llvm.org/">LLVM</a> in a painfully simple manner, I
+      <div class="post-content">
+        
+        <p>If I was to explain <a href="https://llvm.org/">LLVM</a> in a painfully simple manner, I
 might say something like: &ldquo;LLVM is a framework that allows you to define a
 syntax for interacting with computers, and instantly have it work for all
 computers&rdquo;. This description does a colossal disservice to the scope of the
 project, but it serves to illustrate the basic idea: there are many languages
 (frontends) and many CPU architectures (backends) and we don&rsquo;t want to
 re-implement every translation permutation.</p>
-<p><img src="../static/cross_llvm_0.png" alt="cross-llvm-0"></p>
+<p><img src="../../static/cross_llvm_0.png" alt="cross-llvm-0"></p>
 <p>Furthermore, if we can make some generic optimizations in the middle, we get
 wins across all languages and architectures. Consumers of compilers built on
 LLVM can also pick and choose what sort of optimizations they want to enable,
@@ -121,22 +186,28 @@ our focus for today.</p>
 <p>If you are interested in learning more about LLVM and how to use it, I highly
 recommend <a href="https://llvm.org/docs/tutorial/">the Kaleidoscope tutorial</a>.</p>
 </blockquote>
-<h3 id="crossplane---explained-by-a-human">Crossplane - Explained by a Human</h3>
+<h3 id="crossplane---explained-by-a-human">
+  Crossplane - Explained by a Human
+  <a class="heading-link" href="#crossplane---explained-by-a-human">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
 <p>So what does this have to do with <a href="https://crossplane.io/">Crossplane</a>?
 Crossplane is neither a language nor a target architecture &ndash; its documentation
 says it is &ldquo;&hellip; an open source Kubernetes add-on that supercharges your
 Kubernetes clusters enabling you to provision and manage infrastructure,
 services, and applications from kubectl&rdquo;. That is some great marketing copy!
-<sup id="fnref:1"><a href="posts/crossplane-infrastructure-llvm/#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup></p>
+<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup></p>
 <p>We&rsquo;ll keep up our trend of overly simplifying extremely complex systems by
 describing <a href="https://kubernetes.io/">Kubernetes</a> as a &ldquo;distributed system
 framework that just incidentally happens to be commonly used for orchestrating
-containers&rdquo;<sup id="fnref:2"><a href="posts/crossplane-infrastructure-llvm/#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup>. Even folks who have had only the most elementary introduction
+containers&rdquo;<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup>. Even folks who have had only the most elementary introduction
 to Kubernetes will likely recognize some of the API types it offers, such as
 <code>Pods</code>, <code>Deployments</code>, and <code>Services</code>. These are the components that lead the
 project to frequently be described as a &ldquo;container orchestrator&rdquo;, and they are
 built-in the the API server.</p>
-<p>Kubernetes also, (in)famously<sup id="fnref:3"><a href="posts/crossplane-infrastructure-llvm/#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup>, allows anyone to extend the API using another
+<p>Kubernetes also, (in)famously<sup id="fnref:3"><a href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup>, allows anyone to extend the API using another
 built-in type <a href="https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/">named
 <code>CustomResourceDefinitions</code></a>
 (CRDs). Crossplane takes advantage of this functionality by introducing a <a href="https://doc.crds.dev/github.com/crossplane/crossplane">few
@@ -158,7 +229,7 @@ Let&rsquo;s take a look at Providers first.</p>
 <a href="https://kubernetes.io/docs/concepts/architecture/controller/">controllers</a> that
 reconcile them. These CRDs are high-fidelity, 1:1 representations of external
 APIs. We refer to this type of CRD as a &ldquo;managed resource&rdquo;, and they are all
-cluster-scoped<sup id="fnref:4"><a href="posts/crossplane-infrastructure-llvm/#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup>. The controllers that reconcile them know how to take the
+cluster-scoped<sup id="fnref:4"><a href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup>. The controllers that reconcile them know how to take the
 specification of the resource and drive its external state to match it. Common
 examples of Crossplane Providers include
 <a href="https://github.com/crossplane/provider-gcp">provider-gcp</a>,
@@ -179,11 +250,11 @@ and some depend on the existence of other resources before they can be used
 effectively. An <code>RDSInstance</code> might require other AWS managed resources, such as
 a<code>VPC</code>, <code>Subnet</code>, <code>SecurityGroup</code>, etc. as well as SQL resources, such as
 <code>Database</code>, <code>User</code>, and <code>Grant</code>, before an application can connect. It is
-difficult for even an experienced cloud architect<sup id="fnref:5"><a href="posts/crossplane-infrastructure-llvm/#fn:5" class="footnote-ref" role="doc-noteref">5</a></sup>. In response,
+difficult for even an experienced cloud architect<sup id="fnref:5"><a href="#fn:5" class="footnote-ref" role="doc-noteref">5</a></sup>. In response,
 organizations either require developers to contact infrastructure admins and ask
 them to set up the proper resources they need, or they throw security out the
 window and subject developers to baptism by fire. The first solution removes any
-notion of DevOps<sup id="fnref:6"><a href="posts/crossplane-infrastructure-llvm/#fn:6" class="footnote-ref" role="doc-noteref">6</a></sup>, and the second is not something anyone is going to be
+notion of DevOps<sup id="fnref:6"><a href="#fn:6" class="footnote-ref" role="doc-noteref">6</a></sup>, and the second is not something anyone is going to be
 excited about, unless your name is <a href="https://twitter.com/IanColdwater">Ian
 Coldwater</a>.</p>
 <p>Crossplane aspires to provide a third option by allowing infrastructure admins
@@ -204,51 +275,50 @@ responds by creating a cluster-scoped CRD, and optionally a namespace-scoped CRD
 as well. Here is one for a <code>DB</code>, with only one configurable field (<code>storageGB</code>),
 which is similar to the example from the Crossplane <a href="https://crossplane.io/docs/v1.1/getting-started/create-configuration.html#create-compositeresourcedefinition">getting started
 guide</a>.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">
-<span style="color:#fff;font-weight:bold">apiVersion</span>: apiextensions.crossplane.io/v1
-<span style="color:#fff;font-weight:bold">kind</span>: CompositeResourceDefinition
-<span style="color:#fff;font-weight:bold">metadata</span>:
-  <span style="color:#fff;font-weight:bold">name</span>: clusterdbs.example.org
-<span style="color:#fff;font-weight:bold">spec</span>:
-  <span style="color:#fff;font-weight:bold">group</span>: example.org
-  <span style="color:#fff;font-weight:bold">names</span>:
-    <span style="color:#fff;font-weight:bold">kind</span>: ClusterDB
-    <span style="color:#fff;font-weight:bold">plural</span>: clusterdbs
-  <span style="color:#fff;font-weight:bold">claimNames</span>:
-    <span style="color:#fff;font-weight:bold">kind</span>: DB
-    <span style="color:#fff;font-weight:bold">plural</span>: dbs
-  <span style="color:#fff;font-weight:bold">connectionSecretKeys</span>:
-    - username
-    - password
-    - endpoint
-    - port
-  <span style="color:#fff;font-weight:bold">versions</span>:
-  - <span style="color:#fff;font-weight:bold">name</span>: v1alpha1
-    <span style="color:#fff;font-weight:bold">served</span>: <span style="color:#fff;font-weight:bold">true</span>
-    <span style="color:#fff;font-weight:bold">referenceable</span>: <span style="color:#fff;font-weight:bold">true</span>
-    <span style="color:#fff;font-weight:bold">schema</span>:
-      <span style="color:#fff;font-weight:bold">openAPIV3Schema</span>:
-        <span style="color:#fff;font-weight:bold">type</span>: object
-        <span style="color:#fff;font-weight:bold">properties</span>:
-          <span style="color:#fff;font-weight:bold">spec</span>:
-            <span style="color:#fff;font-weight:bold">type</span>: object
-            <span style="color:#fff;font-weight:bold">properties</span>:
-              <span style="color:#fff;font-weight:bold">parameters</span>:
-                <span style="color:#fff;font-weight:bold">type</span>: object
-                <span style="color:#fff;font-weight:bold">properties</span>:
-                  <span style="color:#fff;font-weight:bold">storageGB</span>:
-                    <span style="color:#fff;font-weight:bold">type</span>: integer
-                <span style="color:#fff;font-weight:bold">required</span>:
-                  - storageGB
-            <span style="color:#fff;font-weight:bold">required</span>:
-              - parameters
-
-</code></pre></div><p>If you were to <code>kubectl apply</code> this manifest in your Kubernetes cluster where
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">apiVersion</span>: apiextensions.crossplane.io/v1
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">kind</span>: CompositeResourceDefinition
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">name</span>: clusterdbs.example.org
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">group</span>: example.org
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">names</span>:
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">kind</span>: ClusterDB
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">plural</span>: clusterdbs
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">claimNames</span>:
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">kind</span>: DB
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">plural</span>: dbs
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">connectionSecretKeys</span>:
+</span></span><span style="display:flex;"><span>    - username
+</span></span><span style="display:flex;"><span>    - password
+</span></span><span style="display:flex;"><span>    - endpoint
+</span></span><span style="display:flex;"><span>    - port
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">versions</span>:
+</span></span><span style="display:flex;"><span>  - <span style="font-weight:bold">name</span>: v1alpha1
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">served</span>: <span style="color:#fff;font-weight:bold">true</span>
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">referenceable</span>: <span style="color:#fff;font-weight:bold">true</span>
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">schema</span>:
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">openAPIV3Schema</span>:
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">type</span>: object
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">properties</span>:
+</span></span><span style="display:flex;"><span>          <span style="font-weight:bold">spec</span>:
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">type</span>: object
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">properties</span>:
+</span></span><span style="display:flex;"><span>              <span style="font-weight:bold">parameters</span>:
+</span></span><span style="display:flex;"><span>                <span style="font-weight:bold">type</span>: object
+</span></span><span style="display:flex;"><span>                <span style="font-weight:bold">properties</span>:
+</span></span><span style="display:flex;"><span>                  <span style="font-weight:bold">storageGB</span>:
+</span></span><span style="display:flex;"><span>                    <span style="font-weight:bold">type</span>: integer
+</span></span><span style="display:flex;"><span>                <span style="font-weight:bold">required</span>:
+</span></span><span style="display:flex;"><span>                  - storageGB
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">required</span>:
+</span></span><span style="display:flex;"><span>              - parameters
+</span></span></code></pre></div><p>If you were to <code>kubectl apply</code> this manifest in your Kubernetes cluster where
 Crossplane is installed, you would see after a few seconds that a <code>ClusterDB</code>
 (<code>spec.names.kind</code>) cluster-scoped CRD existed, and a <code>DB</code>
 (<code>spec.claimNames.kind</code>). As of this point, our cluster looks like the
 following:</p>
-<p><img src="../static/cross_llvm_1.png" alt="cross-llvm-1"></p>
+<p><img src="../../static/cross_llvm_1.png" alt="cross-llvm-1"></p>
 <blockquote>
 <p>Note: All of the CRD instances that exist in the &ldquo;Cluster-Scoped Resources&rdquo;
 box and define the managed resources (e.g. <code>RDSInstance</code>) and core Crossplane
@@ -261,7 +331,7 @@ fields</a>
 that Crossplane uses for machinery. Next, Kubernetes, as it does for all CRDs,
 will register the defined schemas as API types at the cluster and namespace
 scopes respectively:</p>
-<p><img src="../static/cross_llvm_2.png" alt="cross-llvm-2"></p>
+<p><img src="../../static/cross_llvm_2.png" alt="cross-llvm-2"></p>
 <p>Now anyone in the cluster, given proper RBAC permissions, could create a <code>DB</code> in
 a given namespace, or a <code>ClusterDB</code> at the cluster scope. In Crossplane
 vernacular, We call the cluster-scoped variant (<code>ClusterDB</code>) an &ldquo;XR&rdquo; or
@@ -278,53 +348,52 @@ for these types to be of any use to us.</p>
 <p>The <code>Composition</code> type is used to define a new template. These can be relatively
 simple, such mapping our namespace-scoped <code>DB</code> to a cluster-scoped <code>RDSInstance</code>
 and hard-coding some fields. This is useful for a policy enforcement and
-permission isolation<sup id="fnref:7"><a href="posts/crossplane-infrastructure-llvm/#fn:7" class="footnote-ref" role="doc-noteref">7</a></sup>. An example <code>Composition</code> that does this could look as
+permission isolation<sup id="fnref:7"><a href="#fn:7" class="footnote-ref" role="doc-noteref">7</a></sup>. An example <code>Composition</code> that does this could look as
 follows:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">
-<span style="color:#fff;font-weight:bold">apiVersion</span>: apiextensions.crossplane.io/v1
-<span style="color:#fff;font-weight:bold">kind</span>: Composition
-<span style="color:#fff;font-weight:bold">metadata</span>:
-  <span style="color:#fff;font-weight:bold">name</span>: clusterdbs.aws.example.org
-  <span style="color:#fff;font-weight:bold">labels</span>:
-    <span style="color:#fff;font-weight:bold">provider</span>: aws
-    <span style="color:#fff;font-weight:bold">environment</span>: dev
-<span style="color:#fff;font-weight:bold">spec</span>:
-  <span style="color:#fff;font-weight:bold">writeConnectionSecretsToNamespace</span>: crossplane-system
-  <span style="color:#fff;font-weight:bold">compositeTypeRef</span>:
-    <span style="color:#fff;font-weight:bold">apiVersion</span>: example.org/v1alpha1
-    <span style="color:#fff;font-weight:bold">kind</span>: ClusterDB
-  <span style="color:#fff;font-weight:bold">resources</span>:
-    - <span style="color:#fff;font-weight:bold">name</span>: rdsinstance
-      <span style="color:#fff;font-weight:bold">base</span>:
-        <span style="color:#fff;font-weight:bold">apiVersion</span>: database.aws.crossplane.io/v1beta1
-        <span style="color:#fff;font-weight:bold">kind</span>: RDSInstance
-        <span style="color:#fff;font-weight:bold">spec</span>:
-          <span style="color:#fff;font-weight:bold">forProvider</span>:
-            <span style="color:#fff;font-weight:bold">region</span>: us-east<span style="color:#ff0;font-weight:bold">-1</span>
-            <span style="color:#fff;font-weight:bold">dbInstanceClass</span>: db.t2.small
-            <span style="color:#fff;font-weight:bold">masterUsername</span>: masteruser
-            <span style="color:#fff;font-weight:bold">engine</span>: postgres
-            <span style="color:#fff;font-weight:bold">engineVersion</span>: <span style="color:#0ff;font-weight:bold">&#34;9.6&#34;</span>
-            <span style="color:#fff;font-weight:bold">skipFinalSnapshotBeforeDeletion</span>: <span style="color:#fff;font-weight:bold">true</span>
-            <span style="color:#fff;font-weight:bold">publiclyAccessible</span>: <span style="color:#fff;font-weight:bold">true</span>
-          <span style="color:#fff;font-weight:bold">writeConnectionSecretToRef</span>:
-            <span style="color:#fff;font-weight:bold">namespace</span>: crossplane-system
-      <span style="color:#fff;font-weight:bold">patches</span>:
-        - <span style="color:#fff;font-weight:bold">fromFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;metadata.uid&#34;</span>
-          <span style="color:#fff;font-weight:bold">toFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;spec.writeConnectionSecretToRef.name&#34;</span>
-          <span style="color:#fff;font-weight:bold">transforms</span>:
-            - <span style="color:#fff;font-weight:bold">type</span>: string
-              <span style="color:#fff;font-weight:bold">string</span>:
-                <span style="color:#fff;font-weight:bold">fmt</span>: <span style="color:#0ff;font-weight:bold">&#34;%s-postgresql&#34;</span>
-        - <span style="color:#fff;font-weight:bold">fromFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;spec.parameters.storageGB&#34;</span>
-          <span style="color:#fff;font-weight:bold">toFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;spec.forProvider.allocatedStorage&#34;</span>
-      <span style="color:#fff;font-weight:bold">connectionDetails</span>:
-        - <span style="color:#fff;font-weight:bold">fromConnectionSecretKey</span>: username
-        - <span style="color:#fff;font-weight:bold">fromConnectionSecretKey</span>: password
-        - <span style="color:#fff;font-weight:bold">fromConnectionSecretKey</span>: endpoint
-        - <span style="color:#fff;font-weight:bold">fromConnectionSecretKey</span>: port
-
-</code></pre></div><p>Running <code>kubectl apply</code> with this manifest will create the <code>Composition</code>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">apiVersion</span>: apiextensions.crossplane.io/v1
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">kind</span>: Composition
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">name</span>: clusterdbs.aws.example.org
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">labels</span>:
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">provider</span>: aws
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">environment</span>: dev
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">writeConnectionSecretsToNamespace</span>: crossplane-system
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">compositeTypeRef</span>:
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">apiVersion</span>: example.org/v1alpha1
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">kind</span>: ClusterDB
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">resources</span>:
+</span></span><span style="display:flex;"><span>    - <span style="font-weight:bold">name</span>: rdsinstance
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">base</span>:
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">apiVersion</span>: database.aws.crossplane.io/v1beta1
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">kind</span>: RDSInstance
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">spec</span>:
+</span></span><span style="display:flex;"><span>          <span style="font-weight:bold">forProvider</span>:
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">region</span>: us-east-1
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">dbInstanceClass</span>: db.t2.small
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">masterUsername</span>: masteruser
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">engine</span>: postgres
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">engineVersion</span>: <span style="color:#0ff;font-weight:bold">&#34;9.6&#34;</span>
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">skipFinalSnapshotBeforeDeletion</span>: <span style="color:#fff;font-weight:bold">true</span>
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">publiclyAccessible</span>: <span style="color:#fff;font-weight:bold">true</span>
+</span></span><span style="display:flex;"><span>          <span style="font-weight:bold">writeConnectionSecretToRef</span>:
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">namespace</span>: crossplane-system
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">patches</span>:
+</span></span><span style="display:flex;"><span>        - <span style="font-weight:bold">fromFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;metadata.uid&#34;</span>
+</span></span><span style="display:flex;"><span>          <span style="font-weight:bold">toFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;spec.writeConnectionSecretToRef.name&#34;</span>
+</span></span><span style="display:flex;"><span>          <span style="font-weight:bold">transforms</span>:
+</span></span><span style="display:flex;"><span>            - <span style="font-weight:bold">type</span>: string
+</span></span><span style="display:flex;"><span>              <span style="font-weight:bold">string</span>:
+</span></span><span style="display:flex;"><span>                <span style="font-weight:bold">fmt</span>: <span style="color:#0ff;font-weight:bold">&#34;%s-postgresql&#34;</span>
+</span></span><span style="display:flex;"><span>        - <span style="font-weight:bold">fromFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;spec.parameters.storageGB&#34;</span>
+</span></span><span style="display:flex;"><span>          <span style="font-weight:bold">toFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;spec.forProvider.allocatedStorage&#34;</span>
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">connectionDetails</span>:
+</span></span><span style="display:flex;"><span>        - <span style="font-weight:bold">fromConnectionSecretKey</span>: username
+</span></span><span style="display:flex;"><span>        - <span style="font-weight:bold">fromConnectionSecretKey</span>: password
+</span></span><span style="display:flex;"><span>        - <span style="font-weight:bold">fromConnectionSecretKey</span>: endpoint
+</span></span><span style="display:flex;"><span>        - <span style="font-weight:bold">fromConnectionSecretKey</span>: port
+</span></span></code></pre></div><p>Running <code>kubectl apply</code> with this manifest will create the <code>Composition</code>
 instance at the cluster scope. It declares in its <code>compositeTypeRef</code> that it can
 satisfy the <code>ClusterDB</code> abstraction, meaning that those dynamic controllers the
 Crossplane started for the XR (<code>ClusterDB</code>) and XRC (<code>DB</code>) will <em>both</em> view this
@@ -334,55 +403,54 @@ the <code>spec.parameters.storageGB</code> on the XR / XRC to the
 means that the developer can specify the size of the database without actually
 knowing what is satisfying the request, and also means that we could just as
 easily swap out the <code>RDSInstance</code> template for a <code>CloudSQLInstance</code> one for GCP:</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">
-<span style="color:#fff;font-weight:bold">apiVersion</span>: apiextensions.crossplane.io/v1
-<span style="color:#fff;font-weight:bold">kind</span>: Composition
-<span style="color:#fff;font-weight:bold">metadata</span>:
-  <span style="color:#fff;font-weight:bold">name</span>: clusterdb.gcp.example.org
-  <span style="color:#fff;font-weight:bold">labels</span>:
-    <span style="color:#fff;font-weight:bold">provider</span>: gcp
-    <span style="color:#fff;font-weight:bold">environment</span>: dev
-<span style="color:#fff;font-weight:bold">spec</span>:
-  <span style="color:#fff;font-weight:bold">writeConnectionSecretsToNamespace</span>: crossplane-system
-  <span style="color:#fff;font-weight:bold">compositeTypeRef</span>:
-    <span style="color:#fff;font-weight:bold">apiVersion</span>: example.org/v1alpha1
-    <span style="color:#fff;font-weight:bold">kind</span>: ClusterDB
-  <span style="color:#fff;font-weight:bold">resources</span>:
-    - <span style="color:#fff;font-weight:bold">name</span>: cloudsqlinstance
-      <span style="color:#fff;font-weight:bold">base</span>:
-        <span style="color:#fff;font-weight:bold">apiVersion</span>: database.gcp.crossplane.io/v1beta1
-        <span style="color:#fff;font-weight:bold">kind</span>: CloudSQLInstance
-        <span style="color:#fff;font-weight:bold">spec</span>:
-          <span style="color:#fff;font-weight:bold">forProvider</span>:
-            <span style="color:#fff;font-weight:bold">databaseVersion</span>: POSTGRES_9_6
-            <span style="color:#fff;font-weight:bold">region</span>: us-central1
-            <span style="color:#fff;font-weight:bold">settings</span>:
-              <span style="color:#fff;font-weight:bold">tier</span>: db-custom<span style="color:#ff0;font-weight:bold">-1-3840</span>
-              <span style="color:#fff;font-weight:bold">dataDiskType</span>: PD_SSD
-              <span style="color:#fff;font-weight:bold">ipConfiguration</span>:
-                <span style="color:#fff;font-weight:bold">ipv4Enabled</span>: <span style="color:#fff;font-weight:bold">true</span>
-                <span style="color:#fff;font-weight:bold">authorizedNetworks</span>:
-                  - <span style="color:#fff;font-weight:bold">value</span>: <span style="color:#0ff;font-weight:bold">&#34;0.0.0.0/0&#34;</span>
-          <span style="color:#fff;font-weight:bold">writeConnectionSecretToRef</span>:
-            <span style="color:#fff;font-weight:bold">namespace</span>: crossplane-system
-      <span style="color:#fff;font-weight:bold">patches</span>:
-        - <span style="color:#fff;font-weight:bold">fromFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;metadata.uid&#34;</span>
-          <span style="color:#fff;font-weight:bold">toFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;spec.writeConnectionSecretToRef.name&#34;</span>
-          <span style="color:#fff;font-weight:bold">transforms</span>:
-            - <span style="color:#fff;font-weight:bold">type</span>: string
-              <span style="color:#fff;font-weight:bold">string</span>:
-                <span style="color:#fff;font-weight:bold">fmt</span>: <span style="color:#0ff;font-weight:bold">&#34;%s-postgresql&#34;</span>
-        - <span style="color:#fff;font-weight:bold">fromFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;spec.parameters.storageGB&#34;</span>
-          <span style="color:#fff;font-weight:bold">toFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;spec.forProvider.settings.dataDiskSizeGb&#34;</span>
-      <span style="color:#fff;font-weight:bold">connectionDetails</span>:
-        - <span style="color:#fff;font-weight:bold">fromConnectionSecretKey</span>: username
-        - <span style="color:#fff;font-weight:bold">fromConnectionSecretKey</span>: password
-        - <span style="color:#fff;font-weight:bold">fromConnectionSecretKey</span>: endpoint
-        - <span style="color:#fff;font-weight:bold">type</span>: FromValue
-          <span style="color:#fff;font-weight:bold">name</span>: port
-          <span style="color:#fff;font-weight:bold">value</span>: <span style="color:#0ff;font-weight:bold">&#34;5432&#34;</span>
-
-</code></pre></div><p>In this case, <code>spec.parameters.storageGB</code> is being mapped to
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">apiVersion</span>: apiextensions.crossplane.io/v1
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">kind</span>: Composition
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">name</span>: clusterdb.gcp.example.org
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">labels</span>:
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">provider</span>: gcp
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">environment</span>: dev
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">writeConnectionSecretsToNamespace</span>: crossplane-system
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">compositeTypeRef</span>:
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">apiVersion</span>: example.org/v1alpha1
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">kind</span>: ClusterDB
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">resources</span>:
+</span></span><span style="display:flex;"><span>    - <span style="font-weight:bold">name</span>: cloudsqlinstance
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">base</span>:
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">apiVersion</span>: database.gcp.crossplane.io/v1beta1
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">kind</span>: CloudSQLInstance
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">spec</span>:
+</span></span><span style="display:flex;"><span>          <span style="font-weight:bold">forProvider</span>:
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">databaseVersion</span>: POSTGRES_9_6
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">region</span>: us-central1
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">settings</span>:
+</span></span><span style="display:flex;"><span>              <span style="font-weight:bold">tier</span>: db-custom-1-3840
+</span></span><span style="display:flex;"><span>              <span style="font-weight:bold">dataDiskType</span>: PD_SSD
+</span></span><span style="display:flex;"><span>              <span style="font-weight:bold">ipConfiguration</span>:
+</span></span><span style="display:flex;"><span>                <span style="font-weight:bold">ipv4Enabled</span>: <span style="color:#fff;font-weight:bold">true</span>
+</span></span><span style="display:flex;"><span>                <span style="font-weight:bold">authorizedNetworks</span>:
+</span></span><span style="display:flex;"><span>                  - <span style="font-weight:bold">value</span>: <span style="color:#0ff;font-weight:bold">&#34;0.0.0.0/0&#34;</span>
+</span></span><span style="display:flex;"><span>          <span style="font-weight:bold">writeConnectionSecretToRef</span>:
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">namespace</span>: crossplane-system
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">patches</span>:
+</span></span><span style="display:flex;"><span>        - <span style="font-weight:bold">fromFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;metadata.uid&#34;</span>
+</span></span><span style="display:flex;"><span>          <span style="font-weight:bold">toFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;spec.writeConnectionSecretToRef.name&#34;</span>
+</span></span><span style="display:flex;"><span>          <span style="font-weight:bold">transforms</span>:
+</span></span><span style="display:flex;"><span>            - <span style="font-weight:bold">type</span>: string
+</span></span><span style="display:flex;"><span>              <span style="font-weight:bold">string</span>:
+</span></span><span style="display:flex;"><span>                <span style="font-weight:bold">fmt</span>: <span style="color:#0ff;font-weight:bold">&#34;%s-postgresql&#34;</span>
+</span></span><span style="display:flex;"><span>        - <span style="font-weight:bold">fromFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;spec.parameters.storageGB&#34;</span>
+</span></span><span style="display:flex;"><span>          <span style="font-weight:bold">toFieldPath</span>: <span style="color:#0ff;font-weight:bold">&#34;spec.forProvider.settings.dataDiskSizeGb&#34;</span>
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">connectionDetails</span>:
+</span></span><span style="display:flex;"><span>        - <span style="font-weight:bold">fromConnectionSecretKey</span>: username
+</span></span><span style="display:flex;"><span>        - <span style="font-weight:bold">fromConnectionSecretKey</span>: password
+</span></span><span style="display:flex;"><span>        - <span style="font-weight:bold">fromConnectionSecretKey</span>: endpoint
+</span></span><span style="display:flex;"><span>        - <span style="font-weight:bold">type</span>: FromValue
+</span></span><span style="display:flex;"><span>          <span style="font-weight:bold">name</span>: port
+</span></span><span style="display:flex;"><span>          <span style="font-weight:bold">value</span>: <span style="color:#0ff;font-weight:bold">&#34;5432&#34;</span>
+</span></span></code></pre></div><p>In this case, <code>spec.parameters.storageGB</code> is being mapped to
 <code>spec.forProvider.settings.dataDiskSizeGb</code>, but from the developer&rsquo;s
 perspective, it will have the same effect of setting the size of the database.</p>
 <p>You can define as many of these templates as you like for an XR / XRC pair. The
@@ -390,7 +458,7 @@ template that is chosen when an actual instance of the XR / XRC is created is
 dictated by labels (you&rsquo;ll notice we added a few in the <code>Compositions</code> above).
 Before we actually create an instance of an XRC or XR, let&rsquo;s take another peek
 at our cluster:</p>
-<p><img src="../static/cross_llvm_3.png" alt="cross-llvm-3"></p>
+<p><img src="../../static/cross_llvm_3.png" alt="cross-llvm-3"></p>
 <blockquote>
 <p>Note: CRD instances and XRD instances are omitted in &ldquo;Cluster-Scoped
 Resources&rdquo; here as well.</p>
@@ -407,23 +475,22 @@ the XRC that binds to the existing XR, rather than creating a new one
 entirely. Yep &ndash; there is some fun stuff you can do here.</p>
 </blockquote>
 <p>Let&rsquo;s create the following XRC and see what happens in our cluster.</p>
-<div class="highlight"><pre style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">
-<span style="color:#fff;font-weight:bold">apiVersion</span>: example.org/v1alpha1
-<span style="color:#fff;font-weight:bold">kind</span>: DB
-<span style="color:#fff;font-weight:bold">metadata</span>:
-  <span style="color:#fff;font-weight:bold">name</span>: my-db
-  <span style="color:#fff;font-weight:bold">namespace</span>: default
-<span style="color:#fff;font-weight:bold">spec</span>:
-  <span style="color:#fff;font-weight:bold">parameters</span>:
-    <span style="color:#fff;font-weight:bold">storageGB</span>: <span style="color:#ff0;font-weight:bold">20</span>
-  <span style="color:#fff;font-weight:bold">compositionSelector</span>:
-    <span style="color:#fff;font-weight:bold">matchLabels</span>:
-      <span style="color:#fff;font-weight:bold">provider</span>: aws
-  <span style="color:#fff;font-weight:bold">writeConnectionSecretToRef</span>:
-    <span style="color:#fff;font-weight:bold">name</span>: db-conn
-
-</code></pre></div><p>Whoa, that&rsquo;s pretty simple! You&rsquo;re telling me that&rsquo;s all I have to do to create
-a fairly complex database instance? Neat! <sup id="fnref:8"><a href="posts/crossplane-infrastructure-llvm/#fn:8" class="footnote-ref" role="doc-noteref">8</a></sup> Behind the scenes, Crossplane is
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">apiVersion</span>: example.org/v1alpha1
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">kind</span>: DB
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">name</span>: my-db
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">namespace</span>: default
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">parameters</span>:
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">storageGB</span>: <span style="color:#ff0;font-weight:bold">20</span>
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">compositionSelector</span>:
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">matchLabels</span>:
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">provider</span>: aws
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">writeConnectionSecretToRef</span>:
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">name</span>: db-conn
+</span></span></code></pre></div><p>Whoa, that&rsquo;s pretty simple! You&rsquo;re telling me that&rsquo;s all I have to do to create
+a fairly complex database instance? Neat! <sup id="fnref:8"><a href="#fn:8" class="footnote-ref" role="doc-noteref">8</a></sup> Behind the scenes, Crossplane is
 executing the following steps:</p>
 <ol>
 <li>Create a corresponding cluster-scoped XR (<code>my-db-xxx</code>) for the
@@ -441,7 +508,7 @@ by a user or indirectly using composition). Crossplane&rsquo;s composition
 machinery will reflect relevant parts of the status back to the XR / XRC, as
 well as the connection details (which we won&rsquo;t spend too much time on today).</li>
 </ol>
-<p><img src="../static/cross_llvm_4.png" alt="cross-llvm-4"></p>
+<p><img src="../../static/cross_llvm_4.png" alt="cross-llvm-4"></p>
 <p>This is a nice abstraction layer, but a rather trivial example. In a production
 scenario, you likely do not want your database exposed publicly to the entire
 internet, so you will need to set up networking infrastructure around it, and
@@ -465,7 +532,7 @@ out an <code>RDSInstance</code>, we spit out:</p>
 <p>&hellip;and they all work together because of a powerful feature of Crossplane
 managed resources called <a href="https://crossplane.io/docs/v1.1/concepts/managed-resources.html#dependencies">cross-resource
 references</a>.
-<sup id="fnref:9"><a href="posts/crossplane-infrastructure-llvm/#fn:9" class="footnote-ref" role="doc-noteref">9</a></sup></p>
+<sup id="fnref:9"><a href="#fn:9" class="footnote-ref" role="doc-noteref">9</a></sup></p>
 <p>So we&rsquo;ve established how Crossplane composition works, let&rsquo;s get back to
 packaging. Your XRDs and <code>Compositions</code> are essentially how you are buidling
 your own platform API, and if you have a limited number of clusters, it may make
@@ -473,7 +540,7 @@ sense to just throw them in a git repo and <code>kubectl apply</code> them when 
 updates. There are a fair amount of Crossplane users that follow this exact
 strategy. However, I ask you to indulge me for a moment while I explore another
 strategy that will likely seem excessive at first, but I promise to prove its
-worth in a moment<sup id="fnref:10"><a href="posts/crossplane-infrastructure-llvm/#fn:10" class="footnote-ref" role="doc-noteref">10</a></sup>.</p>
+worth in a moment<sup id="fnref:10"><a href="#fn:10" class="footnote-ref" role="doc-noteref">10</a></sup>.</p>
 <p>As mentioned before, Crossplane has a concept of a Configuration package. This
 is similar to the Provider package, but instead of CRDs and a controller, they
 only include XRDs and <code>Compositions</code>. They also can declare dependencies on
@@ -483,13 +550,19 @@ are present in the cluster and will install them if they are not. Both types of
 Crossplane packages are formatted as <a href="https://github.com/opencontainers/image-spec">OCI
 images</a>, meaning that they can be
 pushed to any registry, such as DockerHub, GCR, or the <a href="https://cloud.upbound.io/browse">Upbound
-Registry</a>. <sup id="fnref:11"><a href="posts/crossplane-infrastructure-llvm/#fn:11" class="footnote-ref" role="doc-noteref">11</a></sup></p>
+Registry</a>. <sup id="fnref:11"><a href="#fn:11" class="footnote-ref" role="doc-noteref">11</a></sup></p>
 <p>This allows you (and anyone else if the package is public or shared) to have a
 &ldquo;one-click&rdquo; experience of deploying your entire platform API to any Crossplane
 cluster in a repeatable way. Once again, this has limited value if you are
 running a single cluster for your internal control plane, but if you have any
-intention of sharing, it can be very powerful. <sup id="fnref:12"><a href="posts/crossplane-infrastructure-llvm/#fn:12" class="footnote-ref" role="doc-noteref">12</a></sup></p>
-<h3 id="crossplane-as-a-cluster-api-backend">Crossplane as a Cluster API Backend</h3>
+intention of sharing, it can be very powerful. <sup id="fnref:12"><a href="#fn:12" class="footnote-ref" role="doc-noteref">12</a></sup></p>
+<h3 id="crossplane-as-a-cluster-api-backend">
+  Crossplane as a Cluster API Backend
+  <a class="heading-link" href="#crossplane-as-a-cluster-api-backend">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
 <p>I think up until this point we have done an admirable job of showing how
 Crossplane can provide value to an organization that wishes to allow developers
 to self-service their infrastructure without making their environments the wild
@@ -525,7 +598,7 @@ have a lot of similarities with Crossplane providers:
 <a href="https://github.com/kubernetes-sigs/cluster-api-provider-gcp">cluster-api-provider-gcp</a>,
 <a href="https://github.com/kubernetes-sigs/cluster-api-provider-aws">cluster-api-provider-aws</a>,
 and so on. Each of these providers supplies concrete implementations of the
-abstract types required by core CAPI. <sup id="fnref:13"><a href="posts/crossplane-infrastructure-llvm/#fn:13" class="footnote-ref" role="doc-noteref">13</a></sup> For instance, core CAPI has a
+abstract types required by core CAPI. <sup id="fnref:13"><a href="#fn:13" class="footnote-ref" role="doc-noteref">13</a></sup> For instance, core CAPI has a
 <a href="https://doc.crds.dev/github.com/kubernetes-sigs/cluster-api/cluster.x-k8s.io/Cluster/v1alpha3@v0.3.13">Cluster</a>
 type, which references a concrete provider implementation <a href="https://doc.crds.dev/github.com/kubernetes-sigs/cluster-api/cluster.x-k8s.io/Cluster/v1alpha3@v0.3.13#spec-infrastructureRef">in its
 <code>spec.infrastructureRef</code></a>.
@@ -536,7 +609,7 @@ controller</a>
 that sets up all of the infrastructure required to run Kubernetes on GCP, other
 than the nodes (which are handled by the <code>GCPMachine</code> / <code>GCPMachineTemplate</code>
 types and their corresponding controllers). The list of infrastructure resources
-managed by the <code>GCPCluster</code> controller includes<sup id="fnref:14"><a href="posts/crossplane-infrastructure-llvm/#fn:14" class="footnote-ref" role="doc-noteref">14</a></sup>:</p>
+managed by the <code>GCPCluster</code> controller includes<sup id="fnref:14"><a href="#fn:14" class="footnote-ref" role="doc-noteref">14</a></sup>:</p>
 <ul>
 <li><code>Network</code></li>
 <li><code>Router</code></li>
@@ -583,7 +656,13 @@ to define infrastructure using the declarative Kubernetes API. The CAPI,
 Crossplane, and various provider-specific communities have all done a lot of
 work to this end, but the longer we stay fragmented, the more duplicate work we
 will perform.</p>
-<h3 id="werent-we-talking-about-llvm">Weren&rsquo;t We Talking About LLVM?</h3>
+<h3 id="werent-we-talking-about-llvm">
+  Weren&rsquo;t We Talking About LLVM?
+  <a class="heading-link" href="#werent-we-talking-about-llvm">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
 <p>Ah yes, sorry about that, this post is supposed to be about Crossplane <em>and</em>
 LLVM. You may already see where we are going. We described Crossplane as a
 &ldquo;backend&rdquo; for Cluster API, but really Crossplane itself is the customizable
@@ -592,7 +671,7 @@ infrastructure APIs, similar to the LLVM backends the target different ISAs.
 LLVM provides a more friendly interface to compute resources &ndash; CPU, memory,
 etc. &ndash; for its compiler frontends, while Crossplane provides a friendly
 interface to cloud infrastructure.</p>
-<p><img src="../static/cross_llvm_5.png" alt="cross-llvm-5"></p>
+<p><img src="../../static/cross_llvm_5.png" alt="cross-llvm-5"></p>
 <p>In the example above, CAPI, and operators for <a href="https://kafka.apache.org/">Kafka</a>
 and <a href="https://about.sourcegraph.com/">Sourcegraph</a>, are deploying distributed
 systems that require infrastructure. They all can run on various cloud
@@ -603,7 +682,13 @@ something like
 backend for deploying something like
 <a href="https://github.com/bitnami/charts/tree/master/bitnami/kafka/">Kafka</a> on
 Kubernetes.</p>
-<h3 id="closing-thoughts">Closing Thoughts</h3>
+<h3 id="closing-thoughts">
+  Closing Thoughts
+  <a class="heading-link" href="#closing-thoughts">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
 <p>As you can tell from my endless droning on, I am very excited about this
 direction for the cloud-native community. While I paint a rosy picture, there is
 still quite a lot of work to be done, but I can say for certain that I, and
@@ -614,73 +699,97 @@ adoption</a>.
 Any future work will be standing on the shoulders of giants.</p>
 <p>Send me a message <a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter for any
 questions or comments!</p>
-<section class="footnotes" role="doc-endnotes">
+<div class="footnotes" role="doc-endnotes">
 <hr>
 <ol>
-<li id="fn:1" role="doc-endnote">
-<p>I&rsquo;m allowed to say snarky stuff like this because I helped write it. <a href="posts/crossplane-infrastructure-llvm/#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<li id="fn:1">
+<p>I&rsquo;m allowed to say snarky stuff like this because I helped write it.&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:2" role="doc-endnote">
-<p>I had too much coffee this morning and now I&rsquo;m just getting carried away. <a href="posts/crossplane-infrastructure-llvm/#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<li id="fn:2">
+<p>I had too much coffee this morning and now I&rsquo;m just getting carried away.&#160;<a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:3" role="doc-endnote">
-<p>Once again, I am calling myself out here as we have really taken this extension mechanism to its logical conclusion by shoving <a href="https://doc.crds.dev/github.com/crossplane/provider-aws">a lot</a> of CRDs into your cluster. <a href="posts/crossplane-infrastructure-llvm/#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<li id="fn:3">
+<p>Once again, I am calling myself out here as we have really taken this extension mechanism to its logical conclusion by shoving <a href="https://doc.crds.dev/github.com/crossplane/provider-aws">a lot</a> of CRDs into your cluster.&#160;<a href="#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:4" role="doc-endnote">
-<p>Please read this <a href="https://blog.crossplane.io/crossplane-vs-cloud-infrastructure-addons/">wonderful post</a> by fellow Crossplane maintainer <a href="https://twitter.com/internegz">Nic Cope</a> before you commence yelling at me. <a href="posts/crossplane-infrastructure-llvm/#fnref:4" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<li id="fn:4">
+<p>Please read this <a href="https://blog.crossplane.io/crossplane-vs-cloud-infrastructure-addons/">wonderful post</a> by fellow Crossplane maintainer <a href="https://twitter.com/internegz">Nic Cope</a> before you commence yelling at me.&#160;<a href="#fnref:4" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:5" role="doc-endnote">
-<p>This was my job title once and I still don&rsquo;t know what it means &ndash; yet here I am using it in a blog post that I proclaim contains valuable information. Life comes at you fast. <a href="posts/crossplane-infrastructure-llvm/#fnref:5" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<li id="fn:5">
+<p>This was my job title once and I still don&rsquo;t know what it means &ndash; yet here I am using it in a blog post that I proclaim contains valuable information. Life comes at you fast.&#160;<a href="#fnref:5" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:6" role="doc-endnote">
-<p>There I go again, using words that don&rsquo;t mean anything. <a href="posts/crossplane-infrastructure-llvm/#fnref:6" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<li id="fn:6">
+<p>There I go again, using words that don&rsquo;t mean anything.&#160;<a href="#fnref:6" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:7" role="doc-endnote">
-<p>Read more about moving the level of permissioning to the level of abstraction in this other <a href="https://blog.crossplane.io/crossplane-vs-terraform/">terrific post</a> by <a href="https://twitter.com/internegz">Nic</a>. Also, if you are familiar with <a href="https://www.openpolicyagent.org/">Open Policy Agent</a> your mind is probably already going to some wild places. <a href="posts/crossplane-infrastructure-llvm/#fnref:7" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<li id="fn:7">
+<p>Read more about moving the level of permissioning to the level of abstraction in this other <a href="https://blog.crossplane.io/crossplane-vs-terraform/">terrific post</a> by <a href="https://twitter.com/internegz">Nic</a>. Also, if you are familiar with <a href="https://www.openpolicyagent.org/">Open Policy Agent</a> your mind is probably already going to some wild places.&#160;<a href="#fnref:7" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:8" role="doc-endnote">
-<p>Update: the day has progressed, the coffee is wearing off, and sarcasm levels are rising. <a href="posts/crossplane-infrastructure-llvm/#fnref:8" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<li id="fn:8">
+<p>Update: the day has progressed, the coffee is wearing off, and sarcasm levels are rising.&#160;<a href="#fnref:8" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:9" role="doc-endnote">
-<p>This feature is another reason to have cluster-scoped managed resources &ndash; okay, you can continue yelling at me now. <a href="posts/crossplane-infrastructure-llvm/#fnref:9" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<li id="fn:9">
+<p>This feature is another reason to have cluster-scoped managed resources &ndash; okay, you can continue yelling at me now.&#160;<a href="#fnref:9" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:10" role="doc-endnote">
-<p>Apologies for burying the lede here. Also, did you know that it is spelled &ldquo;lede&rdquo; when you say &ldquo;burying the lede&rdquo;? I sure didn&rsquo;t. Or maybe it isn&rsquo;t spelled &ldquo;lede&rdquo; and &ldquo;lead&rdquo; is actually correct. I really don&rsquo;t know at this point, <a href="https://www.merriam-webster.com/words-at-play/bury-the-lede-versus-lead">you decide</a>. <a href="posts/crossplane-infrastructure-llvm/#fnref:10" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<li id="fn:10">
+<p>Apologies for burying the lede here. Also, did you know that it is spelled &ldquo;lede&rdquo; when you say &ldquo;burying the lede&rdquo;? I sure didn&rsquo;t. Or maybe it isn&rsquo;t spelled &ldquo;lede&rdquo; and &ldquo;lead&rdquo; is actually correct. I really don&rsquo;t know at this point, <a href="https://www.merriam-webster.com/words-at-play/bury-the-lede-versus-lead">you decide</a>.&#160;<a href="#fnref:10" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:11" role="doc-endnote">
-<p>The Upound Registry provides some additional functionality for indexing Crossplane packages over any vanilla image registry, plus I work for Upbound so I am basically required by law to shill for it. There are some real benefits, but you can also use other registries if you please. <a href="posts/crossplane-infrastructure-llvm/#fnref:11" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<li id="fn:11">
+<p>The Upound Registry provides some additional functionality for indexing Crossplane packages over any vanilla image registry, plus I work for Upbound so I am basically required by law to shill for it. There are some real benefits, but you can also use other registries if you please.&#160;<a href="#fnref:11" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:12" role="doc-endnote">
-<p>I promise the moment of truth is coming. <a href="posts/crossplane-infrastructure-llvm/#fnref:12" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<li id="fn:12">
+<p>I promise the moment of truth is coming.&#160;<a href="#fnref:12" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:13" role="doc-endnote">
-<p>Hmm, this sounds familiar. <a href="posts/crossplane-infrastructure-llvm/#fnref:13" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<li id="fn:13">
+<p>Hmm, this sounds familiar.&#160;<a href="#fnref:13" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
-<li id="fn:14" role="doc-endnote">
-<p>You can see more detail and relevant controller links in <a href="https://github.com/crossplane/provider-gcp/issues/303">this issue</a>. <a href="posts/crossplane-infrastructure-llvm/#fnref:14" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+<li id="fn:14">
+<p>You can see more detail and relevant controller links in <a href="https://github.com/crossplane/provider-gcp/issues/303">this issue</a>.&#160;<a href="#fnref:14" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
 </li>
 </ol>
-</section>
-
-  </article>
-
-  <br/>
-
-  
-  
-</section>
+</div>
 
       </div>
 
-      <footer class="footer">
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
   <section class="container">
-     © 2022  
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
   </section>
 </footer>
 
-    </main>
+  </main>
 
-    
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
 <script type="application/javascript">
 var doNotTrack = false;
 if (!doNotTrack) {
@@ -694,7 +803,19 @@ if (!doNotTrack) {
 }
 </script>
 
+  
 
-  </body>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
 
 </html>
