@@ -6,7 +6,16 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 27 Dec 2022 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 16 Jan 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Welcome to Kubernetes API Server Adventures</title>
+      <link>https://danielmangum.com/posts/k8s-asa-welcome/</link>
+      <pubDate>Mon, 16 Jan 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/k8s-asa-welcome/</guid>
+      <description>Kubernetes is comprised of a variety of components, yet most end-user interaction with the system flows through the API Server. It is the entrypoint to many of the features that the project has built up over its lifetime, and can be extended to support arbitrary additional functionality. Because of this, the API Server has proved to be a bottleneck in some cases that it was not originally designed to accommodate, or at least accommodate well.</description>
+    </item>
+    
     <item>
       <title>RISC-V Bytes: Timer Interrupts</title>
       <link>https://danielmangum.com/posts/risc-v-bytes-timer-interrupts/</link>
