@@ -6,7 +6,18 @@
     <description>Recent content in Kubernetes API Server Adventures on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 16 Jan 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/categories/kubernetes-api-server-adventures/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 23 Jan 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/categories/kubernetes-api-server-adventures/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>K8s ASA: The Storage Interface</title>
+      <link>https://danielmangum.com/posts/k8s-asa-the-storage-interface/</link>
+      <pubDate>Mon, 23 Jan 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/k8s-asa-the-storage-interface/</guid>
+      <description>Like most API servers, a, if not the, primary function of the Kubernetes API Server is to ingest data, store it, then return it when requested. Today we are going to be focusing on how the API Server stores data.
+Table of Contents:
+The apiserver Module (👈 &amp;ldquo;I want all the details.&amp;rdquo;) The storage Package Our Good Friend etcd The API Server and etcd Calling storage.Interface Directly (👈 &amp;ldquo;Can we skip the background info?</description>
+    </item>
+    
     <item>
       <title>Welcome to Kubernetes API Server Adventures</title>
       <link>https://danielmangum.com/posts/k8s-asa-welcome/</link>

@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  K8s ASA: The Storage Interface · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="Like most API servers, a, if not the, primary function of the Kubernetes API Server is to ingest data, store it, then return it when requested. Today we are going to be focusing on how the API Server stores data.
+Table of Contents:
+The apiserver Module (👈 &ldquo;I want all the details.&rdquo;) The storage Package Our Good Friend etcd The API Server and etcd Calling storage.Interface Directly (👈 &ldquo;Can we skip the background info?">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="K8s ASA: The Storage Interface"/>
+<meta name="twitter:description" content="Like most API servers, a, if not the, primary function of the Kubernetes API Server is to ingest data, store it, then return it when requested. Today we are going to be focusing on how the API Server stores data.
+Table of Contents:
+The apiserver Module (👈 &ldquo;I want all the details.&rdquo;) The storage Package Our Good Friend etcd The API Server and etcd Calling storage.Interface Directly (👈 &ldquo;Can we skip the background info?"/>
+
+<meta property="og:title" content="K8s ASA: The Storage Interface" />
+<meta property="og:description" content="Like most API servers, a, if not the, primary function of the Kubernetes API Server is to ingest data, store it, then return it when requested. Today we are going to be focusing on how the API Server stores data.
+Table of Contents:
+The apiserver Module (👈 &ldquo;I want all the details.&rdquo;) The storage Package Our Good Friend etcd The API Server and etcd Calling storage.Interface Directly (👈 &ldquo;Can we skip the background info?" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/k8s-asa-the-storage-interface/" /><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-01-23T00:10:34-06:00" />
+<meta property="article:modified_time" content="2023-01-23T00:10:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/k8s-asa-the-storage-interface/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.109.0">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/k8s-asa-the-storage-interface/">
+              K8s ASA: The Storage Interface
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2023-01-23T00:10:34-06:00">
+                January 23, 2023
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              26-minute read
+            </span>
+          </div>
+          
+          <div class="categories">
+  <i class="fa fa-folder" aria-hidden="true"></i>
+    <a href="https://danielmangum.com/categories/kubernetes-api-server-adventures/">Kubernetes API Server Adventures</a></div>
+
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>Like most API servers, a, if not the, primary function of the Kubernetes API Server is to ingest data, store it, then return it when requested. Today we are going to be focusing on how the API Server stores data.</p>
+<p><img src="../../static/k8s-asa-storage-interface.png" alt="cover-image"></p>
+<p>Table of Contents:</p>
+<ul>
+<li><a href="#the-apiserver-module">The <code>apiserver</code> Module</a> (👈 &ldquo;I want all the details.&rdquo;)</li>
+<li><a href="#the-storage-package">The <code>storage</code> Package</a></li>
+<li><a href="#our-good-friend-etcd">Our Good Friend <code>etcd</code></a></li>
+<li><a href="#the-api-server-and-etcd">The API Server and <code>etcd</code></a></li>
+<li><a href="#calling-the-storageinterface-directly">Calling <code>storage.Interface</code> Directly</a> (👈 &ldquo;Can we skip the background info?&rdquo;)
+<ul>
+<li><a href="#devising-a-runtimescheme">Devising a <code>runtime.Scheme</code></a></li>
+<li><a href="#encoding-and-decoding">Encoding and Decoding</a></li>
+<li><a href="#undergoing-transformation">Undergoing Transformation</a></li>
+<li><a href="#finding-our-configmap">Finding Our <code>ConfigMap</code></a> (👈 &ldquo;I am a busy person.&rdquo;)</li>
+</ul>
+</li>
+<li><a href="#closing-thoughts">Closing Thoughts</a></li>
+</ul>
+<h2 id="the-apiserver-module">
+  The <code>apiserver</code> Module
+  <a class="heading-link" href="#the-apiserver-module">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>For the first few posts in this series, we are going to be focusing on a single module in the Kubernetes code base. The <a href="https://github.com/kubernetes/kubernetes/tree/master/staging/src/k8s.io/apiserver"><code>apiserver</code> module</a> is a self-described <a href="https://github.com/kubernetes/kubernetes/tree/master/staging/src/k8s.io/apiserver#apiserver">&ldquo;generic library for building a Kubernetes aggregated API server.&rdquo;</a> It includes a set of packages that provide generic<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup> functionality that you would expect for an API server: <code>audit</code>, <code>authentication</code>, <code>authorization</code>, and more. Some of these packages nest additional packages, following the familiar pattern of offering an interface, then one or more concrete implementations of the interface. One such example is the <a href="https://github.com/kubernetes/kubernetes/tree/master/staging/src/k8s.io/apiserver/pkg/storage"><code>storage</code> package</a>.</p>
+<h2 id="the-storage-package">
+  The <code>storage</code> Package
+  <a class="heading-link" href="#the-storage-package">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>The <code>storage</code> package is, well, for storing data. Or if you want to be more formal about it, provides <a href="https://github.com/kubernetes/kubernetes/blob/3154010eec3488dd64110e3ca6c4ba0b5ac61310/staging/src/k8s.io/apiserver/pkg/storage/doc.go#L17">&ldquo;interfaces for database-related operations.&rdquo;</a> At the center of the aforementioned interfaces is <a href="https://github.com/kubernetes/kubernetes/blob/3154010eec3488dd64110e3ca6c4ba0b5ac61310/staging/src/k8s.io/apiserver/pkg/storage/interfaces.go#L159"><code>storage.Interface</code></a>, which &ldquo;hides all the storage-related operations behind it.&rdquo; For being such a foundational component in the layers of the API Server, the interface is really quite straightforward, exposing only 8 methods, mostly for operations that would be expected for storage and retrieval. These methods include:</p>
+<hr>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>Versioner() Versioner
+</span></span></code></pre></div><p><code>Versioner</code> is an accessor method that returns an implementation of the <a href="https://github.com/kubernetes/kubernetes/blob/3154010eec3488dd64110e3ca6c4ba0b5ac61310/staging/src/k8s.io/apiserver/pkg/storage/interfaces.go#L38"><code>Versioner</code> interface</a>, also provided by the <code>storage</code> package, used to abstract the versioning of resources when modified.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>Create(ctx context.Context, key <span style="color:#fff;font-weight:bold">string</span>, obj, out runtime.Object, ttl <span style="color:#fff;font-weight:bold">uint64</span>) <span style="color:#fff;font-weight:bold">error</span>
+</span></span></code></pre></div><p><code>Create</code> is responsible for adding data in the form of a <code>runtime.Object</code> to the underlying storage implementation with the provided <code>key</code>. It supports setting a &ldquo;time to live&rdquo; (<code>ttl</code>) if the data for the <code>key</code> should be expired after some period, and allows for passing a separate <code>runtime.Object</code> (<code>out</code>) that should be used to represent the object&rsquo;s state after being prepared and stored.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>Delete(ctx context.Context, key <span style="color:#fff;font-weight:bold">string</span>, out runtime.Object, preconditions *Preconditions, validateDeletion ValidateObjectFunc, cachedExistingObject runtime.Object) <span style="color:#fff;font-weight:bold">error</span>
+</span></span></code></pre></div><p><code>Delete</code> is responsible for removing data at the given <code>key</code>, and returning the data in the form of a <code>runtime.Object</code>. It allows setting <code>preconditions</code> that must be met for the operation to be successful (object <code>UUID</code> and <code>ResourceVersion</code> may be supplied), as well as an object validation function (<code>validateDeletion</code>). The latter is a simple hook in the form of <code>func(ctx context.Context, obj runtime.Object) error</code> that should return an error if the resource is invalid. The last supplied argument, <code>cachedExistingObject</code>, can be used to optimize the deletion flow in the event that the state of the desired version of the object to be deleted is already known. As you may have already guessed, if the version of the cached object does not match the <code>ResourceVersion</code> in the <code>preconditions</code>, or we fail validation, it could be due to the cached object being stale, in which case we will need to fetch a fresh version before attempting again<sup id="fnref:2"><a href="#fn:2" class="footnote-ref" role="doc-noteref">2</a></sup>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>Watch(ctx context.Context, key <span style="color:#fff;font-weight:bold">string</span>, opts ListOptions) (watch.Interface, <span style="color:#fff;font-weight:bold">error</span>)
+</span></span></code></pre></div><p><code>Watch</code> returns a <a href="https://github.com/kubernetes/kubernetes/blob/7f8be71148f5461df9ae61b011c732d0ba2f551c/staging/src/k8s.io/apimachinery/pkg/watch/watch.go#L29"><code>watch.Interface</code></a> that enables observing changes to the data at the provided <code>key</code> over a period of time. The <code>watch</code> interface is a simple, but powerful abstraction, supporting only two operations (<code>ResultChan() &lt;-chan Event</code> and <code>Stop()</code>) that offer a high degree of leeway to the implementation. However, the <code>ListOptions</code>, which allow specifying the resource version at which to start the watch, among other things, leak a bit of the underlying implementation with options like <code>Recursive bool</code>, which indicate that the provided <code>key</code> is a prefix and all objects that match should be included in the watch. If you have ever provided the <code>-w</code> (&ldquo;watch&rdquo;) flag when performing a <code>kubectl</code> command, especially if you have tried to watch across multiple types, you may have seen a response like <code>error: you may only specify a single resource type</code>. This is an example of the underling storage engine and the organization of the data within it flowing through to the end-user experience.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>Get(ctx context.Context, key <span style="color:#fff;font-weight:bold">string</span>, opts GetOptions, objPtr runtime.Object) <span style="color:#fff;font-weight:bold">error</span>
+</span></span></code></pre></div><p><code>Get</code> retrieves data at the given <code>key</code> and returns it in the <code>objPtr</code>. Options allow for ignoring errors related to the <code>key</code> not being found, as well as specifying constraints on the resource version of the object to be fetched.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>GetList(ctx context.Context, key <span style="color:#fff;font-weight:bold">string</span>, opts ListOptions, listObj runtime.Object) <span style="color:#fff;font-weight:bold">error</span>
+</span></span></code></pre></div><p><code>GetList</code> is quite similar to <code>Watch</code>, accepting the same set of options. However, instead of providing an interface to receive updates on matching resources, it simply returns them in a list object.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>GuaranteedUpdate(ctx context.Context, key <span style="color:#fff;font-weight:bold">string</span>, destination runtime.Object, ignoreNotFound <span style="color:#fff;font-weight:bold">bool</span>, preconditions *Preconditions, tryUpdate UpdateFunc, cachedExistingObject runtime.Object) <span style="color:#fff;font-weight:bold">error</span>
+</span></span></code></pre></div><p><code>GuaranteedUpdate</code> is similar to <code>Delete</code> but is slightly more complex in that it accepts a caller-defined <code>UpdateFunc</code> in the form of <code>func(input runtime.Object, res ResponseMeta) (output runtime.Object, ttl *uint64, err error)</code>. This function is called repeatedly after preconditions are checked, retrying any failures to store the modified object. However, <code>tryUpdate</code> can also choose to exit the loop by returning an error. Updating in this fashion allows for more resilient and flexible update operations as the caller has more leeway to define whether a given state should result in conflict or not<sup id="fnref:3"><a href="#fn:3" class="footnote-ref" role="doc-noteref">3</a></sup>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>Count(key <span style="color:#fff;font-weight:bold">string</span>) (<span style="color:#fff;font-weight:bold">int64</span>, <span style="color:#fff;font-weight:bold">error</span>)
+</span></span></code></pre></div><p><code>Count</code> is the simplest method exposed, returning the number of objects for the provided <code>key</code>. The <code>key</code> provided is frequently a prefix, but unlike some of the other methods, the caller does not have to explicitly define that it is.</p>
+<hr>
+<p>Though we haven&rsquo;t ventured into any of the handlers for the Kubernetes API endpoints we are all familiar with, we can already see how some of the <code>kubectl</code> commands we run or <code>client-go</code> methods we call could map to performing these storage operations behind the scenes. However, while the <code>storage</code> interface tells us how we can interact with a storage solution, it doesn&rsquo;t tell us anything about how the data we pass through is actually persisted.</p>
+<h2 id="our-good-friend-etcd">
+  Our Good Friend <code>etcd</code>
+  <a class="heading-link" href="#our-good-friend-etcd">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>Before we go any further, I have to recommend that you go and read <a href="https://www.mgasch.com/">Michael Gasch&rsquo;s</a> wonderful <a href="https://www.mgasch.com/2021/01/listwatch-part-1/">post on <code>etcd</code> internals</a>. Because of Michael&rsquo;s thorough write-up, we can mostly focus on how Kubernetes interacts with <a href="https://etcd.io/"><code>etcd</code></a>, rather than going into detail on exactly what is happening when we read and write to our key-value store<sup id="fnref:4"><a href="#fn:4" class="footnote-ref" role="doc-noteref">4</a></sup>.</p>
+<p>While the <code>storage.Interface</code> we outlined above is not strictly coupled to <code>etcd</code>, you&rsquo;ll notice a high degree of similarity between the <a href="https://grpc.io/">gRPC</a> API exposed by <code>etcd</code> and the interface&rsquo;s methods. So much so, that the <a href="https://github.com/kubernetes/kubernetes/blob/2fba771792023756b539501cdabdb19a32bb9536/staging/src/k8s.io/apiserver/pkg/storage/etcd3/store.go#L74"><code>etcd</code> implementation</a> is relatively lightweight. To get a sense of how <code>etcd</code> works, we can download the latest release along with <code>etcdctl</code>, the official CLI.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ ETCD_VER=v3.5.6
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ curl -L https://github.com/etcd-io/etcd/releases/download/${ETCD_VER}/etcd-${ETCD_VER}-linux-amd64.tar.gz -o /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz
+</span></span><span style="display:flex;"><span>$ tar xzvf /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz etcd-v3.5.6-linux-amd64/etcd etcd-v3.5.6-linux-amd64/etcdctl --strip-components=1
+</span></span><span style="display:flex;"><span>$ rm -f /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz
+</span></span></code></pre></div><blockquote>
+<p>NOTE: make sure to move <code>etcd</code> and <code>etcdctl</code> to a directory in your <code>PATH</code>.</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ etcd --version
+</span></span><span style="display:flex;"><span>etcd Version: 3.5.6
+</span></span><span style="display:flex;"><span>Git SHA: cecbe35ce
+</span></span><span style="display:flex;"><span>Go Version: go1.16.15
+</span></span><span style="display:flex;"><span>Go OS/Arch: linux/amd64
+</span></span></code></pre></div><p>If we spin up <code>etcd</code> in the background we can start performing operations with <code>etcdctl</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ etcd &gt; /dev/null 2&gt;&amp;1 &amp;
+</span></span><span style="display:flex;"><span>[1] 442084
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ etcdctl member list
+</span></span><span style="display:flex;"><span>8e9e05c52164694d, started, default, http://localhost:2380, http://localhost:2379, false
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ etcdctl get &#34;&#34; --prefix
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ etcdctl put hello world
+</span></span><span style="display:flex;"><span>OK
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ etcdctl get hello
+</span></span><span style="display:flex;"><span>hello
+</span></span><span style="display:flex;"><span>world
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ etcdctl put well hi
+</span></span><span style="display:flex;"><span>OK
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ etcdctl get &#34;&#34; --prefix
+</span></span><span style="display:flex;"><span>hello
+</span></span><span style="display:flex;"><span>world
+</span></span><span style="display:flex;"><span>well
+</span></span><span style="display:flex;"><span>hi
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ etcd del hello
+</span></span><span style="display:flex;"><span>1
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ etcdctl get &#34;&#34; --prefix
+</span></span><span style="display:flex;"><span>well
+</span></span><span style="display:flex;"><span>hi
+</span></span></code></pre></div><p>With just a few commands, we can see the basics of the <code>Create</code>, <code>Delete</code>, <code>Get</code>, and <code>GetList</code>. We can also open up a new terminal and watch for changes on a given prefix.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span># terminal 1
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ etcdctl watch &#34;&#34; --prefix
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span># terminal 2
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ etcdctl put isee you
+</span></span><span style="display:flex;"><span>OK
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span># terminal 1
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ etcdctl watch &#34;&#34; --prefix
+</span></span><span style="display:flex;"><span>PUT
+</span></span><span style="display:flex;"><span>isee
+</span></span><span style="display:flex;"><span>you
+</span></span></code></pre></div><p>We can round out our investigation before moving on to the API Server by getting the count of keys under a given prefix.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ etcdctl get &#34;&#34; --prefix --count-only --write-out fields
+</span></span><span style="display:flex;"><span>&#34;ClusterID&#34; : 14841639068965178418
+</span></span><span style="display:flex;"><span>&#34;MemberID&#34; : 10276657743932975437
+</span></span><span style="display:flex;"><span>&#34;Revision&#34; : 5
+</span></span><span style="display:flex;"><span>&#34;RaftTerm&#34; : 6
+</span></span><span style="display:flex;"><span>&#34;More&#34; : false
+</span></span><span style="display:flex;"><span>&#34;Count&#34; : 2
+</span></span></code></pre></div><p>Make sure to shut down <code>etcd</code> before continuing.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ jobs
+</span></span><span style="display:flex;"><span>[1]+  Running                 etcd &gt; /dev/null 2&gt;&amp;1 &amp;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ kill %1
+</span></span></code></pre></div><h2 id="the-api-server-and-etcd">
+  The API Server and <code>etcd</code>
+  <a class="heading-link" href="#the-api-server-and-etcd">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>One of the quickest ways to see how Kubernetes interacts with <code>etcd</code> is by spinning up a <a href="https://kind.sigs.k8s.io/"><code>kind</code></a> cluster and interacting with <code>etcd</code> while the API Server is communicating with it.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ kind create cluster
+</span></span></code></pre></div><p>When your cluster is up and running, you should see your single node running as a container.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ docker container ls
+</span></span><span style="display:flex;"><span>CONTAINER ID   IMAGE                  COMMAND                  CREATED              STATUS              PORTS                       NAMES
+</span></span><span style="display:flex;"><span>d5ec8483dd79   kindest/node:v1.25.3   &#34;/usr/local/bin/entr…&#34;   About a minute ago   Up About a minute   127.0.0.1:34285-&gt;6443/tcp   kind-control-plane
+</span></span></code></pre></div><p>If we exec into the container we can take a look at Kubernetes components in action.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ docker exec -it kind-control-plane /bin/bash
+</span></span><span style="display:flex;"><span>root@kind-control-plane:/#
+</span></span></code></pre></div><p>Using <a href="https://man7.org/linux/man-pages/man1/top.1.html"><code>top</code></a> we see that usual suspects are all there: <code>kube-controller</code>, <code>kube-apiserver</code>, <code>kube-scheduler</code>, <code>etcd</code>, etc.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>root@kind-control-plane:/# top -b -n 1
+</span></span><span style="display:flex;"><span>top - 02:53:43 up 3 days,  6:13,  0 users,  load average: 1.50, 2.11, 1.73
+</span></span><span style="display:flex;"><span>Tasks:  33 total,   1 running,  32 sleeping,   0 stopped,   0 zombie
+</span></span><span style="display:flex;"><span>%Cpu(s):  5.3 us,  3.2 sy,  0.0 ni, 90.0 id,  0.0 wa,  0.0 hi,  1.6 si,  0.0 st
+</span></span><span style="display:flex;"><span>MiB Mem :  15650.6 total,    487.8 free,   8350.3 used,   6812.5 buff/cache
+</span></span><span style="display:flex;"><span>MiB Swap:    980.0 total,    446.4 free,    533.6 used.   4547.0 avail Mem 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+</span></span><span style="display:flex;"><span>    624 root      20   0  773984  86460  46600 S   6.7   0.5   0:45.27 kube-controller
+</span></span><span style="display:flex;"><span>    634 root      20   0 1061468 317036  57176 S   6.7   2.0   1:37.29 kube-apiserver
+</span></span><span style="display:flex;"><span>    640 root      20   0  761668  48252  32684 S   6.7   0.3   0:08.51 kube-scheduler
+</span></span><span style="display:flex;"><span>    742 root      20   0   10.7g  47092  18844 S   6.7   0.3   0:55.33 etcd
+</span></span><span style="display:flex;"><span>      1 root      20   0   19564  12572   8248 S   0.0   0.1   0:00.75 systemd
+</span></span><span style="display:flex;"><span>    206 root      19  -1   23140  10652   9720 S   0.0   0.1   0:00.10 systemd-journal
+</span></span><span style="display:flex;"><span>    219 root      20   0 2826620  61292  34524 S   0.0   0.4   0:19.46 containerd
+</span></span><span style="display:flex;"><span>    392 root      20   0  712476  10900   7868 S   0.0   0.1   0:00.59 containerd-shim
+</span></span><span style="display:flex;"><span>    419 root      20   0  712476  10188   7676 S   0.0   0.1   0:00.65 containerd-shim
+</span></span><span style="display:flex;"><span>    438 root      20   0  712220  10340   7932 S   0.0   0.1   0:00.61 containerd-shim
+</span></span><span style="display:flex;"><span>    472 root      20   0  712476  11112   8228 S   0.0   0.1   0:00.60 containerd-shim
+</span></span><span style="display:flex;"><span>    494 65535     20   0     988      4      0 S   0.0   0.0   0:00.02 pause
+</span></span><span style="display:flex;"><span>    504 65535     20   0     988      4      0 S   0.0   0.0   0:00.02 pause
+</span></span><span style="display:flex;"><span>    511 65535     20   0     988      4      0 S   0.0   0.0   0:00.01 pause
+</span></span><span style="display:flex;"><span>    520 65535     20   0     988      4      0 S   0.0   0.0   0:00.01 pause
+</span></span><span style="display:flex;"><span>    806 root      20   0 2473840  85548  49088 S   0.0   0.5   0:59.64 kubelet
+</span></span><span style="display:flex;"><span>    973 root      20   0  712476  10488   8060 S   0.0   0.1   0:00.58 containerd-shim
+</span></span><span style="display:flex;"><span>    998 root      20   0  712220  10788   8244 S   0.0   0.1   0:00.59 containerd-shim
+</span></span><span style="display:flex;"><span>   1022 65535     20   0     988      4      0 S   0.0   0.0   0:00.03 pause
+</span></span><span style="display:flex;"><span>   1029 65535     20   0     988      4      0 S   0.0   0.0   0:00.03 pause
+</span></span><span style="display:flex;"><span>   1087 root      20   0  754980  36596  29032 S   0.0   0.2   0:00.59 kube-proxy
+</span></span><span style="display:flex;"><span>   1089 root      20   0  733024  24224  18136 S   0.0   0.2   0:00.68 kindnetd
+</span></span><span style="display:flex;"><span>   1358 root      20   0  712476  10324   7800 S   0.0   0.1   0:00.54 containerd-shim
+</span></span><span style="display:flex;"><span>   1359 root      20   0  712732  10572   8228 S   0.0   0.1   0:00.57 containerd-shim
+</span></span><span style="display:flex;"><span>   1402 65535     20   0     988      4      0 S   0.0   0.0   0:00.03 pause
+</span></span><span style="display:flex;"><span>   1410 65535     20   0     988      4      0 S   0.0   0.0   0:00.02 pause
+</span></span><span style="display:flex;"><span>   1466 root      20   0  712476  10184   7612 S   0.0   0.1   0:00.55 containerd-shim
+</span></span><span style="display:flex;"><span>   1491 65535     20   0     988      4      0 S   0.0   0.0   0:00.02 pause
+</span></span><span style="display:flex;"><span>   1543 root      20   0  754816  46016  33928 S   0.0   0.3   0:05.68 coredns
+</span></span><span style="display:flex;"><span>   1551 root      20   0  730964  23700  18072 S   0.0   0.1   0:01.09 local-path-prov
+</span></span><span style="display:flex;"><span>   1579 root      20   0  754816  45580  34120 S   0.0   0.3   0:05.57 coredns
+</span></span><span style="display:flex;"><span>   1912 root      20   0    4616   3780   3184 S   0.0   0.0   0:00.02 bash
+</span></span><span style="display:flex;"><span>   1948 root      20   0    7304   2940   2612 R   0.0   0.0   0:00.00 top
+</span></span></code></pre></div><p>Our goal today is to examine the communication between <code>kube-apiserver</code> and <code>etcd</code>. As we saw earlier, <code>etcdctl</code> is useful for querying and watching for changes. We can copy the tool onto our <code>kind</code> node to interact with our running <code>etcd</code> instance.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ docker cp /usr/local/bin/etcdctl kind-control-plane:/usr/local/bin/
+</span></span></code></pre></div><p>Back on the node we should see that <code>etcdctl</code> is now present.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ root@kind-control-plane:/# which etcdctl
+</span></span><span style="display:flex;"><span>/usr/local/bin/etcdctl
+</span></span></code></pre></div><p>However, if we try to connect to the <code>etcd</code> instance running as part of our Kubernetes cluster, we&rsquo;ll observe an error.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ root@kind-control-plane:/# etcdctl get &#34;&#34; --prefix
+</span></span><span style="display:flex;"><span>{&#34;level&#34;:&#34;warn&#34;,&#34;ts&#34;:&#34;2023-01-19T03:48:14.046Z&#34;,&#34;logger&#34;:&#34;etcd-client&#34;,&#34;caller&#34;:&#34;v3@v3.5.6/retry_interceptor.go:62&#34;,&#34;msg&#34;:&#34;retrying of unary invoker failed&#34;,&#34;target&#34;:&#34;etcd-endpoints://0xc0001b2000/127.0.0.1:2379&#34;,&#34;attempt&#34;:0,&#34;error&#34;:&#34;rpc error: code = DeadlineExceeded desc = latest balancer error: last connection error: connection closed before server preface received&#34;}
+</span></span><span style="display:flex;"><span>Error: context deadline exceeded
+</span></span></code></pre></div><p>Hmm, we know <code>kube-apiserver</code> is able to communicate with <code>etcd</code>, so let&rsquo;s looks at how it is configured.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ root@kind-control-plane:/# kubectl get pods -A
+</span></span><span style="display:flex;"><span>NAMESPACE            NAME                                         READY   STATUS    RESTARTS   AGE
+</span></span><span style="display:flex;"><span>kube-system          coredns-565d847f94-wdnpq                     1/1     Running   0          74m
+</span></span><span style="display:flex;"><span>kube-system          coredns-565d847f94-zcmx5                     1/1     Running   0          74m
+</span></span><span style="display:flex;"><span>kube-system          etcd-kind-control-plane                      1/1     Running   0          74m
+</span></span><span style="display:flex;"><span>kube-system          kindnet-kjx7c                                1/1     Running   0          74m
+</span></span><span style="display:flex;"><span>kube-system          kube-apiserver-kind-control-plane            1/1     Running   0          74m
+</span></span><span style="display:flex;"><span>kube-system          kube-controller-manager-kind-control-plane   1/1     Running   0          74m
+</span></span><span style="display:flex;"><span>kube-system          kube-proxy-tmhqp                             1/1     Running   0          74m
+</span></span><span style="display:flex;"><span>kube-system          kube-scheduler-kind-control-plane            1/1     Running   0          74m
+</span></span><span style="display:flex;"><span>local-path-storage   local-path-provisioner-684f458cdd-n6z9z      1/1     Running   0          74m
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ root@kind-control-plane:/# kubectl get pods -n kube-system kube-apiserver-kind-control-plane -o=jsonpath={.spec.containers[0].command} | jq . | grep etcd
+</span></span><span style="display:flex;"><span>  &#34;--etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--etcd-certfile=/etc/kubernetes/pki/apiserver-etcd-client.crt&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--etcd-keyfile=/etc/kubernetes/pki/apiserver-etcd-client.key&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--etcd-servers=https://127.0.0.1:2379&#34;,
+</span></span></code></pre></div><p>Though not explicitly communicated in the error we saw, a safe guess here is that <code>etcd</code> is requiring authentication to connect. We can use the same key and certificates the API Server is using.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ root@kind-control-plane:/# etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/apiserver-etcd-client.crt --key /etc/kubernetes/pki/apiserver-etcd-client.key get &#34;&#34; --prefix --keys-only --limit 5
+</span></span><span style="display:flex;"><span>/registry/apiregistration.k8s.io/apiservices/v1.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/registry/apiregistration.k8s.io/apiservices/v1.admissionregistration.k8s.io
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/registry/apiregistration.k8s.io/apiservices/v1.apiextensions.k8s.io
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/registry/apiregistration.k8s.io/apiservices/v1.apps
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/registry/apiregistration.k8s.io/apiservices/v1.authentication.k8s.io
+</span></span></code></pre></div><p>Now that we are able to connect, using the <code>&quot;&quot;</code> prefix allows us to view all of the keys present<sup id="fnref:5"><a href="#fn:5" class="footnote-ref" role="doc-noteref">5</a></sup> in our <code>etcd</code> instance. The first few keys we see indicate that we are looking at <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#apiservice-v1-apiregistration-k8s-io"><code>APIService</code></a> objects, which inform the API Server where the handlers for a given group are served. If we examine the value for one of these keys, we&rsquo;ll see data that looks a lot like what we get back when we run <code>kubectl get</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ root@kind-control-plane:/# etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/apiserver-etcd-client.crt --key /etc/kubernetes/pki/apiserver-etcd-client.key get /registry/apiregistration.k8s.io/apiservices/v1.apiextensions.k8s.io --print-value-only | jq .
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;kind&#34;: &#34;APIService&#34;,
+</span></span><span style="display:flex;"><span>  &#34;apiVersion&#34;: &#34;apiregistration.k8s.io/v1&#34;,
+</span></span><span style="display:flex;"><span>  &#34;metadata&#34;: {
+</span></span><span style="display:flex;"><span>    &#34;name&#34;: &#34;v1.apiextensions.k8s.io&#34;,
+</span></span><span style="display:flex;"><span>    &#34;uid&#34;: &#34;6e6f1ae3-7eb6-415e-9c40-d13f37d4c184&#34;,
+</span></span><span style="display:flex;"><span>    &#34;creationTimestamp&#34;: &#34;2023-01-22T16:28:14Z&#34;,
+</span></span><span style="display:flex;"><span>    &#34;labels&#34;: {
+</span></span><span style="display:flex;"><span>      &#34;kube-aggregator.kubernetes.io/automanaged&#34;: &#34;onstart&#34;
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    &#34;managedFields&#34;: [
+</span></span><span style="display:flex;"><span>      {
+</span></span><span style="display:flex;"><span>        &#34;manager&#34;: &#34;kube-apiserver&#34;,
+</span></span><span style="display:flex;"><span>        &#34;operation&#34;: &#34;Update&#34;,
+</span></span><span style="display:flex;"><span>        &#34;apiVersion&#34;: &#34;apiregistration.k8s.io/v1&#34;,
+</span></span><span style="display:flex;"><span>        &#34;time&#34;: &#34;2023-01-22T16:28:14Z&#34;,
+</span></span><span style="display:flex;"><span>        &#34;fieldsType&#34;: &#34;FieldsV1&#34;,
+</span></span><span style="display:flex;"><span>        &#34;fieldsV1&#34;: {
+</span></span><span style="display:flex;"><span>          &#34;f:metadata&#34;: {
+</span></span><span style="display:flex;"><span>            &#34;f:labels&#34;: {
+</span></span><span style="display:flex;"><span>              &#34;.&#34;: {},
+</span></span><span style="display:flex;"><span>              &#34;f:kube-aggregator.kubernetes.io/automanaged&#34;: {}
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>          },
+</span></span><span style="display:flex;"><span>          &#34;f:spec&#34;: {
+</span></span><span style="display:flex;"><span>            &#34;f:group&#34;: {},
+</span></span><span style="display:flex;"><span>            &#34;f:groupPriorityMinimum&#34;: {},
+</span></span><span style="display:flex;"><span>            &#34;f:version&#34;: {},
+</span></span><span style="display:flex;"><span>            &#34;f:versionPriority&#34;: {}
+</span></span><span style="display:flex;"><span>          }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>  &#34;spec&#34;: {
+</span></span><span style="display:flex;"><span>    &#34;group&#34;: &#34;apiextensions.k8s.io&#34;,
+</span></span><span style="display:flex;"><span>    &#34;version&#34;: &#34;v1&#34;,
+</span></span><span style="display:flex;"><span>    &#34;groupPriorityMinimum&#34;: 16700,
+</span></span><span style="display:flex;"><span>    &#34;versionPriority&#34;: 15
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>  &#34;status&#34;: {
+</span></span><span style="display:flex;"><span>    &#34;conditions&#34;: [
+</span></span><span style="display:flex;"><span>      {
+</span></span><span style="display:flex;"><span>        &#34;type&#34;: &#34;Available&#34;,
+</span></span><span style="display:flex;"><span>        &#34;status&#34;: &#34;True&#34;,
+</span></span><span style="display:flex;"><span>        &#34;lastTransitionTime&#34;: &#34;2023-01-22T16:28:14Z&#34;,
+</span></span><span style="display:flex;"><span>        &#34;reason&#34;: &#34;Local&#34;,
+</span></span><span style="display:flex;"><span>        &#34;message&#34;: &#34;Local APIServices are always available&#34;
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The format of the keys we have observed is <code>/registry/&lt;group&gt;/&lt;kind&gt;/&lt;metadata.name</code>. However, not all APIs are cluster-scoped like <code>APIService</code>. Let&rsquo;s take a look at <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#configmap-v1-core"><code>ConfigMap</code></a>, a namespace-scoped API.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ root@kind-control-plane:/# etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/apiserver-etcd-client.crt --key /etc/kubernetes/pki/apiserver-etcd-client.key get /registry/configmaps --prefix --keys-only
+</span></span><span style="display:flex;"><span>/registry/configmaps/default/kube-root-ca.crt
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/registry/configmaps/kube-node-lease/kube-root-ca.crt
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/registry/configmaps/kube-public/cluster-info
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/registry/configmaps/kube-public/kube-root-ca.crt
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/registry/configmaps/kube-system/coredns
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/registry/configmaps/kube-system/extension-apiserver-authentication
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/registry/configmaps/kube-system/kube-proxy
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/registry/configmaps/kube-system/kube-root-ca.crt
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/registry/configmaps/kube-system/kubeadm-config
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/registry/configmaps/kube-system/kubelet-config
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/registry/configmaps/local-path-storage/kube-root-ca.crt
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/registry/configmaps/local-path-storage/local-path-config
+</span></span></code></pre></div><p>Because <code>ConfigMap</code> is in the <code>core</code> API group, we don&rsquo;t see any <code>&lt;group&gt;</code> in the key name. However, we do see an additional element in the path: <code>&lt;namespace&gt;</code>. This brings our full format to <code>/registry/[&lt;group&gt;/]&lt;kind&gt;/[&lt;namespace&gt;/]/&lt;metadata.name&gt;</code>. If we were to list all of the <code>ConfigMap</code> objects in our cluster, we should see the same list.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ root@kind-control-plane:/# kubectl get configmaps -A
+</span></span><span style="display:flex;"><span>NAMESPACE            NAME                                 DATA   AGE
+</span></span><span style="display:flex;"><span>default              kube-root-ca.crt                     1      18m
+</span></span><span style="display:flex;"><span>kube-node-lease      kube-root-ca.crt                     1      18m
+</span></span><span style="display:flex;"><span>kube-public          cluster-info                         2      18m
+</span></span><span style="display:flex;"><span>kube-public          kube-root-ca.crt                     1      18m
+</span></span><span style="display:flex;"><span>kube-system          coredns                              1      18m
+</span></span><span style="display:flex;"><span>kube-system          extension-apiserver-authentication   6      18m
+</span></span><span style="display:flex;"><span>kube-system          kube-proxy                           2      18m
+</span></span><span style="display:flex;"><span>kube-system          kube-root-ca.crt                     1      18m
+</span></span><span style="display:flex;"><span>kube-system          kubeadm-config                       1      18m
+</span></span><span style="display:flex;"><span>kube-system          kubelet-config                       1      18m
+</span></span><span style="display:flex;"><span>local-path-storage   kube-root-ca.crt                     1      18m
+</span></span><span style="display:flex;"><span>local-path-storage   local-path-config                    4      18m
+</span></span></code></pre></div><p>We should also see that if we create a new <code>ConfigMap</code> in the cluster, it subsequently can be observed in <code>etcd</code> with the data we supply.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ root@kind-control-plane:/# kubectl create configmap k8s-asa --from-literal hello=world
+</span></span><span style="display:flex;"><span>configmap/k8s-asa created
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>root@kind-control-plane:/# etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/apiserver-etcd-client.crt --key /etc/kubernetes/pki/apiserver-etcd-client.key get /registry/configmaps/default/k8s-asa --print-value-only
+</span></span><span style="display:flex;"><span>k8s
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>v1	ConfigMap�
+</span></span><span style="display:flex;"><span>�
+</span></span><span style="display:flex;"><span>k8s-asa�default&#34;*$49e53b5d-ad63-4c58-b005-7fde4ad240002�׵��V
+</span></span><span style="display:flex;"><span>kubectl-createUpdate�v�׵�FieldsV1:&#34;
+</span></span><span style="display:flex;"><span> {&#34;f:data&#34;:{&#34;.&#34;:{},&#34;f:hello&#34;:{}}}B
+</span></span><span style="display:flex;"><span>helloworld�&#34;
+</span></span></code></pre></div><p>This time we do not get the pretty JSON returned from the values for the <code>APIService</code> keys. Why is that the case if they are both passing through the same <code>storage.Interface</code>? To understand, we need to examine the <code>etcd3</code> implementation of the interface.</p>
+<h2 id="calling-the-storageinterface-directly">
+  Calling the <code>storage.Interface</code> Directly
+  <a class="heading-link" href="#calling-the-storageinterface-directly">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>The only<sup id="fnref:6"><a href="#fn:6" class="footnote-ref" role="doc-noteref">6</a></sup> in-tree implementation of the <code>storage.Interface</code> is <a href="https://github.com/kubernetes/apiserver/blob/ce86ff4a7bd822660d118d976d2fe71893d23996/pkg/storage/etcd3/store.go#L74"><code>etcd3</code></a>. Though we have observed a high degree of correlation between operations supported by <code>etcd</code> and the <code>storage.Interface</code>, there is still some nuance in how the data we send to the API Server ends up getting stored, and ultimately returned. The function signature for creating a new <code>etcd</code> storage backend provides some clues as to its internal operations.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> New(c *clientv3.Client, codec runtime.Codec, newFunc <span style="color:#fff;font-weight:bold">func</span>() runtime.Object, prefix <span style="color:#fff;font-weight:bold">string</span>, groupResource schema.GroupResource, transformer value.Transformer, pagingEnabled <span style="color:#fff;font-weight:bold">bool</span>, leaseManagerConfig LeaseManagerConfig) storage.
+</span></span></code></pre></div><p>While some of the arguments are fairly self-explanatory (e.g. passing a client, specifying a prefix, or specifying whether paging is enabled), others appear a bit more opaque without more context. We are going to be focusing on <code>codec</code> and <code>transformer</code> in this post as we are primarily interested in successfully fetching data from <code>etcd</code> that was put there by the <code>APIServer</code>. As one could infer from their names, <code>codec</code> and <code>transformer</code> are what dictate the difference between the data that is passed to and from the API Server handlers, and that which is stored in <code>etcd</code>. To motivate our exploration, we can construct a program that instantiates the <code>etcd3</code> implementation of <code>storage.Interface</code>, and fetches the <code>ConfigMap</code> we previously created. Instead of copying a binary onto our <code>kind</code> node, we are going to copy the necessary PKI data out of the container and port-forward the <code>etcd</code> server <code>Pod</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span># make a directory outside the container to copy PKI data
+</span></span><span style="display:flex;"><span>$ mkdir pki
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span># find the root directory for the kind node container
+</span></span><span style="display:flex;"><span>$ sudo ls /proc/$(docker inspect kind-control-plane | jq .[0].State.Pid)/root
+</span></span><span style="display:flex;"><span>bin  boot  dev	etc  home  kind  lib  lib32  lib64  libx32  media  mnt	opt  proc  root  run  sbin  srv  sys  tmp  usr	var
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span># copy PKI data out of container
+</span></span><span style="display:flex;"><span>$ sudo cp -r /proc/$(docker inspect kind-control-plane | jq .[0].State.Pid)/root/etc/kubernetes/pki/. ./pki/.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span># change ownership from root to current user / group
+</span></span><span style="display:flex;"><span>$ sudo chown $(id -un):$(id -gn) -R ./pki
+</span></span></code></pre></div><blockquote>
+<p>Note: because the Docker daemon is running as <code>root</code>, all of the files in the container are owned by <code>root:root</code>. By changing the ownership of the copied files were are able to access them without being superuser. This is fine for our exploration here on our local machine, but in any meaningful setting Kubernetes PKI data should always be handled with care to avoid compromising the security of your cluster.</p>
+</blockquote>
+<p>Now in a separate terminal, we can start port-forwarding the <code>etcd</code> <code>Pod</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ kubectl port-forward -n kube-system pod/etcd-kind-control-plane 2379:2379
+</span></span><span style="display:flex;"><span>Forwarding from 127.0.0.1:2379 -&gt; 2379
+</span></span><span style="display:flex;"><span>Forwarding from [::1]:2379 -&gt; 2379
+</span></span></code></pre></div><p>Outside of the cluster, we can create our program that will fetch the <code>ConfigMap</code> from <code>etcd</code> directly.</p>
+<p><code>main.go</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">package</span> main
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;context&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;fmt&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;go.etcd.io/etcd/client/pkg/v3/transport&#34;</span>
+</span></span><span style="display:flex;"><span>	clientv3 <span style="color:#0ff;font-weight:bold">&#34;go.etcd.io/etcd/client/v3&#34;</span>
+</span></span><span style="display:flex;"><span>	v1 <span style="color:#0ff;font-weight:bold">&#34;k8s.io/api/core/v1&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apimachinery/pkg/runtime&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apimachinery/pkg/runtime/serializer&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apiserver/pkg/storage&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apiserver/pkg/storage/etcd3&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apiserver/pkg/storage/value/encrypt/identity&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> main() {
+</span></span><span style="display:flex;"><span>	tlsConfig, err := (transport.TLSInfo{
+</span></span><span style="display:flex;"><span>		CertFile:       <span style="color:#0ff;font-weight:bold">&#34;./pki/etcd/server.crt&#34;</span>,
+</span></span><span style="display:flex;"><span>		KeyFile:        <span style="color:#0ff;font-weight:bold">&#34;./pki/etcd/server.key&#34;</span>,
+</span></span><span style="display:flex;"><span>		TrustedCAFile:  <span style="color:#0ff;font-weight:bold">&#34;./pki/etcd/ca.crt&#34;</span>,
+</span></span><span style="display:flex;"><span>		ClientCertFile: <span style="color:#0ff;font-weight:bold">&#34;./pki/apiserver-etcd-client.crt&#34;</span>,
+</span></span><span style="display:flex;"><span>		ClientKeyFile:  <span style="color:#0ff;font-weight:bold">&#34;./pki/apiserver-etcd-client.key&#34;</span>,
+</span></span><span style="display:flex;"><span>	}).ClientConfig()
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	c, err := clientv3.New(clientv3.Config{
+</span></span><span style="display:flex;"><span>		Endpoints: []<span style="color:#fff;font-weight:bold">string</span>{<span style="color:#0ff;font-weight:bold">&#34;https://127.0.0.1:2379&#34;</span>},
+</span></span><span style="display:flex;"><span>		TLS:       tlsConfig,
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	scheme := runtime.NewScheme()
+</span></span><span style="display:flex;"><span>	v1.AddToScheme(scheme)
+</span></span><span style="display:flex;"><span>	s := etcd3.New(c, serializer.NewCodecFactory(scheme).LegacyCodec(v1.SchemeGroupVersion), <span style="color:#fff;font-weight:bold">nil</span>, <span style="color:#0ff;font-weight:bold">&#34;registry&#34;</span>, v1.Resource(<span style="color:#0ff;font-weight:bold">&#34;ConfigMap&#34;</span>), identity.NewEncryptCheckTransformer(), <span style="color:#fff;font-weight:bold">true</span>, etcd3.NewDefaultLeaseManagerConfig())
+</span></span><span style="display:flex;"><span>	cm := &amp;v1.ConfigMap{}
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> err := s.Get(context.Background(), <span style="color:#0ff;font-weight:bold">&#34;configmaps/default/k8s-asa&#34;</span>, storage.GetOptions{}, cm); err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	fmt.Println(cm.Data)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="devising-a-runtimescheme">
+  Devising a <code>runtime.Scheme</code>
+  <a class="heading-link" href="#devising-a-runtimescheme">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
+<p>To connect with <code>etcd</code>, we must supply paths to the various certificates and keys copied in the PKI data from the container. We also need to specify the address(es), of the <code>etcd</code> server(s). In this case we are port-forwarding a single server on <code>localhost</code>. Once we have our <code>etcd</code> client, we need to instantiate the storage implementation. We do so by first constructing a <a href="https://github.com/kubernetes/kubernetes/blob/0fcc3dbd55732c501d4948840f639e00a2fe33c5/staging/src/k8s.io/apimachinery/pkg/runtime/scheme.go#L46"><code>runtime.Scheme</code></a>. If you have ever written a Kubernetes controller, you are likely already familiar with schemes. In short, a <code>scheme</code> informs the consumer how to convert between a Kubernetes type and an internal Go representation of that type.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">type</span> Scheme <span style="color:#fff;font-weight:bold">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// gvkToType allows one to figure out the go type of an object with
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// the given version and name.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	gvkToType <span style="color:#fff;font-weight:bold">map</span>[schema.GroupVersionKind]reflect.Type
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// typeToGVK allows one to find metadata for a given go object.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// The reflect.Type we index by should *not* be a pointer.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	typeToGVK <span style="color:#fff;font-weight:bold">map</span>[reflect.Type][]schema.GroupVersionKind
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// unversionedTypes are transformed without conversion in ConvertToVersion.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	unversionedTypes <span style="color:#fff;font-weight:bold">map</span>[reflect.Type]schema.GroupVersionKind
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// unversionedKinds are the names of kinds that can be created in the context of any group
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// or version
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// TODO: resolve the status of unversioned types.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	unversionedKinds <span style="color:#fff;font-weight:bold">map</span>[<span style="color:#fff;font-weight:bold">string</span>]reflect.Type
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// Map from version and resource to the corresponding func to convert
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// resource field labels in that version to internal version.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	fieldLabelConversionFuncs <span style="color:#fff;font-weight:bold">map</span>[schema.GroupVersionKind]FieldLabelConversionFunc
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// defaulterFuncs is a map to funcs to be called with an object to provide defaulting
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// the provided object must be a pointer.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	defaulterFuncs <span style="color:#fff;font-weight:bold">map</span>[reflect.Type]<span style="color:#fff;font-weight:bold">func</span>(<span style="color:#fff;font-weight:bold">interface</span>{})
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// converter stores all registered conversion functions. It also has
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// default converting behavior.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	converter *conversion.Converter
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// versionPriority is a map of groups to ordered lists of versions for those groups indicating the
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// default priorities of these versions as registered in the scheme
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	versionPriority <span style="color:#fff;font-weight:bold">map</span>[<span style="color:#fff;font-weight:bold">string</span>][]<span style="color:#fff;font-weight:bold">string</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// observedVersions keeps track of the order we&#39;ve seen versions during type registration
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	observedVersions []schema.GroupVersion
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// schemeName is the name of this scheme.  If you don&#39;t specify a name, the stack of the NewScheme caller will be used.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// This is useful for error reporting to indicate the origin of the scheme.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	schemeName <span style="color:#fff;font-weight:bold">string</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>A <code>scheme</code> starts out as empty, but new types can be added, &ldquo;teaching&rdquo; the <code>scheme</code> how to convert them. In our example program, we are using the <code>core</code> API&rsquo;s convenience function <a href="https://github.com/kubernetes/kubernetes/blob/0fcc3dbd55732c501d4948840f639e00a2fe33c5/staging/src/k8s.io/api/core/v1/register.go#L41"><code>v1.AddToScheme</code></a> to register all <code>core</code> API types. Ultimately, this function calls the <a href="https://github.com/kubernetes/kubernetes/blob/91cfe7f0c30ee52fe7c63778357838c6f4ca63c6/staging/src/k8s.io/apimachinery/pkg/runtime/scheme.go#L156"><code>AddKnownTypeWithName()</code></a> on the <code>runtime.Scheme</code> for each type being registered. This adds the type to the conversion maps and registers a self-conversion function if available.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> (s *Scheme) AddKnownTypeWithName(gvk schema.GroupVersionKind, obj Object) {
+</span></span><span style="display:flex;"><span>	s.addObservedVersion(gvk.GroupVersion())
+</span></span><span style="display:flex;"><span>	t := reflect.TypeOf(obj)
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> <span style="color:#fff;font-weight:bold">len</span>(gvk.Version) == <span style="color:#ff0;font-weight:bold">0</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(fmt.Sprintf(<span style="color:#0ff;font-weight:bold">&#34;version is required on all types: %s %v&#34;</span>, gvk, t))
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> t.Kind() != reflect.Pointer {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(<span style="color:#0ff;font-weight:bold">&#34;All types must be pointers to structs.&#34;</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	t = t.Elem()
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> t.Kind() != reflect.Struct {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(<span style="color:#0ff;font-weight:bold">&#34;All types must be pointers to structs.&#34;</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> oldT, found := s.gvkToType[gvk]; found &amp;&amp; oldT != t {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(fmt.Sprintf(<span style="color:#0ff;font-weight:bold">&#34;Double registration of different types for %v: old=%v.%v, new=%v.%v in scheme %q&#34;</span>, gvk, oldT.PkgPath(), oldT.Name(), t.PkgPath(), t.Name(), s.schemeName))
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	s.gvkToType[gvk] = t
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">for</span> _, existingGvk := <span style="color:#fff;font-weight:bold">range</span> s.typeToGVK[t] {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">if</span> existingGvk == gvk {
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	s.typeToGVK[t] = <span style="color:#fff;font-weight:bold">append</span>(s.typeToGVK[t], gvk)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// if the type implements DeepCopyInto(&lt;obj&gt;), register a self-conversion
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#fff;font-weight:bold">if</span> m := reflect.ValueOf(obj).MethodByName(<span style="color:#0ff;font-weight:bold">&#34;DeepCopyInto&#34;</span>); m.IsValid() &amp;&amp; m.Type().NumIn() == <span style="color:#ff0;font-weight:bold">1</span> &amp;&amp; m.Type().NumOut() == <span style="color:#ff0;font-weight:bold">0</span> &amp;&amp; m.Type().In(<span style="color:#ff0;font-weight:bold">0</span>) == reflect.TypeOf(obj) {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">if</span> err := s.AddGeneratedConversionFunc(obj, obj, <span style="color:#fff;font-weight:bold">func</span>(a, b <span style="color:#fff;font-weight:bold">interface</span>{}, scope conversion.Scope) <span style="color:#fff;font-weight:bold">error</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#007f7f">// copy a to b
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>			reflect.ValueOf(a).MethodByName(<span style="color:#0ff;font-weight:bold">&#34;DeepCopyInto&#34;</span>).Call([]reflect.Value{reflect.ValueOf(b)})
+</span></span><span style="display:flex;"><span>			<span style="color:#007f7f">// clear TypeMeta to match legacy reflective conversion
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>			b.(Object).GetObjectKind().SetGroupVersionKind(schema.GroupVersionKind{})
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>
+</span></span><span style="display:flex;"><span>		}); err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Ever wondered where all of the methods in your <code>zz_generated.deepcopy.go</code> files are used? This is it! The function uses <a href="https://go.dev/blog/laws-of-reflection">reflection</a> on the passed <code>struct</code> pointer to determine whether a <code>DeepCopyInto()</code> method is present, and, if so, registers it. For the <code>ConfigMap</code> type, <a href="https://github.com/kubernetes/kubernetes/blob/0fcc3dbd55732c501d4948840f639e00a2fe33c5/staging/src/k8s.io/api/core/v1/zz_generated.deepcopy.go#L550">the <code>DeepCopyInto()</code> method</a> looks as follows.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> (in *ConfigMap) DeepCopyInto(out *ConfigMap) {
+</span></span><span style="display:flex;"><span>	*out = *in
+</span></span><span style="display:flex;"><span>	out.TypeMeta = in.TypeMeta
+</span></span><span style="display:flex;"><span>	in.ObjectMeta.DeepCopyInto(&amp;out.ObjectMeta)
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> in.Immutable != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		in, out := &amp;in.Immutable, &amp;out.Immutable
+</span></span><span style="display:flex;"><span>		*out = <span style="color:#fff;font-weight:bold">new</span>(<span style="color:#fff;font-weight:bold">bool</span>)
+</span></span><span style="display:flex;"><span>		**out = **in
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> in.Data != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		in, out := &amp;in.Data, &amp;out.Data
+</span></span><span style="display:flex;"><span>		*out = <span style="color:#fff;font-weight:bold">make</span>(<span style="color:#fff;font-weight:bold">map</span>[<span style="color:#fff;font-weight:bold">string</span>]<span style="color:#fff;font-weight:bold">string</span>, <span style="color:#fff;font-weight:bold">len</span>(*in))
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">for</span> key, val := <span style="color:#fff;font-weight:bold">range</span> *in {
+</span></span><span style="display:flex;"><span>			(*out)[key] = val
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> in.BinaryData != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		in, out := &amp;in.BinaryData, &amp;out.BinaryData
+</span></span><span style="display:flex;"><span>		*out = <span style="color:#fff;font-weight:bold">make</span>(<span style="color:#fff;font-weight:bold">map</span>[<span style="color:#fff;font-weight:bold">string</span>][]<span style="color:#fff;font-weight:bold">byte</span>, <span style="color:#fff;font-weight:bold">len</span>(*in))
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">for</span> key, val := <span style="color:#fff;font-weight:bold">range</span> *in {
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">var</span> outVal []<span style="color:#fff;font-weight:bold">byte</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">if</span> val == <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>				(*out)[key] = <span style="color:#fff;font-weight:bold">nil</span>
+</span></span><span style="display:flex;"><span>			} <span style="color:#fff;font-weight:bold">else</span> {
+</span></span><span style="display:flex;"><span>				in, out := &amp;val, &amp;outVal
+</span></span><span style="display:flex;"><span>				*out = <span style="color:#fff;font-weight:bold">make</span>([]<span style="color:#fff;font-weight:bold">byte</span>, <span style="color:#fff;font-weight:bold">len</span>(*in))
+</span></span><span style="display:flex;"><span>				<span style="color:#fff;font-weight:bold">copy</span>(*out, *in)
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>			(*out)[key] = outVal
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="encoding-and-decoding">
+  Encoding and Decoding
+  <a class="heading-link" href="#encoding-and-decoding">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
+<p>We can use our <code>scheme</code> that is knowledgeable of <code>core</code> API types to construct the first utility we are interested in: a <code>codec</code>. Like any codec, the <code>codec</code> we construct will be capable of encoding and decoding. The <a href="https://github.com/kubernetes/kubernetes/blob/f21c60341740874703ce12e070eda6cdddfd9f7b/staging/src/k8s.io/apimachinery/pkg/runtime/interfaces.go#L112"><code>runtime.Codec</code> interface</a> is an alias for another interface, <a href="https://github.com/kubernetes/kubernetes/blob/f21c60341740874703ce12e070eda6cdddfd9f7b/staging/src/k8s.io/apimachinery/pkg/runtime/interfaces.go#L104"><code>runtime.Serializer</code></a>, with the latter indicating that encoding and decoding should consider versioning.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#007f7f">// Serializer is the core interface for transforming objects into a serialized format and back.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">// Implementations may choose to perform conversion of the object, but no assumptions should be made.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">type</span> Serializer <span style="color:#fff;font-weight:bold">interface</span> {
+</span></span><span style="display:flex;"><span>	Encoder
+</span></span><span style="display:flex;"><span>	Decoder
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007f7f">// Codec is a Serializer that deals with the details of versioning objects. It offers the same
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">// interface as Serializer, so this is a marker to consumers that care about the version of the objects
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">// they receive.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">type</span> Codec Serializer
+</span></span></code></pre></div><p>Our call to <a href="https://github.com/kubernetes/kubernetes/blob/f21c60341740874703ce12e070eda6cdddfd9f7b/staging/src/k8s.io/apimachinery/pkg/runtime/serializer/codec_factory.go#L176"><code>serializer.NewCodecFactory()</code></a> constructs a <a href="https://github.com/kubernetes/kubernetes/blob/f21c60341740874703ce12e070eda6cdddfd9f7b/staging/src/k8s.io/apimachinery/pkg/runtime/serializer/codec_factory.go#L91">set of serializers</a> for each of the following formats:</p>
+<ul>
+<li><a href="https://www.json.org/json-en.html">JSON</a></li>
+<li><a href="https://yaml.org/spec/">YAML</a></li>
+<li><a href="https://protobuf.dev/">Protobuf</a></li>
+</ul>
+<p>We then call <a href="https://github.com/kubernetes/kubernetes/blob/cc60df95959bc4e6422ff05dc3d7c6ba3817bff0/staging/src/k8s.io/apimachinery/pkg/runtime/serializer/codec_factory.go#L263"><code>LegacyCodec()</code></a> to access the encoder and decoder that make use of the underlying scheme and serializers. Importantly, when given a <code>struct</code> pointer, this codec will always encode to JSON. We are only performing a <code>Get()</code> in our program, but we can demonstrate encoding with a smaller program that just sends the output to <code>stdout</code>.</p>
+<p><code>encode.go</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">package</span> main
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;os&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	v1 <span style="color:#0ff;font-weight:bold">&#34;k8s.io/api/core/v1&#34;</span>
+</span></span><span style="display:flex;"><span>	metav1 <span style="color:#0ff;font-weight:bold">&#34;k8s.io/apimachinery/pkg/apis/meta/v1&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apimachinery/pkg/runtime&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apimachinery/pkg/runtime/serializer&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> main() {
+</span></span><span style="display:flex;"><span>	scheme := runtime.NewScheme()
+</span></span><span style="display:flex;"><span>	v1.AddToScheme(scheme)
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> err := serializer.NewCodecFactory(scheme).LegacyCodec(v1.SchemeGroupVersion).Encode(&amp;v1.ConfigMap{
+</span></span><span style="display:flex;"><span>		ObjectMeta: metav1.ObjectMeta{
+</span></span><span style="display:flex;"><span>			Name: <span style="color:#0ff;font-weight:bold">&#34;hello&#34;</span>,
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>		TypeMeta: metav1.TypeMeta{
+</span></span><span style="display:flex;"><span>			Kind:       <span style="color:#0ff;font-weight:bold">&#34;ConfigMap&#34;</span>,
+</span></span><span style="display:flex;"><span>			APIVersion: <span style="color:#0ff;font-weight:bold">&#34;v1&#34;</span>,
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>	}, os.Stdout); err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Running this program demonstrates the default encoding using the JSON serializer.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ go run encode.go
+</span></span><span style="display:flex;"><span>{&#34;kind&#34;:&#34;ConfigMap&#34;,&#34;apiVersion&#34;:&#34;v1&#34;,&#34;metadata&#34;:{&#34;name&#34;:&#34;hello&#34;,&#34;creationTimestamp&#34;:null}}
+</span></span></code></pre></div><p>This aligns with the behavior we saw with <code>APIService</code>, but not <code>ConfigMap</code>. The reason is that these two APIs are served by different servers. In a <a href="https://danielmangum.com/posts/how-kubernetes-validates-custom-resources/">previous post on Custom Resource validation</a> I described the structure of the API Server chain. The first server in the chain is <code>kube-aggregator</code>, which is responsible for <a href="https://github.com/kubernetes/kubernetes/blob/cc60df95959bc4e6422ff05dc3d7c6ba3817bff0/staging/src/k8s.io/kube-aggregator/pkg/apis/apiregistration/register.go#L48">serving the <code>APIService</code> API</a>. It is followed by <code>kube-apiserver</code>, which is followed by <code>apiextensions-apiserver</code>. However, when building the delegating chain, the servers are <a href="https://github.com/kubernetes/kubernetes/blob/2f2240400391add53983c9c04cb91ec8a8df5c67/cmd/kube-apiserver/app/server.go#L204">constructed in reverse order</a>. When the <a href="https://github.com/kubernetes/kubernetes/blob/2f2240400391add53983c9c04cb91ec8a8df5c67/cmd/kube-apiserver/app/options/options.go#L43"><code>ServerRunOptions</code></a>, which are exposed to the end user via flags, are constructed, the default storage media type in the <code>etcd</code> options is <a href="https://github.com/kubernetes/kubernetes/blob/2f2240400391add53983c9c04cb91ec8a8df5c67/cmd/kube-apiserver/app/options/options.go#L136">set to</a> <code>application/vnd.kubernetes.protobuf</code>.</p>
+<p>For <code>kube-apiserver</code>, this ultimately is passed down to <a href="https://github.com/kubernetes/kubernetes/blob/8fdaac238e4f7f560066ea3a324cdbcaae564ac9/staging/src/k8s.io/apiserver/pkg/server/storage/storage_factory.go#L148"><code>NewDefaultStorageFactory()</code></a>, then to <a href="https://github.com/kubernetes/kubernetes/blob/8fdaac238e4f7f560066ea3a324cdbcaae564ac9/staging/src/k8s.io/apiserver/pkg/server/storage/storage_codec.go#L43"><code>NewStorageCodec()</code></a>, which uses it to <a href="https://github.com/kubernetes/kubernetes/blob/8fdaac238e4f7f560066ea3a324cdbcaae564ac9/staging/src/k8s.io/apiserver/pkg/server/storage/storage_codec.go#L50">extract a serializer</a> that matches the media type. The result is a <code>runtime.Codec</code> that encodes to protobuf for storage, while supporting decoding from JSON, YAML, or protobuf.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>	mediaType, _, err := mime.ParseMediaType(opts.StorageMediaType)
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>, <span style="color:#fff;font-weight:bold">nil</span>, fmt.Errorf(<span style="color:#0ff;font-weight:bold">&#34;%q is not a valid mime-type&#34;</span>, opts.StorageMediaType)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	supportedMediaTypes := opts.StorageSerializer.SupportedMediaTypes()
+</span></span><span style="display:flex;"><span>	serializer, ok := runtime.SerializerInfoForMediaType(supportedMediaTypes, mediaType)
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> !ok {
+</span></span><span style="display:flex;"><span>		supportedMediaTypeList := <span style="color:#fff;font-weight:bold">make</span>([]<span style="color:#fff;font-weight:bold">string</span>, <span style="color:#fff;font-weight:bold">len</span>(supportedMediaTypes))
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">for</span> i, mediaType := <span style="color:#fff;font-weight:bold">range</span> supportedMediaTypes {
+</span></span><span style="display:flex;"><span>			supportedMediaTypeList[i] = mediaType.MediaType
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>, <span style="color:#fff;font-weight:bold">nil</span>, fmt.Errorf(<span style="color:#0ff;font-weight:bold">&#34;unable to find serializer for %q, supported media types: %v&#34;</span>, mediaType, supportedMediaTypeList)
+</span></span><span style="display:flex;"><span>	}
+</span></span></code></pre></div><p>The same is not true for <code>kube-aggregator</code>, which <a href="https://github.com/kubernetes/kubernetes/blob/2f2240400391add53983c9c04cb91ec8a8df5c67/cmd/kube-apiserver/app/aggregator.go#L83">copies the <code>etcd</code> configuration</a>, and <a href="https://github.com/kubernetes/kubernetes/blob/2f2240400391add53983c9c04cb91ec8a8df5c67/cmd/kube-apiserver/app/aggregator.go#L85">instantiates a <code>LegacyCodec</code></a>, but does not honor the default media type, meaning that <code>APIService</code> objects fall back to the default of encoding to JSON.</p>
+<h3 id="undergoing-transformation">
+  Undergoing Transformation
+  <a class="heading-link" href="#undergoing-transformation">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
+<p>Compared to encoding and decoding, transformers are much simpler. The <a href="https://github.com/kubernetes/kubernetes/blob/8fdaac238e4f7f560066ea3a324cdbcaae564ac9/staging/src/k8s.io/apiserver/pkg/storage/value/transformer.go#L44"><code>value.Transformer</code> interface</a> encompasses just two methods: <code>TransformFromStorage()</code> and <code>TransformToStorage()</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#007f7f">// Transformer allows a value to be transformed before being read from or written to the underlying store. The methods
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">// must be able to undo the transformation caused by the other.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">type</span> Transformer <span style="color:#fff;font-weight:bold">interface</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// TransformFromStorage may transform the provided data from its underlying storage representation or return an error.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// Stale is true if the object on disk is stale and a write to etcd should be issued, even if the contents of the object
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// have not changed.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	TransformFromStorage(ctx context.Context, data []<span style="color:#fff;font-weight:bold">byte</span>, dataCtx Context) (out []<span style="color:#fff;font-weight:bold">byte</span>, stale <span style="color:#fff;font-weight:bold">bool</span>, err <span style="color:#fff;font-weight:bold">error</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// TransformToStorage may transform the provided data into the appropriate form in storage or return an error.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	TransformToStorage(ctx context.Context, data []<span style="color:#fff;font-weight:bold">byte</span>, dataCtx Context) (out []<span style="color:#fff;font-weight:bold">byte</span>, err <span style="color:#fff;font-weight:bold">error</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The canonical example of a transformer is one that performs some form of encryption on the data being stored. There are a <a href="https://github.com/kubernetes/kubernetes/tree/8fdaac238e4f7f560066ea3a324cdbcaae564ac9/staging/src/k8s.io/apiserver/pkg/storage/value/encrypt">variety of implementations</a>, including <a href="https://kubernetes.io/docs/tasks/administer-cluster/kms-provider/">support for external key management services</a>. However, we are just using <a href="https://github.com/kubernetes/kubernetes/blob/8fdaac238e4f7f560066ea3a324cdbcaae564ac9/staging/src/k8s.io/apiserver/pkg/storage/value/encrypt/identity/identity.go#L39">the <code>identity</code> transformer</a>, which does nothing when <a href="https://github.com/kubernetes/kubernetes/blob/8fdaac238e4f7f560066ea3a324cdbcaae564ac9/staging/src/k8s.io/apiserver/pkg/storage/value/encrypt/identity/identity.go#L55">transforming to storage</a>, and just verifies that the data is <em>not</em> encrypted when <a href="https://github.com/kubernetes/kubernetes/blob/8fdaac238e4f7f560066ea3a324cdbcaae564ac9/staging/src/k8s.io/apiserver/pkg/storage/value/encrypt/identity/identity.go#L44">transforming from storage</a>.</p>
+<h3 id="finding-our-configmap">
+  Finding Our <code>ConfigMap</code>
+  <a class="heading-link" href="#finding-our-configmap">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
+<p>We&rsquo;ve done a lot of explaining, let&rsquo;s see it in action! Stepping through our relatively small program in a debugger helps unearth some of the hidden complexity. We can set a breakpoint at the location in which we instantiate the <code>etcd3</code> implementation of <code>storage.Interface</code> to step into the construction of our <code>codec</code>.</p>
+<p><img src="../../static/k8s-asa-storage-debug-0.png" alt="k8s-asa-storage-debug-0"></p>
+<p>We don&rsquo;t pass any mutators, so we move immediately to constructing the JSON, YAML, and protobuf serializers for our <code>scheme</code>.</p>
+<p><img src="../../static/k8s-asa-storage-debug-1.png" alt="k8s-asa-storage-debug-1"></p>
+<p>Next, the <code>newCodecFactory()</code> function is called, which appends all serializers as <code>decoders</code>, and sets the JSON serializer as the <code>legacySerializer</code>, which will eventually be used as our <code>encoder</code>.</p>
+<p><img src="../../static/k8s-asa-storage-debug-2.png" alt="k8s-asa-storage-debug-2"></p>
+<p>When we invoke <code>LegacyCodec()</code> with the proper <code>schema.GroupVersion</code>, we get our implementation of <code>runtime.Codec</code>.</p>
+<p><img src="../../static/k8s-asa-storage-debug-3.png" alt="k8s-asa-storage-debug-3"></p>
+<p>With our <code>codec</code> in place, we are ready to fetch the <code>ConfigMap</code> data from <code>etcd</code> and decode it into our passed <code>struct</code> pointer. The call to <code>Get()</code> can omit the <code>/registry/</code> prefix as we set it as the default when constructing the implmentation. The bulk of the work in this method is performed by the <code>transformer</code> and the <code>codec</code>, but because our <code>transformer</code> is mostly a no-op, we are primarily interested in decoding.</p>
+<p><img src="../../static/k8s-asa-storage-debug-4.png" alt="k8s-asa-storage-debug-4"></p>
+<p>We can tell that the data fetched from <code>etcd</code> is in protobuf format based on the magic number at the beginning of the value.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>&#34;k8s\x00\n\x0f\n\x02v1\x12\tConfigMap\x12\xb6\x01\n\xa3\x01\n\ak8s-asa\x12\x00\x1a\adefault\&#34;\x00*$ebc5e916-fba3-4a27-be4b-f505c12562462\x008\x00B\b\b\x99\xfb\xbb\x9e\x06\x10\x00\x8a\x01V\n\x0ekubectl-create\x12\x06Update\x1a\x02v1\&#34;\b\b\x99\xfb\xbb\x9e\x06\x10\x002\bFieldsV1:\&#34;\n {\&#34;f:data\&#34;:{\&#34;.\&#34;:{},\&#34;f:hello\&#34;:{}}}B\x00\x12\x0e\n\x05hello\x12\x05world\x1a\x00\&#34;\x00&#34;
+</span></span></code></pre></div><p>The protobuf <a href="https://github.com/kubernetes/kubernetes/blob/674eb36f92dcea33e47ac07d71d88ebe9f5c4c6d/staging/src/k8s.io/apimachinery/pkg/runtime/serializer/protobuf/protobuf.go#L45">serializer</a> uses the prefix to identify whether it can successfully decode the value into its Go definition.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">var</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// protoEncodingPrefix serves as a magic number for an encoded protobuf message on this serializer. All
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// proto messages serialized by this schema will be preceded by the bytes 0x6b 0x38 0x73, with the fourth
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// byte being reserved for the encoding style. The only encoding style defined is 0x00, which means that
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// the rest of the byte stream is a message of type k8s.io.kubernetes.pkg.runtime.Unknown (proto2).
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">//
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// See k8s.io/apimachinery/pkg/runtime/generated.proto for details of the runtime.Unknown message.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">//
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// This encoding scheme is experimental, and is subject to change at any time.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	protoEncodingPrefix = []<span style="color:#fff;font-weight:bold">byte</span>{<span style="color:#ff0;font-weight:bold">0x6b</span>, <span style="color:#ff0;font-weight:bold">0x38</span>, <span style="color:#ff0;font-weight:bold">0x73</span>, <span style="color:#ff0;font-weight:bold">0x00</span>}
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><p>As we iterate through the decoders, we skip our JSON and YAML variants, before the protobuf decoder recognizes the data.</p>
+<p><img src="../../static/k8s-asa-storage-debug-5.png" alt="k8s-asa-storage-debug-5"></p>
+<p>After validating the length of the data, we find ourselves back at using our <code>runtime.Scheme</code> (<code>runtime.ObjectTyper</code> and <code>runtime.ObjectCreater</code>) in order to convert the data into our Go representation of a <code>ConfigMap</code>.</p>
+<p><img src="../../static/k8s-asa-storage-debug-6.png" alt="k8s-asa-storage-debug-6"></p>
+<p>Now that we have our object, we can print our data and see that it matches the <code>ConfigMap</code> we created at the beginning via <code>kubectl</code>.</p>
+<blockquote>
+<p>Reminder: we must be port-forwarding <code>etcd</code> to be able to connect successfully.</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ go run main.go
+</span></span><span style="display:flex;"><span>map[hello:world]
+</span></span></code></pre></div><h2 id="closing-thoughts">
+  Closing Thoughts
+  <a class="heading-link" href="#closing-thoughts">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>This has been the first installment in the <a href="https://danielmangum.com/categories/kubernetes-api-server-adventures/">Kubernetes API Server Adventures series</a>. While there is an endless amount of information about how to use Kubernetes, and a fair amount about how to extend it, I have found there to be relatively little information about the code itself. While the vast majority of readers may not be interacting with the code on a daily basis, understanding what is happening behind the scenes helps us reason about why the system may be exhibiting unexpected behavior. It may also lead us to change parts of the system to better fit our use-cases.</p>
+<p>If you have any questions, thoughts, or suggestions, please feel free to send me a message <a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter or <a href="https://types.pl/web/@hasheddan">@hasheddan@types.pl</a> on Mastodon!</p>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<p>Generic is used in a relative sense here. As we&rsquo;ll see throughout this series, many of the components in Kubernetes have grown to have subtle dependencies on one another, meaning that saying any one component is generic typically indicates that it can be used in multiple areas of the Kubernetes code base, but not necessarily outside of it.&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:2">
+<p>The exact behavior described here is not strictly required by the interface, but is in reality <a href="https://github.com/kubernetes/kubernetes/blob/3154010eec3488dd64110e3ca6c4ba0b5ac61310/staging/src/k8s.io/apiserver/pkg/storage/etcd3/store.go#L271">how the <code>etcd</code> implementation functions</a>.&#160;<a href="#fnref:2" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:3">
+<p>You may already be thinking about different types of updates in Kubernetes and what guarantees they offer.&#160;<a href="#fnref:3" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:4">
+<p>Rest assured, we will be coming back here in a future post. A <a href="https://danielmangum.com/posts/k8s-asa-welcome/">primary motivation</a> of this series is gaining an understanding of where various parts of the API server break down. <code>etcd</code> may very well be a limiting factor in some of the use cases we explore.&#160;<a href="#fnref:4" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:5">
+<p>Important flags here include specifying the provided key is a prefix (<code>--prefix</code>), indicating that we only want a list of keys (<code>--keys-only</code>), and limiting to only 5 keys (<code>--limit</code>).&#160;<a href="#fnref:5" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+<li id="fn:6">
+<p>This could be disputed as <a href="https://github.com/kubernetes/apiserver/blob/f928c72a9f84c5422dc1ea70919ded7570a99d12/pkg/storage/cacher/cacher.go#L241"><code>Cacher</code></a> is technically an implementation as well. However, it requires an underlying implementation in order to perform its operations. We&rsquo;ll be looking at caching extensively in a future post.&#160;<a href="#fnref:6" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+</ol>
+</div>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
