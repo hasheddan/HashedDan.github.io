@@ -16,7 +16,9 @@
 Controllers initialize metrics when started, and write to the registry at various points throughout operation, such as when processing items off the workqueue and after completed reconciliation loops. If you are using a framework like Kubebuilder, it will generate manifests for the necessary objects, such as a ServiceMonitor, to scrape these metrics using kube-prometheus in your Kubernetes cluster.">
 <meta name="keywords" content="blog,developer,personal">
 
-<meta name="twitter:card" content="summary"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
 <meta name="twitter:title" content="Scraping controller-runtime Prometheus Metrics Locally"/>
 <meta name="twitter:description" content="controller-runtime exposes a metrics server by default on port 8080 for any controller Manager. Metrics are registered for the client, workqueue, and on a per-controller basis.
 Controllers initialize metrics when started, and write to the registry at various points throughout operation, such as when processing items off the workqueue and after completed reconciliation loops. If you are using a framework like Kubebuilder, it will generate manifests for the necessary objects, such as a ServiceMonitor, to scrape these metrics using kube-prometheus in your Kubernetes cluster."/>
@@ -25,7 +27,7 @@ Controllers initialize metrics when started, and write to the registry at variou
 <meta property="og:description" content="controller-runtime exposes a metrics server by default on port 8080 for any controller Manager. Metrics are registered for the client, workqueue, and on a per-controller basis.
 Controllers initialize metrics when started, and write to the registry at various points throughout operation, such as when processing items off the workqueue and after completed reconciliation loops. If you are using a framework like Kubebuilder, it will generate manifests for the necessary objects, such as a ServiceMonitor, to scrape these metrics using kube-prometheus in your Kubernetes cluster." />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://danielmangum.com/posts/controller-runtime-scrape-prometheus-local/" /><meta property="article:section" content="posts" />
+<meta property="og:url" content="https://danielmangum.com/posts/controller-runtime-scrape-prometheus-local/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2021-02-20T01:41:34-06:00" />
 <meta property="article:modified_time" content="2021-02-20T01:41:34-06:00" />
 

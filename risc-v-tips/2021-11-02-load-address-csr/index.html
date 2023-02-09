@@ -19,7 +19,9 @@ csrw mepc, t1 =&gt; csrrw x0, mepc, t1
 Original Tweet">
 <meta name="keywords" content="blog,developer,personal">
 
-<meta name="twitter:card" content="summary"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
 <meta name="twitter:title" content="Loading an Address into a CSR"/>
 <meta name="twitter:description" content="Tonight&rsquo;s @risc_v Tip:
 You can use two convenient pseudo-instructions to load the address of a symbol into a CSR.
@@ -34,7 +36,7 @@ la t1, main =&gt; auipc t1, main[31:12]; addi t1, t1, main[11:0]
 csrw mepc, t1 =&gt; csrrw x0, mepc, t1
 Original Tweet" />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://danielmangum.com/risc-v-tips/2021-11-02-load-address-csr/" /><meta property="article:section" content="risc-v-tips" />
+<meta property="og:url" content="https://danielmangum.com/risc-v-tips/2021-11-02-load-address-csr/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="risc-v-tips" />
 <meta property="article:published_time" content="2021-11-02T00:10:34-06:00" />
 <meta property="article:modified_time" content="2021-11-02T00:10:34-06:00" />
 
