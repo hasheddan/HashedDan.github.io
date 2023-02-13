@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  K8s ASA: Watching and Caching · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="In our most recent post in the Kubernetes API Server Adventures series we took a look at the storage interface and explored the only in-tree implementation: etcd3. However, a careful read of the footnotes in that post revealed I wasn&rsquo;t being completely honest about etcd3 being the only implementation.
+This could be disputed as Cacher is technically an implementation as well. However, it requires an underlying implementation in order to perform its operations.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="K8s ASA: Watching and Caching"/>
+<meta name="twitter:description" content="In our most recent post in the Kubernetes API Server Adventures series we took a look at the storage interface and explored the only in-tree implementation: etcd3. However, a careful read of the footnotes in that post revealed I wasn&rsquo;t being completely honest about etcd3 being the only implementation.
+This could be disputed as Cacher is technically an implementation as well. However, it requires an underlying implementation in order to perform its operations."/>
+
+<meta property="og:title" content="K8s ASA: Watching and Caching" />
+<meta property="og:description" content="In our most recent post in the Kubernetes API Server Adventures series we took a look at the storage interface and explored the only in-tree implementation: etcd3. However, a careful read of the footnotes in that post revealed I wasn&rsquo;t being completely honest about etcd3 being the only implementation.
+This could be disputed as Cacher is technically an implementation as well. However, it requires an underlying implementation in order to perform its operations." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/k8s-asa-watching-and-caching/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-02-13T00:10:34-06:00" />
+<meta property="article:modified_time" content="2023-02-13T00:10:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/k8s-asa-watching-and-caching/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.109.0">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/k8s-asa-watching-and-caching/">
+              K8s ASA: Watching and Caching
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2023-02-13T00:10:34-06:00">
+                February 13, 2023
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              19-minute read
+            </span>
+          </div>
+          
+          <div class="categories">
+  <i class="fa fa-folder" aria-hidden="true"></i>
+    <a href="https://danielmangum.com/categories/kubernetes-api-server-adventures/">Kubernetes API Server Adventures</a></div>
+
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>In our <a href="https://danielmangum.com/posts/k8s-asa-the-storage-interface/">most recent
+post</a> in the
+<a href="https://danielmangum.com/categories/kubernetes-api-server-adventures/">Kubernetes API Server Adventures
+series</a>
+we took a look at the <a href="https://github.com/kubernetes/kubernetes/blob/3154010eec3488dd64110e3ca6c4ba0b5ac61310/staging/src/k8s.io/apiserver/pkg/storage/interfaces.go#L159"><code>storage</code>
+interface</a>
+and explored the only in-tree implementation:
+<a href="https://github.com/kubernetes/kubernetes/blob/2fba771792023756b539501cdabdb19a32bb9536/staging/src/k8s.io/apiserver/pkg/storage/etcd3/store.go#L74"><code>etcd3</code></a>.
+However, a careful <a href="https://danielmangum.com/posts/k8s-asa-the-storage-interface/#fn:6">read of the
+footnotes</a>
+in that post revealed I wasn&rsquo;t being <em>completely</em> honest about <code>etcd3</code> being the
+only implementation.</p>
+<blockquote>
+<p>This could be disputed as
+<a href="https://github.com/kubernetes/apiserver/blob/f928c72a9f84c5422dc1ea70919ded7570a99d12/pkg/storage/cacher/cacher.go#L241"><code>Cacher</code></a>
+is technically an implementation as well. However, it requires an underlying
+implementation in order to perform its operations. We&rsquo;ll be looking at caching
+extensively in a future post.</p>
+</blockquote>
+<p>It is time to make things right! I promised we would be looking at caching
+extensively and the time has come to do so.</p>
+<p><img src="../../static/k8s-asa-caching-0.png" alt="cover-image"></p>
+<p>Table of Contents:</p>
+<ul>
+<li><a href="#watching">Watching</a> (👈 &ldquo;I want the problem and the solution.&rdquo;)</li>
+<li><a href="#everyones-watching">Everyone&rsquo;s Watching</a></li>
+<li><a href="#caching">Caching</a> (👈 &ldquo;I just want the solution.&rdquo;)
+<ul>
+<li><a href="#watchcache"><code>watchCache</code></a></li>
+<li><a href="#cacherlisterwatcher"><code>cacherListerWatcher</code></a></li>
+<li><a href="#reflector"><code>Reflector</code></a></li>
+<li><a href="#tying-it-all-together">Tying It All Together</a></li>
+<li><a href="#the-watch-method">The <code>Watch()</code> Method</a></li>
+</ul>
+</li>
+<li><a href="#everyones-watching-efficiently">Everyone&rsquo;s Watching&hellip; Efficiently</a> (👈 &ldquo;Just show me the code.&rdquo;)</li>
+</ul>
+<h2 id="watching">
+  Watching
+  <a class="heading-link" href="#watching">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>Before we introduce any type of caching, it is worth revisiting the fact that
+<a href="https://github.com/kubernetes/kubernetes/blob/3154010eec3488dd64110e3ca6c4ba0b5ac61310/staging/src/k8s.io/apiserver/pkg/storage/interfaces.go#L159"><code>storage.Interface</code></a>
+includes a <a href="https://github.com/kubernetes/kubernetes/blob/3154010eec3488dd64110e3ca6c4ba0b5ac61310/staging/src/k8s.io/apiserver/pkg/storage/interfaces.go#L184"><code>Watch</code>
+method</a>,
+the <code>etcd3</code> implementation <a href="https://github.com/kubernetes/kubernetes/blob/3154010eec3488dd64110e3ca6c4ba0b5ac61310/staging/src/k8s.io/apiserver/pkg/storage/etcd3/store.go#L847">supports
+it</a>,
+and we <a href="https://danielmangum.com/posts/k8s-asa-the-storage-interface/#our-good-friend-etcd">previously
+explored</a>
+watching for changes by talking directly to <code>etcd</code> with <code>etcdctl</code>. <code>etcd</code> offers
+a <a href="https://etcd.io/docs/v3.5/learning/api/#watch-api">Watch API</a> that utilizes
+<a href="https://grpc.io/docs/what-is-grpc/core-concepts/#bidirectional-streaming-rpc">bi-directional gRPC
+streams</a>
+to deliver events to clients when the value for a given key changes.</p>
+<p>The <code>etcd3</code> <code>Watch</code> implementation
+<a href="https://github.com/kubernetes/kubernetes/blob/3154010eec3488dd64110e3ca6c4ba0b5ac61310/staging/src/k8s.io/apiserver/pkg/storage/etcd3/store.go#L856">constructs</a>
+a
+<a href="https://github.com/kubernetes/kubernetes/blob/3154010eec3488dd64110e3ca6c4ba0b5ac61310/staging/src/k8s.io/apimachinery/pkg/watch/watch.go#L29"><code>watch.Interface</code></a>
+that is <a href="https://github.com/kubernetes/kubernetes/blob/3154010eec3488dd64110e3ca6c4ba0b5ac61310/staging/src/k8s.io/apiserver/pkg/storage/etcd3/watcher.go#L61">backed by a
+<code>watcher</code></a>.
+A new <code>watcher</code> is constructed on every call to <code>Watch</code>, and each <code>watcher</code>
+essentially just <a href="https://github.com/kubernetes/kubernetes/blob/3154010eec3488dd64110e3ca6c4ba0b5ac61310/staging/src/k8s.io/apiserver/pkg/storage/etcd3/watcher.go#L243">calls the <code>etcd</code> Watch
+API</a>
+and <a href="https://github.com/kubernetes/kubernetes/blob/3154010eec3488dd64110e3ca6c4ba0b5ac61310/staging/src/k8s.io/apiserver/pkg/storage/etcd3/watcher.go#L265">forwards events on a
+channel</a>.</p>
+<p>Let&rsquo;s take our program from last post and modify it to watch for changes to all
+<code>ConfigMaps</code> in a cluster.</p>
+<blockquote>
+<p>You can find instructions on how to get the PKI data needed to talk to <code>etcd</code>
+in a <code>kind</code> cluster
+<a href="https://danielmangum.com/posts/k8s-asa-the-storage-interface/#calling-the-storageinterface-directly">here</a>.</p>
+</blockquote>
+<p><code>directwatch.go</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">package</span> main
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;context&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;fmt&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;go.etcd.io/etcd/client/pkg/v3/transport&#34;</span>
+</span></span><span style="display:flex;"><span>	clientv3 <span style="color:#0ff;font-weight:bold">&#34;go.etcd.io/etcd/client/v3&#34;</span>
+</span></span><span style="display:flex;"><span>	v1 <span style="color:#0ff;font-weight:bold">&#34;k8s.io/api/core/v1&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apimachinery/pkg/runtime&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apimachinery/pkg/runtime/serializer&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apiserver/pkg/storage&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apiserver/pkg/storage/etcd3&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apiserver/pkg/storage/value/encrypt/identity&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/kubernetes/pkg/apis/core&#34;</span>
+</span></span><span style="display:flex;"><span>	k8sv1 <span style="color:#0ff;font-weight:bold">&#34;k8s.io/kubernetes/pkg/apis/core/v1&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> main() {
+</span></span><span style="display:flex;"><span>	tlsConfig, err := (transport.TLSInfo{
+</span></span><span style="display:flex;"><span>		CertFile:       <span style="color:#0ff;font-weight:bold">&#34;./pki/etcd/server.crt&#34;</span>,
+</span></span><span style="display:flex;"><span>		KeyFile:        <span style="color:#0ff;font-weight:bold">&#34;./pki/etcd/server.key&#34;</span>,
+</span></span><span style="display:flex;"><span>		TrustedCAFile:  <span style="color:#0ff;font-weight:bold">&#34;./pki/etcd/ca.crt&#34;</span>,
+</span></span><span style="display:flex;"><span>		ClientCertFile: <span style="color:#0ff;font-weight:bold">&#34;./pki/apiserver-etcd-client.crt&#34;</span>,
+</span></span><span style="display:flex;"><span>		ClientKeyFile:  <span style="color:#0ff;font-weight:bold">&#34;./pki/apiserver-etcd-client.key&#34;</span>,
+</span></span><span style="display:flex;"><span>	}).ClientConfig()
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	c, err := clientv3.New(clientv3.Config{
+</span></span><span style="display:flex;"><span>		Endpoints: []<span style="color:#fff;font-weight:bold">string</span>{<span style="color:#0ff;font-weight:bold">&#34;https://127.0.0.1:2379&#34;</span>},
+</span></span><span style="display:flex;"><span>		TLS:       tlsConfig,
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	scheme := runtime.NewScheme()
+</span></span><span style="display:flex;"><span>	k8sv1.AddToScheme(scheme)
+</span></span><span style="display:flex;"><span>	core.AddToScheme(scheme)
+</span></span><span style="display:flex;"><span>	f := serializer.NewCodecFactory(scheme)
+</span></span><span style="display:flex;"><span>	s := etcd3.New(c, f.CodecForVersions(<span style="color:#fff;font-weight:bold">nil</span>, f.UniversalDecoder(), <span style="color:#fff;font-weight:bold">nil</span>, k8sv1.SchemeGroupVersion), <span style="color:#fff;font-weight:bold">nil</span>, <span style="color:#0ff;font-weight:bold">&#34;registry&#34;</span>, v1.Resource(<span style="color:#0ff;font-weight:bold">&#34;ConfigMap&#34;</span>), identity.NewEncryptCheckTransformer(), <span style="color:#fff;font-weight:bold">true</span>, etcd3.NewDefaultLeaseManagerConfig())
+</span></span><span style="display:flex;"><span>	w, err := s.Watch(context.Background(), <span style="color:#0ff;font-weight:bold">&#34;configmaps&#34;</span>, storage.ListOptions{
+</span></span><span style="display:flex;"><span>		Predicate: storage.Everything,
+</span></span><span style="display:flex;"><span>		Recursive: <span style="color:#fff;font-weight:bold">true</span>,
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">for</span> e := <span style="color:#fff;font-weight:bold">range</span> w.ResultChan() {
+</span></span><span style="display:flex;"><span>		co, ok := e.Object.(*v1.ConfigMap)
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">if</span> !ok {
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">panic</span>(<span style="color:#0ff;font-weight:bold">&#34;not a config map!&#34;</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		fmt.Printf(<span style="color:#0ff;font-weight:bold">&#34;%s || %s/%s\n&#34;</span>, e.Type, co.Namespace, co.Name)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><blockquote>
+<p>Take note of the fact that we are registering types from <code>k8s.io/kubernetes</code>
+rather than <code>k8s.io/api</code>. This is necessary in order to perform conversion
+from <a href="https://github.com/kubernetes/kubernetes/blob/ea0764452222146c47ec826977f49d7001b0ea8c/staging/src/k8s.io/apimachinery/pkg/runtime/interfaces.go#L30">the <code>__internal</code>
+version</a>
+to our desired version (<code>v1</code>). Note that we also are passing a <code>nil</code> encoder
+to <code>CodecForVersions</code> as we are only decoding while reading events off the
+stream.</p>
+</blockquote>
+<p>If you have a <code>kind</code> cluster running, you can start port-forwarding the <code>etcd</code>
+<code>Pod</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ kubectl port-forward -n kube-system pod/etcd-kind-control-plane 2379:2379
+</span></span></code></pre></div><p>Now we can start our program.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ go run directwatch.go
+</span></span><span style="display:flex;"><span>ADDED || default/kube-root-ca.crt
+</span></span><span style="display:flex;"><span>ADDED || kube-node-lease/kube-root-ca.crt
+</span></span><span style="display:flex;"><span>ADDED || kube-public/cluster-info
+</span></span><span style="display:flex;"><span>ADDED || kube-public/kube-root-ca.crt
+</span></span><span style="display:flex;"><span>ADDED || kube-system/coredns
+</span></span><span style="display:flex;"><span>ADDED || kube-system/extension-apiserver-authentication
+</span></span><span style="display:flex;"><span>ADDED || kube-system/kube-proxy
+</span></span><span style="display:flex;"><span>ADDED || kube-system/kube-root-ca.crt
+</span></span><span style="display:flex;"><span>ADDED || kube-system/kubeadm-config
+</span></span><span style="display:flex;"><span>ADDED || kube-system/kubelet-config
+</span></span><span style="display:flex;"><span>ADDED || local-path-storage/kube-root-ca.crt
+</span></span><span style="display:flex;"><span>ADDED || local-path-storage/local-path-config
+</span></span></code></pre></div><p>As expected, we get <code>ADDED</code> events for all <code>ConfigMaps</code> currently in the
+cluster. We can create, update, and delete a <code>ConfigMap</code> to see how other events
+are reflected in our watch stream.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ kubectl create configmap k8s-asa --from-literal hello=world
+</span></span><span style="display:flex;"><span>configmap/k8s-asa created
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ kubectl create configmap k8s-asa --from-literal hello=asa -o yaml --dry-run | kubectl apply -f -
+</span></span><span style="display:flex;"><span>configmap/k8s-asa configured
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ kubectl delete configmap k8s-asa
+</span></span><span style="display:flex;"><span>configmap &#34;k8s-asa&#34; deleted
+</span></span></code></pre></div><p>We should see each of these events in our watch stream with the appropriate
+type.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>ADDED || default/k8s-asa
+</span></span><span style="display:flex;"><span>MODIFIED || default/k8s-asa
+</span></span><span style="display:flex;"><span>DELETED || default/k8s-asa
+</span></span></code></pre></div><h2 id="everyones-watching">
+  Everyone&rsquo;s Watching
+  <a class="heading-link" href="#everyones-watching">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>This is all working quite well. We are able to get events any time a type we
+care about changes, and it doesn&rsquo;t seem as though <code>etcd</code> or our little program
+are breaking a sweat, but let&rsquo;s take a look at some <code>etcd</code> metrics to make sure.
+We can find the exposed metrics address for <code>etcd</code> in our <code>kind</code> cluster by
+looking at command for the container in the <code>Pod</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ kubectl get pod -n kube-system etcd-kind-control-plane -o=jsonpath={.spec.containers[0].command} | jq .
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[
+</span></span><span style="display:flex;"><span>  &#34;etcd&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--advertise-client-urls=https://172.19.0.2:2379&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--cert-file=/etc/kubernetes/pki/etcd/server.crt&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--client-cert-auth=true&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--data-dir=/var/lib/etcd&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--experimental-initial-corrupt-check=true&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--experimental-watch-progress-notify-interval=5s&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--initial-advertise-peer-urls=https://172.19.0.2:2380&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--initial-cluster=kind-control-plane=https://172.19.0.2:2380&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--key-file=/etc/kubernetes/pki/etcd/server.key&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--listen-client-urls=https://127.0.0.1:2379,https://172.19.0.2:2379&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--listen-metrics-urls=http://127.0.0.1:2381&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--listen-peer-urls=https://172.19.0.2:2380&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--name=kind-control-plane&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--peer-cert-file=/etc/kubernetes/pki/etcd/peer.crt&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--peer-client-cert-auth=true&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--peer-key-file=/etc/kubernetes/pki/etcd/peer.key&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--peer-trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--snapshot-count=10000&#34;,
+</span></span><span style="display:flex;"><span>  &#34;--trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt&#34;
+</span></span><span style="display:flex;"><span>]
+</span></span></code></pre></div><p>The <code>--listen-metrics-urls</code> is wht we are looking for. <code>etcd</code> will serve
+<a href="">Prometheus</a> metrics on the <code>/metrics</code> endpoint at this address. We can craft
+a minimal Prometheus configuration file to instruct the collector to scrape
+<code>etcd</code>.</p>
+<p><code>prometheus.yml</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="font-weight:bold">global</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">scrape_interval</span>: 1s
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">scrape_configs</span>:
+</span></span><span style="display:flex;"><span>  - <span style="font-weight:bold">job_name</span>: etcd
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">static_configs</span>:
+</span></span><span style="display:flex;"><span>    - <span style="font-weight:bold">targets</span>: [<span style="color:#0ff;font-weight:bold">&#39;127.0.0.1:2379&#39;</span>]
+</span></span></code></pre></div><p>Before we start Prometheus, we&rsquo;ll need to make sure that we are able to access
+the <code>etcd</code> metrics endpoint. Port-forwarding to the host network namespace
+allows us to also run Prometheus in the host network namespace, which simplifies
+accessing the dashboard in the browser.</p>
+<p>Port-forward the <code>etcd</code> metrics endpoint.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ kubectl port-forward -n kube-system pod/etcd-kind-control-plane 2381:2381
+</span></span></code></pre></div><p>Then start Prometheus container attached to the host network.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ docker run --net=host --rm -v $(pwd)/prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus
+</span></span></code></pre></div><p>The Prometheus dashboard should now be accessible in the browser at
+<code>127.0.0.1:9090</code>. We can get a graph of metrics <code>etcd</code> exposes by entering a
+query. For example, <code>irate(process_cpu_seconds_total{job=&quot;etcd&quot;}[5m])</code> will show
+us the rate of increase of total system and user CPU time. If we now run our
+program that establishes watches on <code>ConfigMaps</code>, we shouldn&rsquo;t see a meaningful
+impact on CPU.</p>
+<p><img src="../../static/k8s-asa-caching-1.png" alt="k8s-asa-caching-1"></p>
+<blockquote>
+<p>Y-axis range is <code>0.03</code> to <code>0.23</code>.</p>
+</blockquote>
+<blockquote>
+<p>Note: Remember that since we are running <code>etcd</code> in a <code>kind</code> cluster, the
+Kubernetes API Server, as well as other components, are interacting with it in
+addition to the load from our program.</p>
+</blockquote>
+<p>This is to be expected: one watch is unlikely to have a significant impact.
+However, if we increase the number of watches, we are going to start to see some
+problems. Let&rsquo;s adjust our program to start 10,000 watches on <code>ConfigMaps</code>.</p>
+<p><code>manydirectwatch.go</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">package</span> main
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;context&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;fmt&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;os&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;os/signal&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;go.etcd.io/etcd/client/pkg/v3/transport&#34;</span>
+</span></span><span style="display:flex;"><span>	clientv3 <span style="color:#0ff;font-weight:bold">&#34;go.etcd.io/etcd/client/v3&#34;</span>
+</span></span><span style="display:flex;"><span>	v1 <span style="color:#0ff;font-weight:bold">&#34;k8s.io/api/core/v1&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apimachinery/pkg/runtime&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apimachinery/pkg/runtime/serializer&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apiserver/pkg/storage&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apiserver/pkg/storage/etcd3&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apiserver/pkg/storage/value/encrypt/identity&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/kubernetes/pkg/apis/core&#34;</span>
+</span></span><span style="display:flex;"><span>	k8sv1 <span style="color:#0ff;font-weight:bold">&#34;k8s.io/kubernetes/pkg/apis/core/v1&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> main() {
+</span></span><span style="display:flex;"><span>	tlsConfig, err := (transport.TLSInfo{
+</span></span><span style="display:flex;"><span>		CertFile:       <span style="color:#0ff;font-weight:bold">&#34;./pki/etcd/server.crt&#34;</span>,
+</span></span><span style="display:flex;"><span>		KeyFile:        <span style="color:#0ff;font-weight:bold">&#34;./pki/etcd/server.key&#34;</span>,
+</span></span><span style="display:flex;"><span>		TrustedCAFile:  <span style="color:#0ff;font-weight:bold">&#34;./pki/etcd/ca.crt&#34;</span>,
+</span></span><span style="display:flex;"><span>		ClientCertFile: <span style="color:#0ff;font-weight:bold">&#34;./pki/apiserver-etcd-client.crt&#34;</span>,
+</span></span><span style="display:flex;"><span>		ClientKeyFile:  <span style="color:#0ff;font-weight:bold">&#34;./pki/apiserver-etcd-client.key&#34;</span>,
+</span></span><span style="display:flex;"><span>	}).ClientConfig()
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	c, err := clientv3.New(clientv3.Config{
+</span></span><span style="display:flex;"><span>		Endpoints: []<span style="color:#fff;font-weight:bold">string</span>{<span style="color:#0ff;font-weight:bold">&#34;https://127.0.0.1:2379&#34;</span>},
+</span></span><span style="display:flex;"><span>		TLS:       tlsConfig,
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	scheme := runtime.NewScheme()
+</span></span><span style="display:flex;"><span>	k8sv1.AddToScheme(scheme)
+</span></span><span style="display:flex;"><span>	core.AddToScheme(scheme)
+</span></span><span style="display:flex;"><span>	f := serializer.NewCodecFactory(scheme)
+</span></span><span style="display:flex;"><span>	s := etcd3.New(c, f.CodecForVersions(<span style="color:#fff;font-weight:bold">nil</span>, f.UniversalDecoder(), <span style="color:#fff;font-weight:bold">nil</span>, k8sv1.SchemeGroupVersion), <span style="color:#fff;font-weight:bold">nil</span>, <span style="color:#0ff;font-weight:bold">&#34;registry&#34;</span>, v1.Resource(<span style="color:#0ff;font-weight:bold">&#34;ConfigMap&#34;</span>), identity.NewEncryptCheckTransformer(), <span style="color:#fff;font-weight:bold">true</span>, etcd3.NewDefaultLeaseManagerConfig())
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">for</span> i := <span style="color:#ff0;font-weight:bold">0</span>; i &lt; <span style="color:#ff0;font-weight:bold">10000</span>; i++ {
+</span></span><span style="display:flex;"><span>		w, err := s.Watch(context.Background(), <span style="color:#0ff;font-weight:bold">&#34;configmaps&#34;</span>, storage.ListOptions{
+</span></span><span style="display:flex;"><span>			Predicate: storage.Everything,
+</span></span><span style="display:flex;"><span>			Recursive: <span style="color:#fff;font-weight:bold">true</span>,
+</span></span><span style="display:flex;"><span>		})
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">go</span> <span style="color:#fff;font-weight:bold">func</span>() {
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">for</span> e := <span style="color:#fff;font-weight:bold">range</span> w.ResultChan() {
+</span></span><span style="display:flex;"><span>				co, ok := e.Object.(*v1.ConfigMap)
+</span></span><span style="display:flex;"><span>				<span style="color:#fff;font-weight:bold">if</span> !ok {
+</span></span><span style="display:flex;"><span>					<span style="color:#fff;font-weight:bold">panic</span>(<span style="color:#0ff;font-weight:bold">&#34;not a config map!&#34;</span>)
+</span></span><span style="display:flex;"><span>				}
+</span></span><span style="display:flex;"><span>				fmt.Printf(<span style="color:#0ff;font-weight:bold">&#34;%s || %s/%s\n&#34;</span>, e.Type, co.Namespace, co.Name)
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		}()
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	stop := <span style="color:#fff;font-weight:bold">make</span>(<span style="color:#fff;font-weight:bold">chan</span> os.Signal)
+</span></span><span style="display:flex;"><span>	signal.Notify(stop, os.Interrupt)
+</span></span><span style="display:flex;"><span>	&lt;-stop
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>If we start our program now, we should see all 10,000 watches getting a list of
+all <code>ConfigMaps</code> in the cluster. If we create a new <code>ConfigMap</code>, we can see all
+watches being notified.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ go run manysimplewatch.go
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>ADDED || kube-system/kube-proxy
+</span></span><span style="display:flex;"><span>ADDED || kube-system/kube-root-ca.crt
+</span></span><span style="display:flex;"><span>ADDED || kube-system/kubeadm-config
+</span></span><span style="display:flex;"><span>ADDED || kube-system/kubelet-config
+</span></span><span style="display:flex;"><span>ADDED || local-path-storage/kube-root-ca.crt
+</span></span><span style="display:flex;"><span>ADDED || local-path-storage/local-path-config
+</span></span><span style="display:flex;"><span>ADDED || kube-system/kube-root-ca.crt
+</span></span><span style="display:flex;"><span>ADDED || kube-system/kubeadm-config
+</span></span><span style="display:flex;"><span>ADDED || kube-system/kubelet-config
+</span></span><span style="display:flex;"><span>ADDED || local-path-storage/kube-root-ca.crt
+</span></span><span style="display:flex;"><span>ADDED || local-path-storage/local-path-config
+</span></span><span style="display:flex;"><span>...
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ kubectl create configmap testing
+</span></span><span style="display:flex;"><span>configmap/testing created
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>ADDED || default/testing
+</span></span><span style="display:flex;"><span>ADDED || default/testing
+</span></span><span style="display:flex;"><span>ADDED || default/testing
+</span></span><span style="display:flex;"><span>ADDED || default/testing
+</span></span><span style="display:flex;"><span>ADDED || default/testing
+</span></span><span style="display:flex;"><span>ADDED || default/testing
+</span></span><span style="display:flex;"><span>ADDED || default/testing
+</span></span><span style="display:flex;"><span>ADDED || default/testing
+</span></span><span style="display:flex;"><span>ADDED || default/testing
+</span></span><span style="display:flex;"><span>ADDED || default/testing
+</span></span><span style="display:flex;"><span>...
+</span></span></code></pre></div><p>Looking back at our <code>etcd</code> metrics, we can see a significant spike in CPU at
+program startup. This is concerning, but perhaps even more troublesome is the
+amount of work incurred when we created a new <code>ConfigMap</code>. While the load is
+simulated in our program, the Kubernetes API Server may service many watch
+requests from various clients. Establishing a watch in <code>etcd</code> for each is
+unnecessary as the API Server only needs one notification in order to
+subsequently inform all clients.</p>
+<p><img src="../../static/k8s-asa-caching-2.png" alt="k8s-asa-caching-2"></p>
+<blockquote>
+<p>Y-axis range is <code>0.00</code> to <code>3.00</code>.</p>
+</blockquote>
+<blockquote>
+<p>The first large spike corresponds to when our program started. The second
+spike, albeit smaller, corresponds to creating a single <code>ConfigMap</code> with
+10,000 watches established.</p>
+</blockquote>
+<h2 id="caching">
+  Caching
+  <a class="heading-link" href="#caching">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>As you may have guessed, the Kubernetes API Server makes use of a caching
+strategy to address this issue, and interacting with the caching layer is much
+like calling the <code>etcd3</code> <code>storage.Interface</code> implementation directly. In fact,
+the caching layer implements <code>storage.Interface</code> as well.</p>
+<p>When <a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go#L324">constructing a
+<code>cacher.Cacher</code></a>
+a <code>Config</code> struct is passed that includes a <code>storage.Interface</code> implementation.
+As <a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go#L241">denoted in the
+docstring</a>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#007f7f">// Cacher implements storage.Interface (although most of the calls are just
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">// delegated to the underlying storage).
+</span></span></span></code></pre></div><p>For example, because <code>etcd</code> informs a watcher of creation events (<code>ADDED</code>), the
+<a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go#L460"><code>Create()</code>
+implementation</a>
+of <code>Cacher</code> directly calls the underlying <code>storage</code>&rsquo;s <code>Create()</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#007f7f">// Create implements storage.Interface.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">func</span> (c *Cacher) Create(ctx context.Context, key <span style="color:#fff;font-weight:bold">string</span>, obj, out runtime.Object, ttl <span style="color:#fff;font-weight:bold">uint64</span>) <span style="color:#fff;font-weight:bold">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> c.storage.Create(ctx, key, obj, out, ttl)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Other methods perform minor operations before calling the underlying <code>storage</code>,
+but <code>Watch()</code> doesn&rsquo;t directly interact with it at all. Instead, it constructs a
+new
+<a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go#L1197"><code>cacheWatcher</code></a>
+and starts its event processing loop. Before looking into how the <code>cacheWatcher</code>
+works, it is necessary to understand how events are delivered from <code>etcd</code> to all
+the watchers started by this method. When the <code>Cacher</code> is constructed, it
+creates three important underlying components, two of which are implementations
+of more generic interfaces in the
+<a href="https://github.com/kubernetes/kubernetes/tree/master/staging/src/k8s.io/client-go">client-go</a>
+<a href="https://github.com/kubernetes/kubernetes/tree/master/staging/src/k8s.io/client-go/tools/cache"><code>cache</code>
+package</a>:</p>
+<ul>
+<li><a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/watch_cache.go#L137"><code>watchCache</code></a>,
+which is an implementation of
+<a href="https://github.com/kubernetes/client-go/blob/d46293369ed0c0fad65e426099354f6764b0a131/tools/cache/store.go#L39"><code>cache.Store</code></a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go#L1108"><code>cacherListerWatcher</code></a>,
+which is an implementation of
+<a href="https://github.com/kubernetes/client-go/blob/d46293369ed0c0fad65e426099354f6764b0a131/tools/cache/listwatch.go#L43"><code>cache.ListerWatcher</code></a>.</li>
+<li><a href="https://github.com/kubernetes/client-go/blob/d46293369ed0c0fad65e426099354f6764b0a131/tools/cache/reflector.go#L50"><code>Reflector</code></a>
+accepts implementations of the two previously mentioned interfaces, and uses
+the latter to populate the former.</li>
+</ul>
+<p>Let&rsquo;s dig into each of these in more depth.</p>
+<h3 id="watchcache">
+  <code>watchCache</code>
+  <a class="heading-link" href="#watchcache">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
+<p>The <code>watchCache</code> is where the actual cache of events that are served to watchers
+are stored. It is a sliding window with a resizable capacity, meaning that when
+a new item is added, we either drop the oldest or expand the size of the cache
+to accommodate adding the new item. As previously mentioned, <code>watchCache</code>
+implements <code>cache.Store</code>, which supports the following methods.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">type</span> Store <span style="color:#fff;font-weight:bold">interface</span> {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// Add adds the given object to the accumulator associated with the given object&#39;s key
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	Add(obj <span style="color:#fff;font-weight:bold">interface</span>{}) <span style="color:#fff;font-weight:bold">error</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// Update updates the given object in the accumulator associated with the given object&#39;s key
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	Update(obj <span style="color:#fff;font-weight:bold">interface</span>{}) <span style="color:#fff;font-weight:bold">error</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// Delete deletes the given object from the accumulator associated with the given object&#39;s key
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	Delete(obj <span style="color:#fff;font-weight:bold">interface</span>{}) <span style="color:#fff;font-weight:bold">error</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// List returns a list of all the currently non-empty accumulators
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	List() []<span style="color:#fff;font-weight:bold">interface</span>{}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// ListKeys returns a list of all the keys currently associated with non-empty accumulators
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	ListKeys() []<span style="color:#fff;font-weight:bold">string</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// Get returns the accumulator associated with the given object&#39;s key
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	Get(obj <span style="color:#fff;font-weight:bold">interface</span>{}) (item <span style="color:#fff;font-weight:bold">interface</span>{}, exists <span style="color:#fff;font-weight:bold">bool</span>, err <span style="color:#fff;font-weight:bold">error</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// GetByKey returns the accumulator associated with the given key
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	GetByKey(key <span style="color:#fff;font-weight:bold">string</span>) (item <span style="color:#fff;font-weight:bold">interface</span>{}, exists <span style="color:#fff;font-weight:bold">bool</span>, err <span style="color:#fff;font-weight:bold">error</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// Replace will delete the contents of the store, using instead the
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// given list. Store takes ownership of the list, you should not reference
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// it after calling this function.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	Replace([]<span style="color:#fff;font-weight:bold">interface</span>{}, <span style="color:#fff;font-weight:bold">string</span>) <span style="color:#fff;font-weight:bold">error</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// Resync is meaningless in the terms appearing here but has
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// meaning in some implementations that have non-trivial
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// additional behavior (e.g., DeltaFIFO).
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	Resync() <span style="color:#fff;font-weight:bold">error</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The <code>Add()</code>, <code>Update()</code>, and <code>Delete()</code> implementations construct a
+<a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apimachinery/pkg/watch/watch.go#L57"><code>watch.Event</code></a>,
+then pass it along to the <a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/watch_cache.go#L282"><code>processEvent()</code>
+method</a>.
+Here the event is transformed into a
+<a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/watch_cache.go#L70"><code>watchCacheEvent</code></a>,
+which ultimately gets passed to
+<a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/watch_cache.go#L342"><code>updateCache()</code></a>.
+The <code>updateCache()</code> method, along with the
+<a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/watch_cache.go#L355"><code>resizeCacheLocked()</code></a>
+method it calls, are where the sliding window logic is implemented.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#007f7f">// Assumes that lock is already held for write.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">func</span> (w *watchCache) updateCache(event *watchCacheEvent) {
+</span></span><span style="display:flex;"><span>	w.resizeCacheLocked(event.RecordTime)
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> w.isCacheFullLocked() {
+</span></span><span style="display:flex;"><span>		<span style="color:#007f7f">// Cache is full - remove the oldest element.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>		w.startIndex++
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	w.cache[w.endIndex%w.capacity] = event
+</span></span><span style="display:flex;"><span>	w.endIndex++
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007f7f">// resizeCacheLocked resizes the cache if necessary:
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">// - increases capacity by 2x if cache is full and all cached events occurred within last eventFreshDuration.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">// - decreases capacity by 2x when recent quarter of events occurred outside of eventFreshDuration(protect watchCache from flapping).
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">func</span> (w *watchCache) resizeCacheLocked(eventTime time.Time) {
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> w.isCacheFullLocked() &amp;&amp; eventTime.Sub(w.cache[w.startIndex%w.capacity].RecordTime) &lt; eventFreshDuration {
+</span></span><span style="display:flex;"><span>		capacity := min(w.capacity*<span style="color:#ff0;font-weight:bold">2</span>, w.upperBoundCapacity)
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">if</span> capacity &gt; w.capacity {
+</span></span><span style="display:flex;"><span>			w.doCacheResizeLocked(capacity)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> w.isCacheFullLocked() &amp;&amp; eventTime.Sub(w.cache[(w.endIndex-w.capacity/<span style="color:#ff0;font-weight:bold">4</span>)%w.capacity].RecordTime) &gt; eventFreshDuration {
+</span></span><span style="display:flex;"><span>		capacity := max(w.capacity/<span style="color:#ff0;font-weight:bold">2</span>, w.lowerBoundCapacity)
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">if</span> capacity &lt; w.capacity {
+</span></span><span style="display:flex;"><span>			w.doCacheResizeLocked(capacity)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Before returning from <code>processEvent()</code>, an <a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/watch_cache.go#L335"><code>eventHandler()</code> function is
+invoked</a>
+if one was passed during <code>watchCache</code> construction. We&rsquo;ll revisit this shortly
+when we look at how watchers are notified of events.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>	<span style="color:#007f7f">// Avoid calling event handler under lock.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// This is safe as long as there is at most one call to Add/Update/Delete and
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// UpdateResourceVersion in flight at any point in time, which is true now,
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// because reflector calls them synchronously from its main thread.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#fff;font-weight:bold">if</span> w.eventHandler != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		w.eventHandler(wcEvent)
+</span></span><span style="display:flex;"><span>	}
+</span></span></code></pre></div><p>Other methods, particularly those that involve getting and listing, rely on an
+underlying
+<a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/client-go/tools/cache/index.go#L35"><code>cache.Indexer</code></a>.
+Ultimately, the <a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/client-go/tools/cache/store.go#L271">simple
+indexer</a>
+<a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/watch_cache.go#L217">constructed in the
+<code>watchCache</code></a>
+boils down to <a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/client-go/tools/cache/thread_safe_store.go#L355">a thread-safe
+<code>map</code></a>.
+While the sliding window of events in the <code>watchCache</code> allows us to send updates
+to many different watchers, the indexer allows for new watchers to easily get
+the latest state of objects, which is required when starting a watch.</p>
+<p>Together, these two mechanisms allow for many requests to be served from their
+in-memory store, rather than having to reach out to <code>etcd</code> directly.</p>
+<h3 id="cacherlisterwatcher">
+  <code>cacherListerWatcher</code>
+  <a class="heading-link" href="#cacherlisterwatcher">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
+<p>The <code>cacherListerWatcher</code> is much simpler than the <code>watchCache</code>, as it
+essentially wraps the <code>storage.Interface</code> that is passed to the <code>Cacher</code> and
+calls the underlying <code>GetList()</code> and <code>Watch()</code> methods.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#007f7f">// NewCacherListerWatcher returns a storage.Interface backed ListerWatcher.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">func</span> NewCacherListerWatcher(storage storage.Interface, resourcePrefix <span style="color:#fff;font-weight:bold">string</span>, newListFunc <span style="color:#fff;font-weight:bold">func</span>() runtime.Object) cache.ListerWatcher {
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> &amp;cacherListerWatcher{
+</span></span><span style="display:flex;"><span>		storage:        storage,
+</span></span><span style="display:flex;"><span>		resourcePrefix: resourcePrefix,
+</span></span><span style="display:flex;"><span>		newListFunc:    newListFunc,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007f7f">// Implements cache.ListerWatcher interface.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">func</span> (lw *cacherListerWatcher) List(options metav1.ListOptions) (runtime.Object, <span style="color:#fff;font-weight:bold">error</span>) {
+</span></span><span style="display:flex;"><span>	list := lw.newListFunc()
+</span></span><span style="display:flex;"><span>	pred := storage.SelectionPredicate{
+</span></span><span style="display:flex;"><span>		Label:    labels.Everything(),
+</span></span><span style="display:flex;"><span>		Field:    fields.Everything(),
+</span></span><span style="display:flex;"><span>		Limit:    options.Limit,
+</span></span><span style="display:flex;"><span>		Continue: options.Continue,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	storageOpts := storage.ListOptions{
+</span></span><span style="display:flex;"><span>		ResourceVersionMatch: options.ResourceVersionMatch,
+</span></span><span style="display:flex;"><span>		Predicate:            pred,
+</span></span><span style="display:flex;"><span>		Recursive:            <span style="color:#fff;font-weight:bold">true</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> err := lw.storage.GetList(context.TODO(), lw.resourcePrefix, storageOpts, list); err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>, err
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> list, <span style="color:#fff;font-weight:bold">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007f7f">// Implements cache.ListerWatcher interface.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">func</span> (lw *cacherListerWatcher) Watch(options metav1.ListOptions) (watch.Interface, <span style="color:#fff;font-weight:bold">error</span>) {
+</span></span><span style="display:flex;"><span>	opts := storage.ListOptions{
+</span></span><span style="display:flex;"><span>		ResourceVersion: options.ResourceVersion,
+</span></span><span style="display:flex;"><span>		Predicate:       storage.Everything,
+</span></span><span style="display:flex;"><span>		Recursive:       <span style="color:#fff;font-weight:bold">true</span>,
+</span></span><span style="display:flex;"><span>		ProgressNotify:  <span style="color:#fff;font-weight:bold">true</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> lw.storage.Watch(context.TODO(), lw.resourcePrefix, opts)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The <code>cacherListerWatcher</code> is what retrieves the data that ultimately gets stored
+in the <code>watchCache</code>, but they need a mechanism to tie them together.</p>
+<h3 id="reflector">
+  <code>Reflector</code>
+  <a class="heading-link" href="#reflector">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
+<p>The <code>watchCache</code> and <code>cacherListerWatcher</code> are constructed prior to the
+<code>Reflector</code> so that they can be passed to it.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>	watchCache := newWatchCache(
+</span></span><span style="display:flex;"><span>		config.KeyFunc, cacher.processEvent, config.GetAttrsFunc, config.Versioner, config.Indexers, config.Clock, config.GroupResource)
+</span></span><span style="display:flex;"><span>	listerWatcher := NewCacherListerWatcher(config.Storage, config.ResourcePrefix, config.NewListFunc)
+</span></span><span style="display:flex;"><span>	reflectorName := <span style="color:#0ff;font-weight:bold">&#34;storage/cacher.go:&#34;</span> + config.ResourcePrefix
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	reflector := cache.NewNamedReflector(reflectorName, listerWatcher, obj, watchCache, <span style="color:#ff0;font-weight:bold">0</span>)
+</span></span></code></pre></div><p>The <code>Reflector</code> is defined in the <code>client-go/tools/cache</code> package with the
+following docstring.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#007f7f">// Reflector watches a specified resource and causes all changes to be reflected in the given store.
+</span></span></span></code></pre></div><p>The majority of the functionality is invoked from its <a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/client-go/tools/cache/reflector.go#L315"><code>ListAndWatch()</code>
+method</a>,
+which does exactly as its name implies: lists and then watches. Events coming
+from the <code>ListerWatcher</code> (<code>cacherListerWatcher</code>) are processed in the
+<a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/client-go/tools/cache/reflector.go#L532"><code>watchHandler()</code></a>.
+This is where the data is passed to the <code>watchCache</code>,</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">case</span> watch.Added:
+</span></span><span style="display:flex;"><span>				err := store.Add(event.Object)
+</span></span><span style="display:flex;"><span>				<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>					utilruntime.HandleError(fmt.Errorf(<span style="color:#0ff;font-weight:bold">&#34;%s: unable to add watch event object (%#v) to store: %v&#34;</span>, name, event.Object, err))
+</span></span><span style="display:flex;"><span>				}
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">case</span> watch.Modified:
+</span></span><span style="display:flex;"><span>				err := store.Update(event.Object)
+</span></span><span style="display:flex;"><span>				<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>					utilruntime.HandleError(fmt.Errorf(<span style="color:#0ff;font-weight:bold">&#34;%s: unable to update watch event object (%#v) to store: %v&#34;</span>, name, event.Object, err))
+</span></span><span style="display:flex;"><span>				}
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">case</span> watch.Deleted:
+</span></span><span style="display:flex;"><span>				<span style="color:#007f7f">// TODO: Will any consumers need access to the &#34;last known
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>				<span style="color:#007f7f">// state&#34;, which is passed in event.Object? If so, may need
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>				<span style="color:#007f7f">// to change this.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>				err := store.Delete(event.Object)
+</span></span><span style="display:flex;"><span>				<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>					utilruntime.HandleError(fmt.Errorf(<span style="color:#0ff;font-weight:bold">&#34;%s: unable to delete watch event object (%#v) from store: %v&#34;</span>, name, event.Object, err))
+</span></span><span style="display:flex;"><span>				}
+</span></span></code></pre></div><h3 id="tying-it-all-together">
+  Tying It All Together
+  <a class="heading-link" href="#tying-it-all-together">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
+<p><img src="../../static/k8s-asa-caching-4.png" alt="k8s-asa-caching-4"></p>
+<p>With all components in place, we need to <a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go#L406">fire up the <code>Reflector</code> to start
+pulling data from
+<code>cacherListerWatcher</code></a>
+and storing it in the <code>watchCache</code>, which will inform the <code>Cacher</code> of updates.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">go</span> cacher.dispatchEvents()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	cacher.stopWg.Add(<span style="color:#ff0;font-weight:bold">1</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">go</span> <span style="color:#fff;font-weight:bold">func</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">defer</span> cacher.stopWg.Done()
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">defer</span> cacher.terminateAllWatchers()
+</span></span><span style="display:flex;"><span>		wait.Until(
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">func</span>() {
+</span></span><span style="display:flex;"><span>				<span style="color:#fff;font-weight:bold">if</span> !cacher.isStopped() {
+</span></span><span style="display:flex;"><span>					cacher.startCaching(stopCh)
+</span></span><span style="display:flex;"><span>				}
+</span></span><span style="display:flex;"><span>			}, time.Second, stopCh,
+</span></span><span style="display:flex;"><span>		)
+</span></span><span style="display:flex;"><span>	}()
+</span></span></code></pre></div><p>Looking at the second call first, <code>cacher.startCaching(stopCh)</code> is how we start
+the <code>Reflector</code> with a <a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go#L449">call to
+<code>ListAndWatch()</code></a>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> (c *Cacher) startCaching(stopChannel &lt;-<span style="color:#fff;font-weight:bold">chan</span> <span style="color:#fff;font-weight:bold">struct</span>{}) {
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// The &#39;usable&#39; lock is always &#39;RLock&#39;able when it is safe to use the cache.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// It is safe to use the cache after a successful list until a disconnection.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// We start with usable (write) locked. The below OnReplace function will
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// unlock it after a successful list. The below defer will then re-lock
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// it when this function exits (always due to disconnection), only if
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// we actually got a successful list. This cycle will repeat as needed.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	successfulList := <span style="color:#fff;font-weight:bold">false</span>
+</span></span><span style="display:flex;"><span>	c.watchCache.SetOnReplace(<span style="color:#fff;font-weight:bold">func</span>() {
+</span></span><span style="display:flex;"><span>		successfulList = <span style="color:#fff;font-weight:bold">true</span>
+</span></span><span style="display:flex;"><span>		c.ready.set(<span style="color:#fff;font-weight:bold">true</span>)
+</span></span><span style="display:flex;"><span>		klog.V(<span style="color:#ff0;font-weight:bold">1</span>).Infof(<span style="color:#0ff;font-weight:bold">&#34;cacher (%v): initialized&#34;</span>, c.groupResource.String())
+</span></span><span style="display:flex;"><span>		metrics.WatchCacheInitializations.WithLabelValues(c.groupResource.String()).Inc()
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">defer</span> <span style="color:#fff;font-weight:bold">func</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">if</span> successfulList {
+</span></span><span style="display:flex;"><span>			c.ready.set(<span style="color:#fff;font-weight:bold">false</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	c.terminateAllWatchers()
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// Note that since onReplace may be not called due to errors, we explicitly
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// need to retry it on errors under lock.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// Also note that startCaching is called in a loop, so there&#39;s no need
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// to have another loop here.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#fff;font-weight:bold">if</span> err := c.reflector.ListAndWatch(stopChannel); err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		klog.Errorf(<span style="color:#0ff;font-weight:bold">&#34;cacher (%v): unexpected ListAndWatch error: %v; reinitializing...&#34;</span>, c.groupResource.String(), err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>This will cause the <code>Reflector</code> to start populating the <code>watchCache</code>, which will
+in turn notify the <code>Cacher</code> so that it can dispatch to all watchers. The
+<a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go#L787"><code>cacher.processEvent()</code>
+method</a>
+was passed to the <code>watchCache</code> as the <code>eventHandler()</code> we saw earlier.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> (c *Cacher) processEvent(event *watchCacheEvent) {
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> curLen := <span style="color:#fff;font-weight:bold">int64</span>(<span style="color:#fff;font-weight:bold">len</span>(c.incoming)); c.incomingHWM.Update(curLen) {
+</span></span><span style="display:flex;"><span>		<span style="color:#007f7f">// Monitor if this gets backed up, and how much.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>		klog.V(<span style="color:#ff0;font-weight:bold">1</span>).Infof(<span style="color:#0ff;font-weight:bold">&#34;cacher (%v): %v objects queued in incoming channel.&#34;</span>, c.groupResource.String(), curLen)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	c.incoming &lt;- *event
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>This sends on the <code>c.incoming</code> channel, which is then read in the
+<a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go#L795"><code>cacher.dispatchEvents()</code>
+method</a>,
+before being dispatched to each watcher.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">case</span> event, ok := &lt;-c.incoming:
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">if</span> !ok {
+</span></span><span style="display:flex;"><span>				<span style="color:#fff;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>			<span style="color:#007f7f">// Don&#39;t dispatch bookmarks coming from the storage layer.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>			<span style="color:#007f7f">// They can be very frequent (even to the level of subseconds)
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>			<span style="color:#007f7f">// to allow efficient watch resumption on kube-apiserver restarts,
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>			<span style="color:#007f7f">// and propagating them down may overload the whole system.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>			<span style="color:#007f7f">//
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>			<span style="color:#007f7f">// TODO: If at some point we decide the performance and scalability
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>			<span style="color:#007f7f">// footprint is acceptable, this is the place to hook them in.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>			<span style="color:#007f7f">// However, we then need to check if this was called as a result
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>			<span style="color:#007f7f">// of a bookmark event or regular Add/Update/Delete operation by
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>			<span style="color:#007f7f">// checking if resourceVersion here has changed.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>			<span style="color:#fff;font-weight:bold">if</span> event.Type != watch.Bookmark {
+</span></span><span style="display:flex;"><span>				c.dispatchEvent(&amp;event)
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>			lastProcessedResourceVersion = event.ResourceVersion
+</span></span><span style="display:flex;"><span>			metrics.EventsCounter.WithLabelValues(c.groupResource.String()).Inc()
+</span></span></code></pre></div><p>When we <a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go#L878">call
+<code>c.dispatchEvent(&amp;event)</code></a>,
+the list of <code>cacheWatcher</code> is filtered to those who are interested in the given
+event, and the event is sent to each.</p>
+<h3 id="the-watch-method">
+  The <code>Watch()</code> Method
+  <a class="heading-link" href="#the-watch-method">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
+<p>This has been quite a ride, but now that we know how events are processed, it is
+time to get back to the <a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go#L483"><code>Watch()</code>
+method</a>.
+As mentioned earlier, instead of starting a new <code>etcd</code> watch when this method is
+invoked, we just create a <code>cacheWatcher</code>, which gets added to the candidates
+when the <code>Cacher</code> processes events. Each <code>cacheWatcher</code> has its own processing
+loop:
+<a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go#L1443"><code>watcher.processInterval()</code></a>.
+The <code>Watch()</code> method starts the processing loop for each watcher that it
+constructs after adding it to the list of watchers for the <code>Cacher</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">func</span>() {
+</span></span><span style="display:flex;"><span>		c.Lock()
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">defer</span> c.Unlock()
+</span></span><span style="display:flex;"><span>		<span style="color:#007f7f">// Update watcher.forget function once we can compute it.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>		watcher.forget = forgetWatcher(c, watcher, c.watcherIdx, triggerValue, triggerSupported)
+</span></span><span style="display:flex;"><span>		c.watchers.addWatcher(watcher, c.watcherIdx, triggerValue, triggerSupported)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#007f7f">// Add it to the queue only when the client support watch bookmarks.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>		<span style="color:#fff;font-weight:bold">if</span> watcher.allowWatchBookmarks {
+</span></span><span style="display:flex;"><span>			c.bookmarkWatchers.addWatcher(watcher)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		c.watcherIdx++
+</span></span><span style="display:flex;"><span>	}()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">go</span> watcher.processInterval(ctx, cacheInterval, watchRV)
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> watcher, <span style="color:#fff;font-weight:bold">nil</span>
+</span></span></code></pre></div><p>The <code>cacheInterval</code> is <a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go#L539">constructed earlier in the
+method</a>,
+and delivers any existing events in the <code>watchCache</code> that the <code>cacheWatcher</code> is
+interested in. The <code>watcher.processInterval()</code> method first <a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go#L1466">processes all
+events from the
+<code>cacheInterval</code></a>,
+then starts waiting to <a href="https://github.com/kubernetes/kubernetes/blob/e818649c10f29bc80b874889a448da4023918330/staging/src/k8s.io/apiserver/pkg/storage/cacher/cacher.go#L1504">process future dispatched
+events</a>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">for</span> {
+</span></span><span style="display:flex;"><span>		event, err := cacheInterval.Next()
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>			klog.Warningf(<span style="color:#0ff;font-weight:bold">&#34;couldn&#39;t retrieve watch event to serve: %#v&#34;</span>, err)
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">if</span> event == <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">break</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		c.sendWatchCacheEvent(event)
+</span></span><span style="display:flex;"><span>		<span style="color:#007f7f">// With some events already sent, update resourceVersion so that
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>		<span style="color:#007f7f">// events that were buffered and not yet processed won&#39;t be delivered
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>		<span style="color:#007f7f">// to this watcher second time causing going back in time.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>		resourceVersion = event.ResourceVersion
+</span></span><span style="display:flex;"><span>		initEventCount++
+</span></span><span style="display:flex;"><span>	}
+</span></span></code></pre></div><blockquote>
+<p>Note: some code commends removed for brevity.</p>
+</blockquote>
+<p>Processing events consists of calling <code>sendWatchCacheEvent()</code>, which transforms
+the event, then delivers it on the <code>result</code> channel, which is the same channel
+that callers of <code>Watch()</code> are able to read from!</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> (c *cacheWatcher) sendWatchCacheEvent(event *watchCacheEvent) {
+</span></span><span style="display:flex;"><span>	watchEvent := c.convertToWatchEvent(event)
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> watchEvent == <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#007f7f">// Watcher is not interested in that object.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>		<span style="color:#fff;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">select</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">case</span> &lt;-c.done:
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">default</span>:
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">select</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">case</span> c.result &lt;- *watchEvent:
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">case</span> &lt;-c.done:
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><blockquote>
+<p>Note: some code comments removed for brevity.</p>
+</blockquote>
+<h2 id="everyones-watching-efficiently">
+  Everyone&rsquo;s Watching&hellip; Efficiently
+  <a class="heading-link" href="#everyones-watching-efficiently">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>Let&rsquo;s see the <code>Cacher</code> implementation of the <code>storage.Interface</code> in action. We
+can take our program and modify it to pass the <code>etcd</code> storage implementation to
+the <code>Cacher</code>.</p>
+<p><code>cachewatch.go</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">package</span> main
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;context&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;fmt&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;os&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;os/signal&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;go.etcd.io/etcd/client/pkg/v3/transport&#34;</span>
+</span></span><span style="display:flex;"><span>	clientv3 <span style="color:#0ff;font-weight:bold">&#34;go.etcd.io/etcd/client/v3&#34;</span>
+</span></span><span style="display:flex;"><span>	v1 <span style="color:#0ff;font-weight:bold">&#34;k8s.io/api/core/v1&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apimachinery/pkg/fields&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apimachinery/pkg/labels&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apimachinery/pkg/runtime&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apimachinery/pkg/runtime/serializer&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apiserver/pkg/storage&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apiserver/pkg/storage/cacher&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apiserver/pkg/storage/etcd3&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/apiserver/pkg/storage/value/encrypt/identity&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/kubernetes/pkg/apis/core&#34;</span>
+</span></span><span style="display:flex;"><span>	k8sv1 <span style="color:#0ff;font-weight:bold">&#34;k8s.io/kubernetes/pkg/apis/core/v1&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;k8s.io/utils/clock&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> main() {
+</span></span><span style="display:flex;"><span>	tlsConfig, err := (transport.TLSInfo{
+</span></span><span style="display:flex;"><span>		CertFile:       <span style="color:#0ff;font-weight:bold">&#34;./pki/etcd/server.crt&#34;</span>,
+</span></span><span style="display:flex;"><span>		KeyFile:        <span style="color:#0ff;font-weight:bold">&#34;./pki/etcd/server.key&#34;</span>,
+</span></span><span style="display:flex;"><span>		TrustedCAFile:  <span style="color:#0ff;font-weight:bold">&#34;./pki/etcd/ca.crt&#34;</span>,
+</span></span><span style="display:flex;"><span>		ClientCertFile: <span style="color:#0ff;font-weight:bold">&#34;./pki/apiserver-etcd-client.crt&#34;</span>,
+</span></span><span style="display:flex;"><span>		ClientKeyFile:  <span style="color:#0ff;font-weight:bold">&#34;./pki/apiserver-etcd-client.key&#34;</span>,
+</span></span><span style="display:flex;"><span>	}).ClientConfig()
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	c, err := clientv3.New(clientv3.Config{
+</span></span><span style="display:flex;"><span>		Endpoints: []<span style="color:#fff;font-weight:bold">string</span>{<span style="color:#0ff;font-weight:bold">&#34;https://127.0.0.1:2379&#34;</span>},
+</span></span><span style="display:flex;"><span>		TLS:       tlsConfig,
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	scheme := runtime.NewScheme()
+</span></span><span style="display:flex;"><span>	k8sv1.AddToScheme(scheme)
+</span></span><span style="display:flex;"><span>	core.AddToScheme(scheme)
+</span></span><span style="display:flex;"><span>	f := serializer.NewCodecFactory(scheme)
+</span></span><span style="display:flex;"><span>	s := etcd3.New(c, f.CodecForVersions(<span style="color:#fff;font-weight:bold">nil</span>, f.UniversalDecoder(), <span style="color:#fff;font-weight:bold">nil</span>, k8sv1.SchemeGroupVersion), <span style="color:#fff;font-weight:bold">nil</span>, <span style="color:#0ff;font-weight:bold">&#34;registry&#34;</span>, v1.Resource(<span style="color:#0ff;font-weight:bold">&#34;ConfigMap&#34;</span>), identity.NewEncryptCheckTransformer(), <span style="color:#fff;font-weight:bold">true</span>, etcd3.NewDefaultLeaseManagerConfig())
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	ca, err := cacher.NewCacherFromConfig(cacher.Config{
+</span></span><span style="display:flex;"><span>		Storage:        s,
+</span></span><span style="display:flex;"><span>		Versioner:      storage.APIObjectVersioner{},
+</span></span><span style="display:flex;"><span>		GroupResource:  v1.Resource(<span style="color:#0ff;font-weight:bold">&#34;configmaps&#34;</span>),
+</span></span><span style="display:flex;"><span>		ResourcePrefix: <span style="color:#0ff;font-weight:bold">&#34;configmaps&#34;</span>,
+</span></span><span style="display:flex;"><span>		KeyFunc:        <span style="color:#fff;font-weight:bold">func</span>(o runtime.Object) (<span style="color:#fff;font-weight:bold">string</span>, <span style="color:#fff;font-weight:bold">error</span>) { <span style="color:#fff;font-weight:bold">return</span> storage.NamespaceKeyFunc(<span style="color:#0ff;font-weight:bold">&#34;configmaps&#34;</span>, o) },
+</span></span><span style="display:flex;"><span>		GetAttrsFunc: <span style="color:#fff;font-weight:bold">func</span>(o runtime.Object) (label labels.Set, field fields.Set, err <span style="color:#fff;font-weight:bold">error</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">return</span> labels.Set{},
+</span></span><span style="display:flex;"><span>				fields.Set{}, <span style="color:#fff;font-weight:bold">nil</span>
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>		NewFunc: <span style="color:#fff;font-weight:bold">func</span>() runtime.Object {
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">return</span> &amp;v1.ConfigMap{}
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>		NewListFunc: <span style="color:#fff;font-weight:bold">func</span>() runtime.Object {
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">return</span> &amp;v1.ConfigMapList{}
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>		Codec: f.LegacyCodec(k8sv1.SchemeGroupVersion),
+</span></span><span style="display:flex;"><span>		Clock: clock.RealClock{},
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">for</span> i := <span style="color:#ff0;font-weight:bold">0</span>; i &lt; <span style="color:#ff0;font-weight:bold">10000</span>; i++ {
+</span></span><span style="display:flex;"><span>		w, err := ca.Watch(context.Background(), <span style="color:#0ff;font-weight:bold">&#34;configmaps&#34;</span>, storage.ListOptions{
+</span></span><span style="display:flex;"><span>			Predicate: storage.Everything,
+</span></span><span style="display:flex;"><span>			Recursive: <span style="color:#fff;font-weight:bold">true</span>,
+</span></span><span style="display:flex;"><span>		})
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">go</span> <span style="color:#fff;font-weight:bold">func</span>() {
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">for</span> e := <span style="color:#fff;font-weight:bold">range</span> w.ResultChan() {
+</span></span><span style="display:flex;"><span>				<span style="color:#fff;font-weight:bold">switch</span> o := e.Object.(<span style="color:#fff;font-weight:bold">type</span>) {
+</span></span><span style="display:flex;"><span>				<span style="color:#fff;font-weight:bold">case</span> *v1.ConfigMap:
+</span></span><span style="display:flex;"><span>					fmt.Printf(<span style="color:#0ff;font-weight:bold">&#34;%s || %s/%s\n&#34;</span>, e.Type, o.Namespace, o.Name)
+</span></span><span style="display:flex;"><span>				<span style="color:#fff;font-weight:bold">default</span>:
+</span></span><span style="display:flex;"><span>					co, ok := o.(runtime.CacheableObject)
+</span></span><span style="display:flex;"><span>					<span style="color:#fff;font-weight:bold">if</span> !ok {
+</span></span><span style="display:flex;"><span>						<span style="color:#fff;font-weight:bold">panic</span>(<span style="color:#0ff;font-weight:bold">&#34;unknown event&#34;</span>)
+</span></span><span style="display:flex;"><span>					}
+</span></span><span style="display:flex;"><span>					c, ok := co.GetObject().(*v1.ConfigMap)
+</span></span><span style="display:flex;"><span>					<span style="color:#fff;font-weight:bold">if</span> !ok {
+</span></span><span style="display:flex;"><span>						<span style="color:#fff;font-weight:bold">panic</span>(<span style="color:#0ff;font-weight:bold">&#34;unknown object&#34;</span>)
+</span></span><span style="display:flex;"><span>					}
+</span></span><span style="display:flex;"><span>					fmt.Printf(<span style="color:#0ff;font-weight:bold">&#34;%s || %s/%s\n&#34;</span>, e.Type, c.Namespace, c.Name)
+</span></span><span style="display:flex;"><span>				}
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		}()
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	stop := <span style="color:#fff;font-weight:bold">make</span>(<span style="color:#fff;font-weight:bold">chan</span> os.Signal)
+</span></span><span style="display:flex;"><span>	signal.Notify(stop, os.Interrupt)
+</span></span><span style="display:flex;"><span>	&lt;-stop
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>With Prometheus still running and scraping our <code>etcd</code> instance in our <code>kind</code>
+cluster, we can run our program and see the impact on CPU.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ go run cachewatch.go
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>ADDED || kube-system/kube-proxy
+</span></span><span style="display:flex;"><span>ADDED || kube-public/cluster-info
+</span></span><span style="display:flex;"><span>ADDED || kube-system/coredns
+</span></span><span style="display:flex;"><span>ADDED || default/kube-root-ca.crt
+</span></span><span style="display:flex;"><span>ADDED || kube-public/kube-root-ca.crt
+</span></span><span style="display:flex;"><span>ADDED || kube-system/kubelet-config
+</span></span><span style="display:flex;"><span>ADDED || kube-system/kubeadm-config
+</span></span><span style="display:flex;"><span>ADDED || kube-system/kubeadm-config
+</span></span><span style="display:flex;"><span>ADDED || local-path-storage/kube-root-ca.crt
+</span></span><span style="display:flex;"><span>ADDED || local-path-storage/local-path-config
+</span></span><span style="display:flex;"><span>ADDED || default/kube-root-ca.crt
+</span></span><span style="display:flex;"><span>...
+</span></span></code></pre></div><p>Despite still establishing 10,000 watchers, there is no noticeable impact on CPU
+in our <code>etcd</code> instance. The same holds true if we create a new <code>ConfigMap</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ kubectl create configmap testing
+</span></span><span style="display:flex;"><span>configmap/testing created
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>ADDED || default/testing2
+</span></span><span style="display:flex;"><span>ADDED || default/testing2
+</span></span><span style="display:flex;"><span>ADDED || default/testing2
+</span></span><span style="display:flex;"><span>ADDED || default/testing2
+</span></span><span style="display:flex;"><span>ADDED || default/testing2
+</span></span><span style="display:flex;"><span>ADDED || default/testing2
+</span></span><span style="display:flex;"><span>ADDED || default/testing2
+</span></span><span style="display:flex;"><span>ADDED || default/testing2
+</span></span><span style="display:flex;"><span>ADDED || default/testing2
+</span></span><span style="display:flex;"><span>...
+</span></span></code></pre></div><p><img src="../../static/k8s-asa-caching-3.png" alt="k8s-asa-caching-3"></p>
+<blockquote>
+<p>Y-axis range is <code>0.00</code> to <code>0.18</code>.</p>
+</blockquote>
+<h2 id="closing-thoughts">
+  Closing Thoughts
+  <a class="heading-link" href="#closing-thoughts">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>This has been the second installment in the <a href="https://danielmangum.com/categories/kubernetes-api-server-adventures/">Kubernetes API Server Adventures
+series</a>.
+Building on our exploration of the <code>storage.Interface</code>, we have learned how
+Kubernetes optimizes the watch operation in the face of potentially many
+clients. As with most things in the software engineering, this optimization is
+not without tradeoffs, but it achieves the goal of making the common case more
+efficient. We&rsquo;ll see if there are any cases where this tradeoff causes issues in
+future posts.</p>
+<p>If you have any questions, thoughts, or suggestions, please feel free to send me
+a message <a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter or
+<a href="https://types.pl/web/@hasheddan">@hasheddan@types.pl</a> on Mastodon!</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>

@@ -6,7 +6,17 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 23 Jan 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 13 Feb 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>K8s ASA: Watching and Caching</title>
+      <link>https://danielmangum.com/posts/k8s-asa-watching-and-caching/</link>
+      <pubDate>Mon, 13 Feb 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/k8s-asa-watching-and-caching/</guid>
+      <description>In our most recent post in the Kubernetes API Server Adventures series we took a look at the storage interface and explored the only in-tree implementation: etcd3. However, a careful read of the footnotes in that post revealed I wasn&amp;rsquo;t being completely honest about etcd3 being the only implementation.
+This could be disputed as Cacher is technically an implementation as well. However, it requires an underlying implementation in order to perform its operations.</description>
+    </item>
+    
     <item>
       <title>K8s ASA: The Storage Interface</title>
       <link>https://danielmangum.com/posts/k8s-asa-the-storage-interface/</link>
