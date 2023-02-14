@@ -381,7 +381,7 @@ looking at command for the container in the <code>Pod</code>.</p>
 </span></span><span style="display:flex;"><span>  &#34;--snapshot-count=10000&#34;,
 </span></span><span style="display:flex;"><span>  &#34;--trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt&#34;
 </span></span><span style="display:flex;"><span>]
-</span></span></code></pre></div><p>The <code>--listen-metrics-urls</code> is wht we are looking for. <code>etcd</code> will serve
+</span></span></code></pre></div><p>The <code>--listen-metrics-urls</code> is what we are looking for. <code>etcd</code> will serve
 <a href="">Prometheus</a> metrics on the <code>/metrics</code> endpoint at this address. We can craft
 a minimal Prometheus configuration file to instruct the collector to scrape
 <code>etcd</code>.</p>
