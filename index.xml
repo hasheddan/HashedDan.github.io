@@ -9,10 +9,10 @@
     <lastBuildDate>Sat, 18 Mar 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Where does the kubelet mount volumes?</title>
-      <link>https://danielmangum.com/posts/3-18-23/</link>
+      <link>https://danielmangum.com/posts/where-does-the-kubelet-mount-volumes/</link>
       <pubDate>Sat, 18 Mar 2023 00:10:34 -0600</pubDate>
       
-      <guid>https://danielmangum.com/posts/3-18-23/</guid>
+      <guid>https://danielmangum.com/posts/where-does-the-kubelet-mount-volumes/</guid>
       <description>Don&amp;rsquo;t have time to read this post? I get it. The answer to your question is /var/lib/kubelet/&amp;lt;pod-id&amp;gt;/volumes/.
 Every so often I will be pairing with someone or showing off a demo and realize that some common operation I perform is not well-documented. We all have examples of domain knowledge we learned somewhere along the way and stashed in our toolbox. Whenever I encounter these situations I try to remember to post about them so that the next person can find the information at least a little bit faster than I did.</description>
     </item>
