@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  Where does the kubelet mount volumes? · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="Don&rsquo;t have time to read this post? I get it. The answer to your question is /var/lib/kubelet/&lt;pod-id&gt;/volumes/.
+Every so often I will be pairing with someone or showing off a demo and realize that some common operation I perform is not well-documented. We all have examples of domain knowledge we learned somewhere along the way and stashed in our toolbox. Whenever I encounter these situations I try to remember to post about them so that the next person can find the information at least a little bit faster than I did.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="Where does the kubelet mount volumes?"/>
+<meta name="twitter:description" content="Don&rsquo;t have time to read this post? I get it. The answer to your question is /var/lib/kubelet/&lt;pod-id&gt;/volumes/.
+Every so often I will be pairing with someone or showing off a demo and realize that some common operation I perform is not well-documented. We all have examples of domain knowledge we learned somewhere along the way and stashed in our toolbox. Whenever I encounter these situations I try to remember to post about them so that the next person can find the information at least a little bit faster than I did."/>
+
+<meta property="og:title" content="Where does the kubelet mount volumes?" />
+<meta property="og:description" content="Don&rsquo;t have time to read this post? I get it. The answer to your question is /var/lib/kubelet/&lt;pod-id&gt;/volumes/.
+Every so often I will be pairing with someone or showing off a demo and realize that some common operation I perform is not well-documented. We all have examples of domain knowledge we learned somewhere along the way and stashed in our toolbox. Whenever I encounter these situations I try to remember to post about them so that the next person can find the information at least a little bit faster than I did." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/3-18-23/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-03-18T00:10:34-06:00" />
+<meta property="article:modified_time" content="2023-03-18T00:10:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/3-18-23/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.109.0">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/3-18-23/">
+              Where does the kubelet mount volumes?
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2023-03-18T00:10:34-06:00">
+                March 18, 2023
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              5-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <blockquote>
+<p>Don&rsquo;t have time to read this post? I get it. The answer to your question is
+<code>/var/lib/kubelet/&lt;pod-id&gt;/volumes/</code>.</p>
+</blockquote>
+<p>Every so often I will be pairing with someone or showing off a demo and realize
+that some common operation I perform is not well-documented. We all have
+examples of domain knowledge we learned somewhere along the way and stashed in
+our toolbox. Whenever I encounter these situations I try to remember to post
+about them so that the next person can find the information at least a little
+bit faster than I did.</p>
+<p>Recently, I was troubleshooting an issue where some files were being mounted as
+a <a href="https://kubernetes.io/docs/concepts/storage/volumes/">volume</a> to a container
+in a <a href="https://kubernetes.io/docs/concepts/workloads/pods/"><code>Pod</code></a> on a
+Kubernetes cluster. The volume appeared to be mounted successfully, but the
+container was failing to authenticate with credentials that should have been
+present in the mounted directory. I wanted to validate that the credentials were
+in fact valid, but this particular container was using a minimal <a href="https://github.com/opencontainers/image-spec/blob/main/spec.md">OCI
+image</a> (shout
+out <a href="https://github.com/GoogleContainerTools/distroless">distroless</a> 👏), so
+<a href="https://kubernetes.io/docs/tasks/debug/debug-application/get-shell-running-container/">using <code>kubectl exec</code></a>
+to get a shell was not possible.</p>
+<p>At this point I fell back to the familiar process of accessing the
+<a href="https://kubernetes.io/docs/concepts/architecture/nodes/"><code>Node</code></a> to see what
+was going on. Kubernetes can sometimes feel like an opaque API, but it&rsquo;s helpful
+to remember that behind the scenes everything is still processes and files on
+physical hardware with varying levels of isolation. If we quickly spin up a
+<a href="https://kind.sigs.k8s.io/">kind</a> cluster, we can start to explore a node that
+itself is a container running on our local machine.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ kind create cluster
+</span></span><span style="display:flex;"><span>Creating cluster &#34;kind&#34; ...
+</span></span><span style="display:flex;"><span> ✓ Ensuring node image (kindest/node:v1.25.3) 🖼 
+</span></span><span style="display:flex;"><span> ✓ Preparing nodes 📦  
+</span></span><span style="display:flex;"><span> ✓ Writing configuration 📜 
+</span></span><span style="display:flex;"><span> ✓ Starting control-plane 🕹️ 
+</span></span><span style="display:flex;"><span> ✓ Installing CNI 🔌 
+</span></span><span style="display:flex;"><span> ✓ Installing StorageClass 💾 
+</span></span><span style="display:flex;"><span>Set kubectl context to &#34;kind-kind&#34;
+</span></span><span style="display:flex;"><span>You can now use your cluster with:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>kubectl cluster-info --context kind-kind
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Thanks for using kind! 😊
+</span></span></code></pre></div><p>By default, we will have a single node that is serving as both the control plane
+and a target for scheduling workloads.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ docker container ls
+</span></span><span style="display:flex;"><span>CONTAINER ID   IMAGE                  COMMAND                  CREATED              STATUS              PORTS                       NAMES
+</span></span><span style="display:flex;"><span>f8a584b70c83   kindest/node:v1.25.3   &#34;/usr/local/bin/entr…&#34;   About a minute ago   Up About a minute   127.0.0.1:46125-&gt;6443/tcp   kind-control-plane
+</span></span></code></pre></div><p>We can use a <a href="https://kubernetes.io/docs/concepts/storage/volumes/#secret"><code>Secret</code> volume
+mount</a> as an
+example (acknowledging that if you could read the <code>Secret</code> then you wouldn&rsquo;t
+need to be checking the volume contents). We&rsquo;ll mount it onto a simple container
+image that is built with <code>gcr.io/distroless/cc</code> as the base, and only runs a
+single binary that sleeps forever.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ kubectl create secret generic super-secret --from-literal=test=data
+</span></span><span style="display:flex;"><span>secret/super-secret created
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="font-weight:bold">apiVersion</span>: v1
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">kind</span>: Pod
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">name</span>: sleep
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">containers</span>:
+</span></span><span style="display:flex;"><span>  - <span style="font-weight:bold">name</span>: sleep
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">image</span>: hasheddan/sleep:v0.0.1
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">volumeMounts</span>:
+</span></span><span style="display:flex;"><span>    - <span style="font-weight:bold">name</span>: secrets
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">mountPath</span>: /data/secret
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">volumes</span>:
+</span></span><span style="display:flex;"><span>  - <span style="font-weight:bold">name</span>: secrets
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">secret</span>:
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">secretName</span>: super-secret
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ kubectl apply -f pod.yaml 
+</span></span><span style="display:flex;"><span>pod/sleep created
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ kubectl get pods
+</span></span><span style="display:flex;"><span>NAME    READY   STATUS    RESTARTS   AGE
+</span></span><span style="display:flex;"><span>sleep   1/1     Running   0          5s
+</span></span></code></pre></div><p>We could use <code>docker exec</code> to get a shell into the <code>kind</code> node (if this was a
+cloud-hosted VM you could use <code>ssh</code>), but in the spirit of &ldquo;not being able to
+get a shell&rdquo; let&rsquo;s do it all on our host machine.</p>
+<h3 id="step-1-finding-the-node-filesystem">
+  Step 1: Finding the Node Filesystem
+  <a class="heading-link" href="#step-1-finding-the-node-filesystem">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
+<p>As mentioned previously, our node is just a container running on our local
+machine when we use <code>kind</code>. Before we can look at data in our container running
+<em>in</em> <code>kind</code>, we first need to find the filesystem of the node itself. We&rsquo;ll
+avoid getting too deep into how
+<a href="https://www.kernel.org/doc/html/next/filesystems/overlayfs.html">overlayfs</a>
+works, and instead just access the filesystem of the node via the <a href="https://docs.kernel.org/filesystems/proc.html"><code>proc</code>
+filesystem</a>. In order to do so,
+we need to get the PID of the node container, which Docker makes possible with a
+single command.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ docker container inspect kind-control-plane | jq .[0].State.Pid
+</span></span><span style="display:flex;"><span>958956
+</span></span></code></pre></div><p>With PID in hand, we can access the root directory of the node.</p>
+<blockquote>
+<p>Note: you will likely need elevated privileges to access the root filesystem.</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ ls /proc/958956/root
+</span></span><span style="display:flex;"><span>bin  boot  dev  etc  home  kind  lib  lib32  lib64  libx32  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+</span></span></code></pre></div><p>This mirrors what we would see if we used <code>docker exec</code> instead.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ docker exec -it kind-control-plane ls
+</span></span><span style="display:flex;"><span>bin  boot  dev	etc  home  kind  lib  lib32  lib64  libx32  media  mnt	opt  proc  root  run  sbin  srv  sys  tmp  usr	var
+</span></span></code></pre></div><h3 id="step-2-get-the-pod-uid">
+  Step 2: Get the Pod UID
+  <a class="heading-link" href="#step-2-get-the-pod-uid">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
+<p>Next, we need to know the UID of the <code>Pod</code> for the container we are interested
+in.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ kubectl get pod sleep -o=jsonpath={.metadata.uid}
+</span></span><span style="display:flex;"><span>71b73425-1838-4688-9255-57fbebaa6d43
+</span></span></code></pre></div><p>The <code>kubelet</code> writes data to the <code>/var/lib/kubelet</code> directory, so it is a safe
+bet to look there for mounted volumes.</p>
+<h3 id="step-3-finding-the-volume-mount">
+  Step 3: Finding the Volume Mount
+  <a class="heading-link" href="#step-3-finding-the-volume-mount">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
+<p>The <code>/pods</code> subdirectory has data for each <code>Pod</code> that has been scheduled to this
+node, which in our case is all <code>Pods</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ ls /proc/958956/root/var/lib/kubelet/pods
+</span></span><span style="display:flex;"><span>0d94b24ab949b9eb0e6237e4515cb37b      305850cc48c365264e55686e68437f03      57b07309-36c0-4a02-abec-5b97196bac0f  71b73425-1838-4688-9255-57fbebaa6d43  a22bc248-652a-4142-b3a3-203885aa6df1
+</span></span><span style="display:flex;"><span>2ff98227-a55e-4907-b666-2cb1128e6ad8  3401ce1b-9970-4139-bcf0-400ec0ebca9e  6d3dda2cad9846e0d48dbd5d5b9f59fc      9396d9ae-116a-434d-b0c2-d56df3f7d663  aaff90ec64f346d418f0a93d766752c5
+</span></span></code></pre></div><p><code>Pods</code> are identified by their UID, and within each <code>Pod</code> directory, there is a
+dedicated <code>volumes</code> subdirectory that is segmented by type.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ ls /proc/958956/root/var/lib/kubelet/pods/71b73425-1838-4688-9255-57fbebaa6d43/volumes/
+</span></span><span style="display:flex;"><span>kubernetes.io~projected  kubernetes.io~secret
+</span></span></code></pre></div><p>For our simple example, we have both a projected token volume for our
+<code>ServiceAccount</code>, as well as the <code>Secret</code> volume we explicitly requested.
+Looking inside the <code>Secret</code> volume shows a <code>test</code> file that matches our key, and
+the contents include the value.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ cat /proc/958956/root/var/lib/kubelet/pods/71b73425-1838-4688-9255-57fbebaa6d43/volumes/kubernetes.io~secret/secrets/test
+</span></span><span style="display:flex;"><span>data
+</span></span></code></pre></div><h3 id="bonus-round-proc-inception">
+  Bonus Round: <code>proc</code> Inception
+  <a class="heading-link" href="#bonus-round-proc-inception">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
+<p>If we instead wanted to look at the filesystem of our <code>sleep</code> container
+directly, we could follow the exact same steps in the <code>kind</code> node as we did to
+access its filesystem. Importantly, we need to find the PID of the <code>sleep</code>
+process <em>in</em> the <code>kind</code> node, which will be different than the one we observe on
+the host.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ ls -l /proc/958956/root/proc/*/exe | grep sleep
+</span></span><span style="display:flex;"><span>lrwxrwxrwx 1 root  root  0 Mar 18 14:55 proc/2137/exe -&gt; /sleep
+</span></span></code></pre></div><p>We can then access the <code>root</code> filesystem of the <code>sleep</code> process, and find the
+data that the <code>kubelet</code> mounted on our behalf.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ cat /proc/958956/root/proc/2137/root/data/secret/test
+</span></span><span style="display:flex;"><span>data
+</span></span></code></pre></div><h2 id="closing-thoughts">
+  Closing Thoughts
+  <a class="heading-link" href="#closing-thoughts">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>I hope this post has helped at least one person fix an issue a little faster
+than they would have without it. Always remember that all data is just bits
+somewhere in the machine!</p>
+<p>If you have any questions, thoughts, or suggestions, please feel free to send me
+a message <a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter or
+<a href="https://types.pl/web/@hasheddan">@hasheddan@types.pl</a> on Mastodon!</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
