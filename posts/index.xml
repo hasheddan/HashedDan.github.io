@@ -6,7 +6,17 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sat, 18 Mar 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 06 Apr 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Do you want to take a leap of faith?</title>
+      <link>https://danielmangum.com/posts/leap-of-faith/</link>
+      <pubDate>Thu, 06 Apr 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/leap-of-faith/</guid>
+      <description>Upbound reached General Availability on Tuesday and today is my last day at the company. It feels surreal to write that, despite knowing this day was coming for quite some time. With my time coming to a close, I wanted to take a moment to reflect on one of the most wonderful and impactful experiences of my life.1
+Joining Upbound Link to heading Inception is one of my favorite movies.2 I’ve always loved the scene, and the subsequent callback to it, where Cobb is deciding whether to accept Saito’s proposal.</description>
+    </item>
+    
     <item>
       <title>Where does the kubelet mount volumes?</title>
       <link>https://danielmangum.com/posts/where-does-the-kubelet-mount-volumes/</link>
