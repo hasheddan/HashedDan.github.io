@@ -6,22 +6,22 @@
     <description>Recent content in Categories on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 13 Feb 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/categories/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 09 Apr 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/categories/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>RISC-V Bytes</title>
+      <link>https://danielmangum.com/categories/risc-v-bytes/</link>
+      <pubDate>Sun, 09 Apr 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/categories/risc-v-bytes/</guid>
+      <description></description>
+    </item>
+    
     <item>
       <title>Kubernetes API Server Adventures</title>
       <link>https://danielmangum.com/categories/kubernetes-api-server-adventures/</link>
       <pubDate>Mon, 13 Feb 2023 00:10:34 -0600</pubDate>
       
       <guid>https://danielmangum.com/categories/kubernetes-api-server-adventures/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>RISC-V Bytes</title>
-      <link>https://danielmangum.com/categories/risc-v-bytes/</link>
-      <pubDate>Tue, 27 Dec 2022 00:10:34 -0600</pubDate>
-      
-      <guid>https://danielmangum.com/categories/risc-v-bytes/</guid>
       <description></description>
     </item>
     

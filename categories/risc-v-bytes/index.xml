@@ -6,7 +6,16 @@
     <description>Recent content in RISC-V Bytes on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 27 Dec 2022 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/categories/risc-v-bytes/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 09 Apr 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/categories/risc-v-bytes/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>RISC-V Bytes: Exploring a Custom ESP32 Bootloader</title>
+      <link>https://danielmangum.com/posts/risc-v-bytes-exploring-custom-esp32-bootloader/</link>
+      <pubDate>Sun, 09 Apr 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/risc-v-bytes-exploring-custom-esp32-bootloader/</guid>
+      <description>I recently acquired an ESP32-C3-DevKitC-02 module, and, as I tend to do, jumped right into reading about how the system boots and how the (pretty good!) tooling Espressif offers works. We have typically used QEMU in the RISC-V Bytes series, but getting our hands on physical hardware starts to make things feel a bit more real. In this first post on the ESP32, we&amp;rsquo;ll do some basic setup and look at a simple custom bootloader.</description>
+    </item>
+    
     <item>
       <title>RISC-V Bytes: Timer Interrupts</title>
       <link>https://danielmangum.com/posts/risc-v-bytes-timer-interrupts/</link>
