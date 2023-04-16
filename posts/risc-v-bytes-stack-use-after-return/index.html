@@ -71,7 +71,7 @@
 
 
 
-<meta name="generator" content="Hugo 0.109.0">
+<meta name="generator" content="Hugo 0.111.3">
 
 
 
@@ -934,7 +934,7 @@ program that looks similar to our C and Go implementations.</p>
 </span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">fn</span> main() {
 </span></span><span style="display:flex;"><span>    first();
 </span></span><span style="display:flex;"><span>    second();
-</span></span><span style="display:flex;"><span>    println!(<span style="color:#0ff;font-weight:bold">&#34;{}&#34;</span>, *G)
+</span></span><span style="display:flex;"><span>    println!(<span style="color:#0ff;font-weight:bold">&#34;</span><span style="color:#0ff;font-weight:bold">{}</span><span style="color:#0ff;font-weight:bold">&#34;</span>, *G)
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><p>Attempting to compile this program results in three errors:</p>
 <div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-mysql" data-lang="mysql"><span style="display:flex;"><span>
@@ -1010,7 +1010,7 @@ handled with care. Let&rsquo;s update our program as instructed and recompile.</
 </span></span><span style="display:flex;"><span>    first();
 </span></span><span style="display:flex;"><span>    second();
 </span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">unsafe</span> {
-</span></span><span style="display:flex;"><span>        println!(<span style="color:#0ff;font-weight:bold">&#34;{}&#34;</span>, *G)
+</span></span><span style="display:flex;"><span>        println!(<span style="color:#0ff;font-weight:bold">&#34;</span><span style="color:#0ff;font-weight:bold">{}</span><span style="color:#0ff;font-weight:bold">&#34;</span>, *G)
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-mysql" data-lang="mysql"><span style="display:flex;"><span>
@@ -1042,7 +1042,7 @@ value in memory.</p>
 </span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">mut</span> G: <span style="color:#fff;font-weight:bold">&amp;</span><span style="color:#fff;font-weight:bold">i32</span> = &amp;<span style="color:#ff0;font-weight:bold">0</span>;
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">fn</span> first() {
-</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">let</span> a: <span style="color:#fff;font-weight:bold">&amp;</span>&#39;<span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">i32</span> = &amp;<span style="color:#ff0;font-weight:bold">1</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">let</span> a: <span style="color:#fff;font-weight:bold">&amp;</span><span style="color:#fff;font-weight:bold">&#39;static</span> <span style="color:#fff;font-weight:bold">i32</span> = &amp;<span style="color:#ff0;font-weight:bold">1</span>;
 </span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">unsafe</span> {
 </span></span><span style="display:flex;"><span>        G = &amp;a;
 </span></span><span style="display:flex;"><span>    }
@@ -1056,7 +1056,7 @@ value in memory.</p>
 </span></span><span style="display:flex;"><span>    first();
 </span></span><span style="display:flex;"><span>    second();
 </span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">unsafe</span> {
-</span></span><span style="display:flex;"><span>        println!(<span style="color:#0ff;font-weight:bold">&#34;{}&#34;</span>, *G)
+</span></span><span style="display:flex;"><span>        println!(<span style="color:#0ff;font-weight:bold">&#34;</span><span style="color:#0ff;font-weight:bold">{}</span><span style="color:#0ff;font-weight:bold">&#34;</span>, *G)
 </span></span><span style="display:flex;"><span>    }
 </span></span><span style="display:flex;"><span>}
 </span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>
