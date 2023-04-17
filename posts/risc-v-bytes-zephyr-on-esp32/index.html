@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  RISC-V Bytes: Zephyr on the ESP32 · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="In the most recent post in the RISC-V Bytes series, we had our first experience with real hardware, exploring the bootloader on an ESP32-C3-DevKitC-02 module. We were using esp-idf, which, behind the scenes uses an implementation of FreeRTOS. In this post, we&rsquo;ll swap out the Espressif FreeRTOS implementation for Zephyr, exploring some similarities and differences between the build process and produced artifacts. We&rsquo;ll also see how we can slim down a Zephyr installation, only fetching the code and tools that we need to target the ESP32-C3 chipset.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="RISC-V Bytes: Zephyr on the ESP32"/>
+<meta name="twitter:description" content="In the most recent post in the RISC-V Bytes series, we had our first experience with real hardware, exploring the bootloader on an ESP32-C3-DevKitC-02 module. We were using esp-idf, which, behind the scenes uses an implementation of FreeRTOS. In this post, we&rsquo;ll swap out the Espressif FreeRTOS implementation for Zephyr, exploring some similarities and differences between the build process and produced artifacts. We&rsquo;ll also see how we can slim down a Zephyr installation, only fetching the code and tools that we need to target the ESP32-C3 chipset."/>
+
+<meta property="og:title" content="RISC-V Bytes: Zephyr on the ESP32" />
+<meta property="og:description" content="In the most recent post in the RISC-V Bytes series, we had our first experience with real hardware, exploring the bootloader on an ESP32-C3-DevKitC-02 module. We were using esp-idf, which, behind the scenes uses an implementation of FreeRTOS. In this post, we&rsquo;ll swap out the Espressif FreeRTOS implementation for Zephyr, exploring some similarities and differences between the build process and produced artifacts. We&rsquo;ll also see how we can slim down a Zephyr installation, only fetching the code and tools that we need to target the ESP32-C3 chipset." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/risc-v-bytes-zephyr-on-esp32/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-04-17T00:10:34-06:00" />
+<meta property="article:modified_time" content="2023-04-17T00:10:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/risc-v-bytes-zephyr-on-esp32/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/risc-v-bytes-zephyr-on-esp32/">
+              RISC-V Bytes: Zephyr on the ESP32
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2023-04-17T00:10:34-06:00">
+                April 17, 2023
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              19-minute read
+            </span>
+          </div>
+          
+          <div class="categories">
+  <i class="fa fa-folder" aria-hidden="true"></i>
+    <a href="https://danielmangum.com/categories/risc-v-bytes/">RISC-V Bytes</a></div>
+
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>In the <a href="https://danielmangum.com/posts/risc-v-bytes-exploring-custom-esp32-bootloader/">most recent
+post</a>
+in the <a href="https://danielmangum.com/categories/risc-v-bytes/">RISC-V Bytes</a> series,
+we had our first experience with real hardware, exploring the bootloader on an
+<a href="https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/hw-reference/esp32c3/user-guide-devkitc-02.html">ESP32-C3-DevKitC-02</a>
+module. We were using <a href="https://github.com/espressif/esp-idf">esp-idf</a>, which,
+behind the scenes uses an <a href="https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/freertos.html">implementation of
+FreeRTOS</a>.
+In this post, we&rsquo;ll swap out the Espressif FreeRTOS implementation for
+<a href="https://github.com/zephyrproject-rtos/zephyr/tree/main">Zephyr</a>, exploring some
+similarities and differences between the build process and produced artifacts.
+We&rsquo;ll also see how we can slim down a Zephyr installation, only fetching the
+code and tools that we need to target the ESP32-C3 chipset.</p>
+<p><img src="../../static/risc_v_zephyr_image_header.png" alt="risc-v-zephyr-image-header"></p>
+<blockquote>
+<p>Please excuse my attempt at an illustration of <code>esptool.py</code> inside of a
+<a href="https://en.wikipedia.org/wiki/Trojan_Horse">Trojan Horse</a>.</p>
+</blockquote>
+<h2 id="sections">
+  Sections
+  <a class="heading-link" href="#sections">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<ul>
+<li><a href="#installing-tools">Installing Tools</a></li>
+<li><a href="#setting-up-a-workspace">Setting up a Workspace</a></li>
+<li><a href="#getting-a-toolchain">Getting a Toolchain</a></li>
+<li><a href="#building-the-image">Building the Image</a></li>
+<li><a href="#flashing-and-running">Flashing and Running</a></li>
+</ul>
+<h2 id="installing-tools">
+  Installing Tools
+  <a class="heading-link" href="#installing-tools">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>Zephyr encourages the use of
+<a href="https://docs.zephyrproject.org/latest/develop/west/index.html"><code>west</code></a>, which
+essentially is an extensible wrapper around a variety of other tools. If you are
+familiar with the underlying tools, using <code>west</code> can feel a bit cumbersome, but
+opting out of doing so means that much of the guides and documentation will not
+be applicable to your workflow. I found myself using <code>west</code> in somewhat of a
+minimal fashion, but not going fully into <a href="https://docs.zephyrproject.org/latest/develop/west/without-west.html">using Zephyr without
+<code>west</code></a>.</p>
+<p><code>west</code>-based workflows allow developing Zephyr applications via three different
+models:</p>
+<ul>
+<li><a href="https://docs.zephyrproject.org/latest/develop/application/index.html#zephyr-repo-app"><code>repository</code></a>:
+building an application within the Zephyr repository</li>
+<li><a href="https://docs.zephyrproject.org/latest/develop/application/index.html#zephyr-workspace-app"><code>workspace</code></a>:
+building an application in the same workspace as the Zephyr repository (i.e.
+sharing a parent directory)</li>
+<li><a href="https://docs.zephyrproject.org/latest/develop/application/index.html#zephyr-freestanding-application"><code>freestanding</code></a>:
+building an application that is configured to point to some installation of
+Zephyr</li>
+</ul>
+<p>While <code>repository</code> seems to be the most straightforward for building the in-tree
+sample applications, and <code>workspace</code> appears to be the recommended route for
+most projects, I found <code>freestanding</code> to be more familiar to my typical
+development workflow. That being said, there are pros and cons of all three
+options and you should select the one that is most appropriate for your project.
+We&rsquo;ll explore the resulting directory structure when using a <code>freestanding</code>
+model in the next section.</p>
+<p>Initial tooling setup mostly looks the same regardless of what model you are
+going to use. The full steps for installing <code>cmake</code>, <code>python</code>, and <code>dtc</code> are
+outlined in the <a href="https://docs.zephyrproject.org/latest/develop/getting_started/index.html">Getting Started
+Guide</a>.
+I opted, partially due to my desire to use the <code>freestanding</code> model, to do a
+global installation of <code>west</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ pip3 install --user -U west
+</span></span></code></pre></div><h2 id="setting-up-a-workspace">
+  Setting up a Workspace
+  <a class="heading-link" href="#setting-up-a-workspace">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>With tools in place, it is now time to download Zephyr itself. Rather than using
+<code>west init ~/zephyrproject</code>, which will clone the latest Zephyr version into
+<code>~/zephyrproject/zephyr</code>, I created a new subdirectory in my existing
+<code>~/code/github.com/zephyrproject</code> directory for workspaces, and a subdirectory
+within it for the workspace we will use for the remainder of this blog post.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ mkdir -p workspaces/v3.3.0
+</span></span></code></pre></div><p>As the name suggests, this workspace will be set up to with Zephyr <code>v3.3.0</code>,
+which is the latest release. Within the <code>v3.3.0</code> directory, rather than
+running a bare <code>west init</code> as the guide suggests, we&rsquo;ll create a <em>manifest
+repository</em>, which will inform the version of Zephyr we want and any additional
+dependencies.</p>
+<blockquote>
+<p>Note: if we were using the <code>workspace</code> application model, the manifest repository could
+be our application repository itself. If we were using the <code>repository</code>
+application model, the manifest repository would be Zephyr.</p>
+</blockquote>
+<p><code>v3.3.0/manifest/west.yml</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="font-weight:bold">manifest</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">projects</span>:
+</span></span><span style="display:flex;"><span>    - <span style="font-weight:bold">name</span>: zephyr
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">revision</span>: v3.3.0
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">url</span>: https://github.com/zephyrproject-rtos/zephyr
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">west-commands</span>: scripts/west-commands.yml
+</span></span><span style="display:flex;"><span>      <span style="font-weight:bold">import</span>:
+</span></span><span style="display:flex;"><span>        <span style="font-weight:bold">name-allowlist</span>:
+</span></span><span style="display:flex;"><span>          - hal_espressif
+</span></span></code></pre></div><p>Here we are specifying that we want the <code>v3.3.0</code> release of Zephyr, and we only
+want the <code>hal_espressif</code> project imported from the list of projects in its
+<code>west.yml</code>. Now we can run <code>west init</code> in the <code>v3.3.0</code> directory and point
+it to our local manifest repository.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ west init -l manifest/
+</span></span><span style="display:flex;"><span>=== Initializing from existing manifest repository manifest
+</span></span><span style="display:flex;"><span>--- Creating /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/.west and local configuration file
+</span></span><span style="display:flex;"><span>=== Initialized. Now run &#34;west update&#34; inside /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0.
+</span></span></code></pre></div><p>All this will do is setup <code>west</code> to use the local manifest for future
+operations. Following the instructions in the output, along with some extra
+flags, will download Zephyr and the <code>hal_espressif</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ west update --narrow -o=--depth=1
+</span></span><span style="display:flex;"><span>=== updating zephyr (zephyr):
+</span></span><span style="display:flex;"><span>--- zephyr: initializing
+</span></span><span style="display:flex;"><span>Initialized empty Git repository in /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/zephyr/.git/
+</span></span><span style="display:flex;"><span>--- zephyr: fetching, need revision v3.3.0
+</span></span><span style="display:flex;"><span>remote: Enumerating objects: 28549, done.
+</span></span><span style="display:flex;"><span>remote: Counting objects: 100% (28549/28549), done.
+</span></span><span style="display:flex;"><span>remote: Compressing objects: 100% (22159/22159), done.
+</span></span><span style="display:flex;"><span>remote: Total 28549 (delta 6571), reused 14659 (delta 4784), pack-reused 0
+</span></span><span style="display:flex;"><span>Receiving objects: 100% (28549/28549), 57.04 MiB | 23.41 MiB/s, done.
+</span></span><span style="display:flex;"><span>Resolving deltas: 100% (6571/6571), done.
+</span></span><span style="display:flex;"><span>From https://github.com/zephyrproject-rtos/zephyr
+</span></span><span style="display:flex;"><span> * tag                 v3.3.0     -&gt; FETCH_HEAD
+</span></span><span style="display:flex;"><span>Updating files: 100% (24352/24352), done.
+</span></span><span style="display:flex;"><span>HEAD is now at 07c6af3b release: Zephyr 3.3.0
+</span></span><span style="display:flex;"><span>HEAD is now at 07c6af3b release: Zephyr 3.3.0
+</span></span><span style="display:flex;"><span>=== updating hal_espressif (modules/hal/espressif):
+</span></span><span style="display:flex;"><span>--- hal_espressif: initializing
+</span></span><span style="display:flex;"><span>Initialized empty Git repository in /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/.git/
+</span></span><span style="display:flex;"><span>--- hal_espressif: fetching, need revision 73e7af1e2ed64571ce49ff9f07dc02690b9f2df5
+</span></span><span style="display:flex;"><span>remote: Enumerating objects: 11222, done.
+</span></span><span style="display:flex;"><span>remote: Counting objects: 100% (11222/11222), done.
+</span></span><span style="display:flex;"><span>remote: Compressing objects: 100% (9234/9234), done.
+</span></span><span style="display:flex;"><span>remote: Total 11222 (delta 2547), reused 6008 (delta 1450), pack-reused 0
+</span></span><span style="display:flex;"><span>Receiving objects: 100% (11222/11222), 64.90 MiB | 22.79 MiB/s, done.
+</span></span><span style="display:flex;"><span>Resolving deltas: 100% (2547/2547), done.
+</span></span><span style="display:flex;"><span>From https://github.com/zephyrproject-rtos/hal_espressif
+</span></span><span style="display:flex;"><span> * branch            73e7af1e2ed64571ce49ff9f07dc02690b9f2df5 -&gt; FETCH_HEAD
+</span></span><span style="display:flex;"><span>Updating files: 100% (9878/9878), done.
+</span></span><span style="display:flex;"><span>HEAD is now at 73e7af1 hal: clock: esp32c3: Fix default cpu frequency magnitude
+</span></span><span style="display:flex;"><span>HEAD is now at 73e7af1 hal: clock: esp32c3: Fix default cpu frequency magnitude
+</span></span></code></pre></div><p>Without the <code>name-allowlist</code> restriction, we would instead download <em>all</em>
+projects in the Zephyr <code>west.yml</code>, which is much more than we need. There is a
+tradeoff in this slimmer approach in that if we wanted to target multiple
+chipsets, or just expand functionality, with the same project, we would need to
+either add to the allowlist, or setup a new workspace. The philosophy of
+Zephyr&rsquo;s getting started guide ensures that users will have everything they need
+when getting started, but it also means that they will likely download a number
+of projects they will never use.</p>
+<p>The <code>--narrow</code> and <code>-o=--depth=1</code> flags are also useful in reducing the amount
+of content we download and store. Without the former,
+<a href="https://git-scm.com/docs/git-fetch#Documentation/git-fetch.txt---tags"><code>--tags</code></a>
+is <a href="https://github.com/zephyrproject-rtos/west/blob/c0de98350deb9ff09cf66a31d728e0d2d3b2b822/src/west/app/project.py#L1420">passed to <code>git fetch</code></a>,
+causing all tags to be fetched from the remote. The latter passes the
+<a href="https://git-scm.com/docs/git-fetch#Documentation/git-fetch.txt---depthltdepthgt"><code>--depth</code></a>
+flag <a href="https://github.com/zephyrproject-rtos/west/blob/c0de98350deb9ff09cf66a31d728e0d2d3b2b822/src/west/app/project.py#L1427">to <code>git fetch</code></a>.
+The result of these operations can be observed by viewing the <code>git</code> history of
+Zephyr and <code>hal_espressif</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ git -C zephyr/ log
+</span></span><span style="display:flex;"><span>commit 07c6af3b8c35c1e49186578ca61a25c76e2fb308 (grafted, HEAD, manifest-rev)
+</span></span><span style="display:flex;"><span>Author: Stephanos Ioannidis &lt;root@stephanos.io&gt;
+</span></span><span style="display:flex;"><span>Date:   Sat Feb 18 07:13:22 2023 +0900
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    release: Zephyr 3.3.0
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    This commit sets the Zephyr version to v3.3.0.
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    Signed-off-by: Stephanos Ioannidis &lt;root@stephanos.io&gt;
+</span></span><span style="display:flex;"><span>    Signed-off-by: Lauren Murphy &lt;lauren.murphy@intel.com&gt;
+</span></span><span style="display:flex;"><span>$ git -C modules/hal/espressif/ log
+</span></span><span style="display:flex;"><span>commit 73e7af1e2ed64571ce49ff9f07dc02690b9f2df5 (grafted, HEAD, manifest-rev)
+</span></span><span style="display:flex;"><span>Author: Lucas Tamborrino &lt;lucas.tamborrino@espressif.com&gt;
+</span></span><span style="display:flex;"><span>Date:   Mon Jan 9 10:22:24 2023 -0300
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    hal: clock: esp32c3: Fix default cpu frequency magnitude
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    The value must be corrected in hal after fetching it from dts
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    Signed-off-by: Lucas Tamborrino &lt;lucas.tamborrino@espressif.com&gt;
+</span></span></code></pre></div><blockquote>
+<p>Note: If your application depends on functionality that is only available in
+binary form, it may be necessary to fetch
+<a href="https://docs.zephyrproject.org/latest/contribute/bin_blobs.html">blobs</a>.
+Examples of blobs that may be required when targeting ESP32 systems can be
+found in the <code>hal_espressif</code> <a href="https://github.com/zephyrproject-rtos/hal_espressif/blob/8e5da13712012d2cc480f7abc699235352153e05/zephyr/module.yml#L7"><code>module.yml</code>
+file</a>,
+and instructions for how to fetch are present in the <a href="https://docs.zephyrproject.org/3.3.0/boards/riscv/esp32c3_devkitm/doc/index.html#prerequisites">ESP32-C3
+guide</a>.</p>
+</blockquote>
+<p>This may not be a great strategy for other project layouts where it is expected
+that versions may be updated. However, if you plan to use a single version per
+workspace strategy, as we have chosen here, we are not concerned about having a
+partial history. The only subsequent update operations we should be performing
+in this workspace would be to add a new project, which would not require any
+changes to the existing Zephyr installation or any modules.</p>
+<p>The last steps are to export this version of Zephyr as a CMake package and
+install all Python dependencies. The latter can be done with the following
+command, which will tell CMake where to look for configuration for this version
+of Zephyr. This will allow us to add the Zephyr package to our <code>freestanding</code>
+project a bit later.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#f00">$</span> west zephyr-export
+</span></span><span style="display:flex;"><span>Zephyr (/home/hasheddan/code/github.com/zephyrproject/workspaces/v3<span style="color:#ff0;font-weight:bold">.3.0</span>/zephyr/share/zephyr-<span style="color:#fff;font-weight:bold">package</span>/cmake)
+</span></span><span style="display:flex;"><span>has been added to the user <span style="color:#fff;font-weight:bold">package</span> registry in:
+</span></span><span style="display:flex;"><span><span style="color:#f00">~</span>/.cmake/packages/Zephyr
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ZephyrUnittest (/home/hasheddan/code/github.com/zephyrproject/workspaces/v3<span style="color:#ff0;font-weight:bold">.3.0</span>/zephyr/share/zephyrunittest-<span style="color:#fff;font-weight:bold">package</span>/cmake)
+</span></span><span style="display:flex;"><span>has been added to the user <span style="color:#fff;font-weight:bold">package</span> registry in:
+</span></span><span style="display:flex;"><span><span style="color:#f00">~</span>/.cmake/packages/ZephyrUnittest
+</span></span></code></pre></div><p>Installing Python dependencies is a simple as doing a <code>pip install</code> on the
+Zephyr repository&rsquo;s <code>requirements.txt</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>pip3 install --user -r zephyr/scripts/requirements.txt
+</span></span></code></pre></div><h2 id="getting-a-toolchain">
+  Getting a Toolchain
+  <a class="heading-link" href="#getting-a-toolchain">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>We have all of the code we will need, but we need a toolchain in order to build
+our image. Zephyr has made this quite straightforward via the <a href="https://github.com/zephyrproject-rtos/sdk-ng">Zephyr
+SDK</a>. It provides toolchains for
+every Zephyr supported target. However, the getting started guide will once
+again have you install all of them by default. This is RISC-V Bytes and we only
+need our RISC-V toolchain to target the ESP32-C3, so we&rsquo;ll instead use the
+<em>minimal</em> bundle and only specify the toolchain we want when performing setup.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ cd ~
+</span></span><span style="display:flex;"><span>$ wget https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.0/zephyr-sdk-0.16.0_linux-x86_64_minimal.tar.xz
+</span></span><span style="display:flex;"><span>--2023-04-16 20:46:36--  https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.0/zephyr-sdk-0.16.0_linux-x86_64_minimal.tar.xz
+</span></span><span style="display:flex;"><span>Resolving github.com (github.com)... 140.82.113.3
+</span></span><span style="display:flex;"><span>Connecting to github.com (github.com)|140.82.113.3|:443... connected.
+</span></span><span style="display:flex;"><span>HTTP request sent, awaiting response... 302 Found
+</span></span><span style="display:flex;"><span>Location: https://objects.githubusercontent.com/github-production-release-asset-2e65be/92793986/dfb8508d-575a-412c-ad6a-b758f91650fa?X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=AKIAIWNJYAX4CSVEH53A%2F20230417%2Fus-east-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20230417T004638Z&amp;X-Amz-Expires=300&amp;X-Amz-Signature=8392a1e3072e6ebc2c9c4e1ce83b91e971fc3de99f3733fa62b87e4b8bcf0885&amp;X-Amz-SignedHeaders=host&amp;actor_id=0&amp;key_id=0&amp;repo_id=92793986&amp;response-content-disposition=attachment%3B%20filename%3Dzephyr-sdk-0.16.0_linux-x86_64_minimal.tar.xz&amp;response-content-type=application%2Foctet-stream [following]
+</span></span><span style="display:flex;"><span>--2023-04-16 20:46:36--  https://objects.githubusercontent.com/github-production-release-asset-2e65be/92793986/dfb8508d-575a-412c-ad6a-b758f91650fa?X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=AKIAIWNJYAX4CSVEH53A%2F20230417%2Fus-east-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20230417T004638Z&amp;X-Amz-Expires=300&amp;X-Amz-Signature=8392a1e3072e6ebc2c9c4e1ce83b91e971fc3de99f3733fa62b87e4b8bcf0885&amp;X-Amz-SignedHeaders=host&amp;actor_id=0&amp;key_id=0&amp;repo_id=92793986&amp;response-content-disposition=attachment%3B%20filename%3Dzephyr-sdk-0.16.0_linux-x86_64_minimal.tar.xz&amp;response-content-type=application%2Foctet-stream
+</span></span><span style="display:flex;"><span>Resolving objects.githubusercontent.com (objects.githubusercontent.com)... 185.199.110.133, 185.199.111.133, 185.199.109.133, ...
+</span></span><span style="display:flex;"><span>Connecting to objects.githubusercontent.com (objects.githubusercontent.com)|185.199.110.133|:443... connected.
+</span></span><span style="display:flex;"><span>HTTP request sent, awaiting response... 200 OK
+</span></span><span style="display:flex;"><span>Length: 41512804 (40M) [application/octet-stream]
+</span></span><span style="display:flex;"><span>Saving to: ‘zephyr-sdk-0.16.0_linux-x86_64_minimal.tar.xz’
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>zephyr-sdk-0.16.0_linux-x86_64_minimal.tar.xz      100%[===============================================================================================================&gt;]  39.59M  27.6MB/s    in 1.4s    
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>2023-04-16 20:46:38 (27.6 MB/s) - ‘zephyr-sdk-0.16.0_linux-x86_64_minimal.tar.xz’ saved [41512804/41512804]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$ wget -O - https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.0/sha256.sum | shasum --check --ignore-missing
+</span></span><span style="display:flex;"><span>--2023-04-16 20:46:38--  https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.0/sha256.sum
+</span></span><span style="display:flex;"><span>Resolving github.com (github.com)... 140.82.113.3
+</span></span><span style="display:flex;"><span>Connecting to github.com (github.com)|140.82.113.3|:443... connected.
+</span></span><span style="display:flex;"><span>HTTP request sent, awaiting response... 302 Found
+</span></span><span style="display:flex;"><span>Location: https://objects.githubusercontent.com/github-production-release-asset-2e65be/92793986/e2809f41-5011-41dc-a209-4fe00924abb5?X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=AKIAIWNJYAX4CSVEH53A%2F20230417%2Fus-east-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20230417T004645Z&amp;X-Amz-Expires=300&amp;X-Amz-Signature=91a3b3d1be93ebd02b64d993b32ed9a2db4b48d333b8e3ebf36af319d1b2f132&amp;X-Amz-SignedHeaders=host&amp;actor_id=0&amp;key_id=0&amp;repo_id=92793986&amp;response-content-disposition=attachment%3B%20filename%3Dsha256.sum&amp;response-content-type=application%2Foctet-stream [following]
+</span></span><span style="display:flex;"><span>--2023-04-16 20:46:43--  https://objects.githubusercontent.com/github-production-release-asset-2e65be/92793986/e2809f41-5011-41dc-a209-4fe00924abb5?X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=AKIAIWNJYAX4CSVEH53A%2F20230417%2Fus-east-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20230417T004645Z&amp;X-Amz-Expires=300&amp;X-Amz-Signature=91a3b3d1be93ebd02b64d993b32ed9a2db4b48d333b8e3ebf36af319d1b2f132&amp;X-Amz-SignedHeaders=host&amp;actor_id=0&amp;key_id=0&amp;repo_id=92793986&amp;response-content-disposition=attachment%3B%20filename%3Dsha256.sum&amp;response-content-type=application%2Foctet-stream
+</span></span><span style="display:flex;"><span>Resolving objects.githubusercontent.com (objects.githubusercontent.com)... 185.199.109.133, 185.199.111.133, 185.199.110.133, ...
+</span></span><span style="display:flex;"><span>Connecting to objects.githubusercontent.com (objects.githubusercontent.com)|185.199.109.133|:443... connected.
+</span></span><span style="display:flex;"><span>HTTP request sent, awaiting response... 200 OK
+</span></span><span style="display:flex;"><span>Length: 12148 (12K) [application/octet-stream]
+</span></span><span style="display:flex;"><span>Saving to: ‘STDOUT’
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>-                                                  100%[===============================================================================================================&gt;]  11.86K  --.-KB/s    in 0.001s  
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>2023-04-16 20:46:48 (15.7 MB/s) - written to stdout [12148/12148]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>zephyr-sdk-0.16.0_linux-x86_64_minimal.tar.xz: OK
+</span></span></code></pre></div><p>The minimal bundle includes a <code>setup.sh</code> script that will prompt the user for
+toolchains that should be installed. We can extract the bundle, then run
+<code>setup.sh</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#f00">$</span> tar xvf zephyr-sdk-<span style="color:#ff0;font-weight:bold">0.16.0</span>_linux-x86_64_minimal.tar.xz -C <span style="color:#f00">~</span>/.local/
+</span></span><span style="display:flex;"><span>zephyr-sdk-<span style="color:#ff0;font-weight:bold">0.16.0</span>/
+</span></span><span style="display:flex;"><span>zephyr-sdk-<span style="color:#ff0;font-weight:bold">0.16.0</span>/sdk_version
+</span></span><span style="display:flex;"><span>zephyr-sdk-<span style="color:#ff0;font-weight:bold">0.16.0</span>/sdk_toolchains
+</span></span><span style="display:flex;"><span>zephyr-sdk-<span style="color:#ff0;font-weight:bold">0.16.0</span>/cmake/
+</span></span><span style="display:flex;"><span>zephyr-sdk-<span style="color:#ff0;font-weight:bold">0.16.0</span>/cmake/Zephyr-sdkConfig.cmake
+</span></span><span style="display:flex;"><span>zephyr-sdk-<span style="color:#ff0;font-weight:bold">0.16.0</span>/cmake/Zephyr-sdkConfigVersion.cmake
+</span></span><span style="display:flex;"><span>zephyr-sdk-<span style="color:#ff0;font-weight:bold">0.16.0</span>/cmake/zephyr/
+</span></span><span style="display:flex;"><span>zephyr-sdk-<span style="color:#ff0;font-weight:bold">0.16.0</span>/cmake/zephyr/Kconfig
+</span></span><span style="display:flex;"><span>zephyr-sdk-<span style="color:#ff0;font-weight:bold">0.16.0</span>/cmake/zephyr/generic.cmake
+</span></span><span style="display:flex;"><span>zephyr-sdk-<span style="color:#ff0;font-weight:bold">0.16.0</span>/cmake/zephyr/host-tools.cmake
+</span></span><span style="display:flex;"><span>zephyr-sdk-<span style="color:#ff0;font-weight:bold">0.16.0</span>/cmake/zephyr/target.cmake
+</span></span><span style="display:flex;"><span>zephyr-sdk-<span style="color:#ff0;font-weight:bold">0.16.0</span>/cmake/zephyr_sdk_export.cmake
+</span></span><span style="display:flex;"><span>zephyr-sdk-<span style="color:#ff0;font-weight:bold">0.16.0</span>/zephyr-sdk-x86_64-hosttools-standalone-<span style="color:#ff0;font-weight:bold">0.9</span>.sh
+</span></span><span style="display:flex;"><span>zephyr-sdk-<span style="color:#ff0;font-weight:bold">0.16.0</span>/setup.sh
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f00">$</span> <span style="color:#f00">~</span>/.local/zephyr-sdk-<span style="color:#ff0;font-weight:bold">0.16.0</span>/setup.sh 
+</span></span><span style="display:flex;"><span>Zephyr SDK <span style="color:#ff0;font-weight:bold">0.16.0</span> Setup
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>** NOTE **
+</span></span><span style="display:flex;"><span>You only need to run this script once after extracting the Zephyr SDK
+</span></span><span style="display:flex;"><span>distribution bundle archive.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Install toolchains <span style="color:#fff;font-weight:bold">for</span> all targets [y/n]<span style="color:#f00">?</span> n
+</span></span><span style="display:flex;"><span>Install <span style="color:#f00">&#39;</span>aarch64-zephyr-elf<span style="color:#f00">&#39;</span> toolchain [y/n]<span style="color:#f00">?</span> n
+</span></span><span style="display:flex;"><span>Install <span style="color:#f00">&#39;</span>arc64-zephyr-elf<span style="color:#f00">&#39;</span> toolchain [y/n]<span style="color:#f00">?</span> n
+</span></span><span style="display:flex;"><span>Install <span style="color:#f00">&#39;</span>arc-zephyr-elf<span style="color:#f00">&#39;</span> toolchain [y/n]<span style="color:#f00">?</span> n
+</span></span><span style="display:flex;"><span>Install <span style="color:#f00">&#39;</span>arm-zephyr-eabi<span style="color:#f00">&#39;</span> toolchain [y/n]<span style="color:#f00">?</span> n
+</span></span><span style="display:flex;"><span>Install <span style="color:#f00">&#39;</span>microblazeel-zephyr-elf<span style="color:#f00">&#39;</span> toolchain [y/n]<span style="color:#f00">?</span> n
+</span></span><span style="display:flex;"><span>Install <span style="color:#f00">&#39;</span>mips-zephyr-elf<span style="color:#f00">&#39;</span> toolchain [y/n]<span style="color:#f00">?</span> n
+</span></span><span style="display:flex;"><span>Install <span style="color:#f00">&#39;</span>nios2-zephyr-elf<span style="color:#f00">&#39;</span> toolchain [y/n]<span style="color:#f00">?</span> n
+</span></span><span style="display:flex;"><span>Install <span style="color:#f00">&#39;</span>riscv64-zephyr-elf<span style="color:#f00">&#39;</span> toolchain [y/n]<span style="color:#f00">?</span> y
+</span></span><span style="display:flex;"><span>Install <span style="color:#f00">&#39;</span>sparc-zephyr-elf<span style="color:#f00">&#39;</span> toolchain [y/n]<span style="color:#f00">?</span> n
+</span></span><span style="display:flex;"><span>Install <span style="color:#f00">&#39;</span>x86_64-zephyr-elf<span style="color:#f00">&#39;</span> toolchain [y/n]<span style="color:#f00">?</span> n
+</span></span><span style="display:flex;"><span>Install <span style="color:#f00">&#39;</span>xtensa-espressif_esp32_zephyr-elf<span style="color:#f00">&#39;</span> toolchain [y/n]<span style="color:#f00">?</span> n
+</span></span><span style="display:flex;"><span>Install <span style="color:#f00">&#39;</span>xtensa-espressif_esp32s2_zephyr-elf<span style="color:#f00">&#39;</span> toolchain [y/n]<span style="color:#f00">?</span> n
+</span></span><span style="display:flex;"><span>Install <span style="color:#f00">&#39;</span>xtensa-espressif_esp32s3_zephyr-elf<span style="color:#f00">&#39;</span> toolchain [y/n]<span style="color:#f00">?</span> n
+</span></span><span style="display:flex;"><span>Install <span style="color:#f00">&#39;</span>xtensa-intel_apl_adsp_zephyr-elf<span style="color:#f00">&#39;</span> toolchain [y/n]<span style="color:#f00">?</span> n
+</span></span><span style="display:flex;"><span>Install <span style="color:#f00">&#39;</span>xtensa-intel_s1000_zephyr-elf<span style="color:#f00">&#39;</span> toolchain [y/n]<span style="color:#f00">?</span> n
+</span></span><span style="display:flex;"><span>Install <span style="color:#f00">&#39;</span>xtensa-nxp_imx_adsp_zephyr-elf<span style="color:#f00">&#39;</span> toolchain [y/n]<span style="color:#f00">?</span> n
+</span></span><span style="display:flex;"><span>Install <span style="color:#f00">&#39;</span>xtensa-nxp_imx8m_adsp_zephyr-elf<span style="color:#f00">&#39;</span> toolchain [y/n]<span style="color:#f00">?</span> n
+</span></span><span style="display:flex;"><span>Install <span style="color:#f00">&#39;</span>xtensa-sample_controller_zephyr-elf<span style="color:#f00">&#39;</span> toolchain [y/n]<span style="color:#f00">?</span> n
+</span></span><span style="display:flex;"><span>Install host tools [y/n]<span style="color:#f00">?</span> y
+</span></span><span style="display:flex;"><span>Register Zephyr SDK CMake <span style="color:#fff;font-weight:bold">package</span> [y/n]<span style="color:#f00">?</span> y
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Installing <span style="color:#f00">&#39;</span>riscv64-zephyr-elf<span style="color:#f00">&#39;</span> toolchain ...
+</span></span><span style="display:flex;"><span>toolchain_linux-x86_64_riscv64-zephyr-elf.tar.xz   <span style="color:#ff0;font-weight:bold">100</span>%[===============================================================================================================&gt;] <span style="color:#ff0;font-weight:bold">105.29</span>M  <span style="color:#ff0;font-weight:bold">35.9</span>MB/s    in <span style="color:#ff0;font-weight:bold">2.9</span>s    
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Installing host tools ...
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Registering Zephyr SDK CMake <span style="color:#fff;font-weight:bold">package</span> ...
+</span></span><span style="display:flex;"><span>Zephyr-sdk (/home/hasheddan/.local/zephyr-sdk-<span style="color:#ff0;font-weight:bold">0.16.0</span>/cmake)
+</span></span><span style="display:flex;"><span>has been added to the user <span style="color:#fff;font-weight:bold">package</span> registry in:
+</span></span><span style="display:flex;"><span><span style="color:#f00">~</span>/.cmake/packages/Zephyr-sdk
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>All done.
+</span></span><span style="display:flex;"><span>Press any key to exit ...
+</span></span></code></pre></div><blockquote>
+<p>Note: You may have noticed that the installed toolchain is for 64-bit RISC-V
+(riscv64), but we are targeting a 32-bit chipset. The 64-bit toolchain can
+target both 32-bit and 64-bit architectures (as specified by flags).</p>
+</blockquote>
+<p>You should see all RISC-V tools now present.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ ls ~/.local/zephyr-sdk-0.16.0/riscv64-zephyr-elf/bin/
+</span></span><span style="display:flex;"><span>riscv64-zephyr-elf-addr2line  riscv64-zephyr-elf-cpp           riscv64-zephyr-elf-gcc-ar      riscv64-zephyr-elf-gdb               riscv64-zephyr-elf-ld        riscv64-zephyr-elf-ranlib
+</span></span><span style="display:flex;"><span>riscv64-zephyr-elf-ar         riscv64-zephyr-elf-ct-ng.config  riscv64-zephyr-elf-gcc-nm      riscv64-zephyr-elf-gdb-add-index     riscv64-zephyr-elf-ld.bfd    riscv64-zephyr-elf-readelf
+</span></span><span style="display:flex;"><span>riscv64-zephyr-elf-as         riscv64-zephyr-elf-elfedit       riscv64-zephyr-elf-gcc-ranlib  riscv64-zephyr-elf-gdb-add-index-py  riscv64-zephyr-elf-lto-dump  riscv64-zephyr-elf-size
+</span></span><span style="display:flex;"><span>riscv64-zephyr-elf-c++        riscv64-zephyr-elf-g++           riscv64-zephyr-elf-gcov        riscv64-zephyr-elf-gdb-py            riscv64-zephyr-elf-nm        riscv64-zephyr-elf-strings
+</span></span><span style="display:flex;"><span>riscv64-zephyr-elf-cc         riscv64-zephyr-elf-gcc           riscv64-zephyr-elf-gcov-dump   riscv64-zephyr-elf-gprof             riscv64-zephyr-elf-objcopy   riscv64-zephyr-elf-strip
+</span></span><span style="display:flex;"><span>riscv64-zephyr-elf-c++filt    riscv64-zephyr-elf-gcc-12.2.0    riscv64-zephyr-elf-gcov-tool   riscv64-zephyr-elf-gprof-py          riscv64-zephyr-elf-objdump
+</span></span></code></pre></div><h2 id="building-the-image">
+  Building the Image
+  <a class="heading-link" href="#building-the-image">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>After quite a bit of setup, we are now ready to build! We can setup a simple
+<code>freestanding</code> repository that builds a similar image to the <a href="https://github.com/zephyrproject-rtos/zephyr/tree/main/samples/hello_world">sample
+<code>hello_world</code>
+application</a>.</p>
+<p>Create a new directory outside of any Zephyr workspace (I chose
+<code>~/code/github.com/hasheddan/zephyr-freestanding</code>), and create a
+<code>CMakeLists.txt</code> file, as well as <code>src/main.c</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ mkdir -p zephyr-freestanding/src
+</span></span><span style="display:flex;"><span>$ cd zephyr-freestanding &amp;&amp; touch CMakeLists.txt src/main.c
+</span></span><span style="display:flex;"><span>$ tree
+</span></span><span style="display:flex;"><span>.
+</span></span><span style="display:flex;"><span>├── CMakeLists.txt
+</span></span><span style="display:flex;"><span>└── src
+</span></span><span style="display:flex;"><span>    └── main.c
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>1 directory, 2 files
+</span></span></code></pre></div><p>All that our application will do is print a message and exit. Including
+<a href="https://github.com/zephyrproject-rtos/zephyr/blob/81872eb7015f745127841c0a1fee96aa1d2d52d9/include/zephyr/kernel.h"><code>zepher/kernel.h</code></a> gives us access to <a href="https://github.com/zephyrproject-rtos/zephyr/blob/81872eb7015f745127841c0a1fee96aa1d2d52d9/lib/os/printk.c#L203"><code>printk</code></a>, which allows for printing kernel debugging messages.</p>
+<p><code>src/main.c</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>#include &lt;zephyr/kernel.h&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>int main(void)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	printk(&#34;Hello, RISC-V Bytes!\n&#34;);
+</span></span><span style="display:flex;"><span>	return 0;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>In <code>CMakeLists.txt</code>, we&rsquo;ll need to inform the build system where to find our
+Zephyr installation, as well as where the source(s) for our application live.</p>
+<p><code>CMakeLists.txt</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>cmake_minimum_required(VERSION 3.20.0)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>find_package(Zephyr 3.3.0 REQUIRED)
+</span></span><span style="display:flex;"><span>project(zephyr-freestanding)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>target_sources(app PRIVATE src/main.c)
+</span></span></code></pre></div><p>CMake will be able to identify the <code>Zephyr</code> package due to the <code>west zephyr-export</code> command we ran earlier. We add the version restriction (<code>3.3.0</code>)
+and the <code>REQUIRED</code> directive such that we will fail early if CMake is unable to
+identify a suitable package. However, in order to use CMake via the recommended
+<code>west build</code> command, we&rsquo;ll still need to set <code>ZEPHYR_BASE</code>. This is due to the
+fact that the <code>build</code> command is implemented as a plugin that <a href="https://github.com/zephyrproject-rtos/zephyr/blob/main/scripts/west_commands/build.py">lives in the
+Zephyr
+repository</a>,
+rather than a built-in command. The only argument that needs to be supplied is
+<code>--board</code>, which informs our target, and correspondingly, toolchain and required
+modules. Let&rsquo;s run the build and analyze the output.</p>
+<blockquote>
+<p>Note: We are specifying <code>esp32c3_devkitm</code> despite using the
+ESP32-C3-DevKitC-02. Because these two boards both use the ESP32-C3 chip, the
+configuration is mostly the same.</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ export ZEPHYR_BASE=~/code/github.com/zephyrproject/workspaces/v3.3.0/zephyr
+</span></span><span style="display:flex;"><span>$ west build -b esp32c3_devkitm
+</span></span><span style="display:flex;"><span>-- west build: generating a build system
+</span></span><span style="display:flex;"><span>Loading Zephyr default modules (Zephyr base).
+</span></span><span style="display:flex;"><span>-- Application: /home/hasheddan/code/github.com/hasheddan/zephyr-freestanding
+</span></span><span style="display:flex;"><span>-- CMake version: 3.22.1
+</span></span><span style="display:flex;"><span>-- Found Python3: /usr/bin/python3.10 (found suitable exact version &#34;3.10.6&#34;) found components: Interpreter 
+</span></span><span style="display:flex;"><span>-- Cache files will be written to: /home/hasheddan/.cache/zephyr
+</span></span><span style="display:flex;"><span>-- Zephyr version: 3.3.0 (/home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/zephyr)
+</span></span><span style="display:flex;"><span>-- Found west (found suitable version &#34;1.0.0&#34;, minimum required is &#34;0.7.1&#34;)
+</span></span><span style="display:flex;"><span>-- Board: esp32c3_devkitm
+</span></span><span style="display:flex;"><span>-- ZEPHYR_TOOLCHAIN_VARIANT not set, trying to locate Zephyr SDK
+</span></span><span style="display:flex;"><span>-- Found host-tools: zephyr 0.16.0 (/home/hasheddan/.local/zephyr-sdk-0.16.0)
+</span></span><span style="display:flex;"><span>-- Found toolchain: zephyr 0.16.0 (/home/hasheddan/.local/zephyr-sdk-0.16.0)
+</span></span><span style="display:flex;"><span>-- Found Dtc: /home/hasheddan/.local/zephyr-sdk-0.16.0/sysroots/x86_64-pokysdk-linux/usr/bin/dtc (found suitable version &#34;1.6.0&#34;, minimum required is &#34;1.4.6&#34;) 
+</span></span><span style="display:flex;"><span>-- Found BOARD.dts: /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/zephyr/boards/riscv/esp32c3_devkitm/esp32c3_devkitm.dts
+</span></span><span style="display:flex;"><span>-- Generated zephyr.dts: /home/hasheddan/code/github.com/hasheddan/zephyr-freestanding/build/zephyr/zephyr.dts
+</span></span><span style="display:flex;"><span>-- Generated devicetree_generated.h: /home/hasheddan/code/github.com/hasheddan/zephyr-freestanding/build/zephyr/include/generated/devicetree_generated.h
+</span></span><span style="display:flex;"><span>-- Including generated dts.cmake file: /home/hasheddan/code/github.com/hasheddan/zephyr-freestanding/build/zephyr/dts.cmake
+</span></span><span style="display:flex;"><span>Parsing /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/zephyr/Kconfig
+</span></span><span style="display:flex;"><span>Loaded configuration &#39;/home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/zephyr/boards/riscv/esp32c3_devkitm/esp32c3_devkitm_defconfig&#39;
+</span></span><span style="display:flex;"><span>Configuration saved to &#39;/home/hasheddan/code/github.com/hasheddan/zephyr-freestanding/build/zephyr/.config&#39;
+</span></span><span style="display:flex;"><span>Kconfig header saved to &#39;/home/hasheddan/code/github.com/hasheddan/zephyr-freestanding/build/zephyr/include/generated/autoconf.h&#39;
+</span></span><span style="display:flex;"><span>-- The C compiler identification is GNU 12.2.0
+</span></span><span style="display:flex;"><span>-- The CXX compiler identification is GNU 12.2.0
+</span></span><span style="display:flex;"><span>-- The ASM compiler identification is GNU
+</span></span><span style="display:flex;"><span>-- Found assembler: /home/hasheddan/.local/zephyr-sdk-0.16.0/riscv64-zephyr-elf/bin/riscv64-zephyr-elf-gcc
+</span></span><span style="display:flex;"><span>-- Configuring done
+</span></span><span style="display:flex;"><span>-- Generating done
+</span></span><span style="display:flex;"><span>-- Build files have been written to: /home/hasheddan/code/github.com/hasheddan/zephyr-freestanding/build
+</span></span><span style="display:flex;"><span>-- west build: building application
+</span></span><span style="display:flex;"><span>[1/179] Preparing syscall dependency handling
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[2/179] Generating include/generated/version.h
+</span></span><span style="display:flex;"><span>-- Zephyr version: 3.3.0 (/home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/zephyr), build: 07c6af3b8c35
+</span></span><span style="display:flex;"><span>[162/179] Performing configure step for &#39;EspIdfBootloader&#39;
+</span></span><span style="display:flex;"><span>-- Found Git: /usr/bin/git (found version &#34;2.34.1&#34;) 
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>-- Building ESP-IDF components for target esp32c3
+</span></span><span style="display:flex;"><span>-- Project sdkconfig file /home/hasheddan/code/github.com/hasheddan/zephyr-freestanding/build/esp-idf/build/sdkconfig
+</span></span><span style="display:flex;"><span>-- Adding linker script /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/soc/esp32c3/ld/esp32c3.peripherals.ld
+</span></span><span style="display:flex;"><span>-- Adding linker script /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/esp_rom/esp32c3/ld/esp32c3.rom.ld
+</span></span><span style="display:flex;"><span>-- Adding linker script /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/esp_rom/esp32c3/ld/esp32c3.rom.api.ld
+</span></span><span style="display:flex;"><span>-- Adding linker script /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/esp_rom/esp32c3/ld/esp32c3.rom.libgcc.ld
+</span></span><span style="display:flex;"><span>-- Adding linker script /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/esp_rom/esp32c3/ld/esp32c3.rom.newlib.ld
+</span></span><span style="display:flex;"><span>-- Adding linker script /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/bootloader/subproject/main/ld/esp32c3/bootloader.ld
+</span></span><span style="display:flex;"><span>-- Adding linker script /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/bootloader/subproject/main/ld/esp32c3/bootloader.rom.ld
+</span></span><span style="display:flex;"><span>-- Components: bootloader bootloader_support efuse esp32c3 esp_common esp_hw_support esp_rom esp_system esptool_py freertos hal log main micro-ecc newlib partition_table riscv soc spi_flash
+</span></span><span style="display:flex;"><span>-- Component paths: /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/bootloader /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/bootloader_support /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/efuse /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/esp32c3 /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/esp_common /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/esp_hw_support /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/esp_rom /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/esp_system /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/esptool_py /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/freertos /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/hal /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/log /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/bootloader/subproject/main /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/bootloader/subproject/components/micro-ecc /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/newlib /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/partition_table /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/riscv /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/soc /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/spi_flash
+</span></span><span style="display:flex;"><span>-- Configuring done
+</span></span><span style="display:flex;"><span>-- Generating done
+</span></span><span style="display:flex;"><span>-- Build files have been written to: /home/hasheddan/code/github.com/hasheddan/zephyr-freestanding/build/esp-idf/build/bootloader
+</span></span><span style="display:flex;"><span>[163/179] Performing build step for &#39;EspIdfBootloader&#39;
+</span></span><span style="display:flex;"><span>[1/88] Generating project_elf_src_esp32c3.c
+</span></span><span style="display:flex;"><span>[2/88] Building C object esp-idf/soc/CMakeFiles/__idf_soc.dir/soc_include_legacy_warn.c.obj
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>[86/88] Linking C executable bootloader.elf
+</span></span><span style="display:flex;"><span>[87/88] Generating binary image from built executable
+</span></span><span style="display:flex;"><span>esptool.py v3.3
+</span></span><span style="display:flex;"><span>Creating esp32c3 image...
+</span></span><span style="display:flex;"><span>Merged 1 ELF section
+</span></span><span style="display:flex;"><span>Successfully created esp32c3 image.
+</span></span><span style="display:flex;"><span>Generated /home/hasheddan/code/github.com/hasheddan/zephyr-freestanding/build/esp-idf/build/bootloader/bootloader.bin
+</span></span><span style="display:flex;"><span>[88/88] cd /home/hasheddan/code/github.com/hasheddan/zephyr-freestanding/build/esp-idf/build/bootloader/esp-idf/esptool_py &amp;&amp; /usr/bin/python3.10 /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x0 /home/hasheddan/code/github.com/hasheddan/zephyr-freestanding/build/esp-idf/build/bootloader/bootloader.bin
+</span></span><span style="display:flex;"><span>Bootloader binary size 0x4ba0 bytes. 0x3460 bytes (41%) free.
+</span></span><span style="display:flex;"><span>[169/179] Linking C executable zephyr/zephyr_pre0.elf
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[173/179] Linking C executable zephyr/zephyr_pre1.elf
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[179/179] Linking C executable zephyr/zephyr.elf
+</span></span><span style="display:flex;"><span>Memory region         Used Size  Region Size  %age Used
+</span></span><span style="display:flex;"><span>     mcuboot_hdr:          32 B         32 B    100.00%
+</span></span><span style="display:flex;"><span>        metadata:          28 B         32 B     87.50%
+</span></span><span style="display:flex;"><span>             ROM:       32164 B    4194240 B      0.77%
+</span></span><span style="display:flex;"><span>     iram0_0_seg:       11376 B       320 KB      3.47%
+</span></span><span style="display:flex;"><span>     irom0_0_seg:       83568 B    4194272 B      1.99%
+</span></span><span style="display:flex;"><span>     drom0_0_seg:        2008 B    4194240 B      0.05%
+</span></span><span style="display:flex;"><span>     dram0_0_seg:       21268 B       320 KB      6.49%
+</span></span><span style="display:flex;"><span>    rtc_iram_seg:          0 GB         8 KB      0.00%
+</span></span><span style="display:flex;"><span>        IDT_LIST:          0 GB         8 KB      0.00%
+</span></span><span style="display:flex;"><span>esptool.py v3.3
+</span></span><span style="display:flex;"><span>Creating esp32c3 image...
+</span></span><span style="display:flex;"><span>Merged 6 ELF sections
+</span></span><span style="display:flex;"><span>Successfully created esp32c3 image.
+</span></span></code></pre></div><p>If some of this output looks familiar, it is likely because you have seen many
+of the same steps when using
+<a href="https://github.com/espressif/esptool"><code>esptool.py</code></a> /
+<a href="https://github.com/espressif/esp-idf/blob/master/tools/idf.py"><code>idf.py</code></a>. The
+Zephyr build system wraps these tools from
+<a href="https://github.com/zephyrproject-rtos/hal_espressif"><code>hal_espressif</code></a>, which is
+essentially a fork of <a href="https://github.com/espressif/esp-idf"><code>esp-idf</code></a>. In
+fact, until we get to building the actual Zephyr application, we are building
+the same second stage bootloader from <code>esp-idf</code> that we saw in the last post.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ ls build/esp-idf/build/bootloader
+</span></span><span style="display:flex;"><span>bootloader.bin  bootloader.map  CMakeCache.txt  cmake_install.cmake    config      esp-idf      kconfigs_projbuild.in     project_elf_src_esp32c3.c
+</span></span><span style="display:flex;"><span>bootloader.elf  build.ninja     CMakeFiles      compile_commands.json  config.env  kconfigs.in  project_description.json
+</span></span></code></pre></div><p>If we examine the <code>bootloader.elf</code> file, we&rsquo;ll see the same steps to load and
+jump to the application image.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ ~/.local/zephyr-sdk-0.16.0/riscv64-zephyr-elf/bin/riscv64-zephyr-elf-objdump -D -j .iram.text build/esp-idf/build/bootloader/bootloader.elf | head -48
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>build/esp-idf/build/bootloader/bootloader.elf:     file format elf32-littleriscv
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Disassembly of section .iram.text:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>403ce000 &lt;call_start_cpu0&gt;:
+</span></span><span style="display:flex;"><span>403ce000:	7131                	addi	sp,sp,-192
+</span></span><span style="display:flex;"><span>403ce002:	df06                	sw	ra,188(sp)
+</span></span><span style="display:flex;"><span>403ce004:	00000793          	li	a5,0
+</span></span><span style="display:flex;"><span>403ce008:	c789                	beqz	a5,403ce012 &lt;call_start_cpu0+0x12&gt;
+</span></span><span style="display:flex;"><span>403ce00a:	00000097          	auipc	ra,0x0
+</span></span><span style="display:flex;"><span>403ce00e:	000000e7          	jalr	zero # 0 &lt;mapped-0x3fcd6000&gt;
+</span></span><span style="display:flex;"><span>403ce012:	288d                	jal	403ce084 &lt;bootloader_init&gt;
+</span></span><span style="display:flex;"><span>403ce014:	c119                	beqz	a0,403ce01a &lt;call_start_cpu0+0x1a&gt;
+</span></span><span style="display:flex;"><span>403ce016:	444030ef          	jal	ra,403d145a &lt;bootloader_reset&gt;
+</span></span><span style="display:flex;"><span>403ce01a:	00000793          	li	a5,0
+</span></span><span style="display:flex;"><span>403ce01e:	c789                	beqz	a5,403ce028 &lt;call_start_cpu0+0x28&gt;
+</span></span><span style="display:flex;"><span>403ce020:	00000097          	auipc	ra,0x0
+</span></span><span style="display:flex;"><span>403ce024:	000000e7          	jalr	zero # 0 &lt;mapped-0x3fcd6000&gt;
+</span></span><span style="display:flex;"><span>403ce028:	0a000613          	li	a2,160
+</span></span><span style="display:flex;"><span>403ce02c:	4581                	li	a1,0
+</span></span><span style="display:flex;"><span>403ce02e:	0808                	addi	a0,sp,16
+</span></span><span style="display:flex;"><span>403ce030:	ffc32097          	auipc	ra,0xffc32
+</span></span><span style="display:flex;"><span>403ce034:	324080e7          	jalr	804(ra) # 40000354 &lt;memset&gt;
+</span></span><span style="display:flex;"><span>403ce038:	0808                	addi	a0,sp,16
+</span></span><span style="display:flex;"><span>403ce03a:	076030ef          	jal	ra,403d10b0 &lt;bootloader_utility_load_partition_table&gt;
+</span></span><span style="display:flex;"><span>403ce03e:	e10d                	bnez	a0,403ce060 &lt;call_start_cpu0+0x60&gt;
+</span></span><span style="display:flex;"><span>403ce040:	5be020ef          	jal	ra,403d05fe &lt;esp_log_early_timestamp&gt;
+</span></span><span style="display:flex;"><span>403ce044:	85aa                	mv	a1,a0
+</span></span><span style="display:flex;"><span>403ce046:	3fcd6637          	lui	a2,0x3fcd6
+</span></span><span style="display:flex;"><span>403ce04a:	3fcd6537          	lui	a0,0x3fcd6
+</span></span><span style="display:flex;"><span>403ce04e:	14c60613          	addi	a2,a2,332 # 3fcd614c &lt;_data_end+0x48&gt;
+</span></span><span style="display:flex;"><span>403ce052:	15450513          	addi	a0,a0,340 # 3fcd6154 &lt;_data_end+0x50&gt;
+</span></span><span style="display:flex;"><span>403ce056:	ffc32097          	auipc	ra,0xffc32
+</span></span><span style="display:flex;"><span>403ce05a:	fea080e7          	jalr	-22(ra) # 40000040 &lt;esp_rom_printf&gt;
+</span></span><span style="display:flex;"><span>403ce05e:	bf65                	j	403ce016 &lt;call_start_cpu0+0x16&gt;
+</span></span><span style="display:flex;"><span>403ce060:	0808                	addi	a0,sp,16
+</span></span><span style="display:flex;"><span>403ce062:	27c030ef          	jal	ra,403d12de &lt;bootloader_utility_get_selected_boot_partition&gt;
+</span></span><span style="display:flex;"><span>403ce066:	f9d00793          	li	a5,-99
+</span></span><span style="display:flex;"><span>403ce06a:	c62a                	sw	a0,12(sp)
+</span></span><span style="display:flex;"><span>403ce06c:	faf505e3          	beq	a0,a5,403ce016 &lt;call_start_cpu0+0x16&gt;
+</span></span><span style="display:flex;"><span>403ce070:	4501                	li	a0,0
+</span></span><span style="display:flex;"><span>403ce072:	2029                	jal	403ce07c &lt;bootloader_common_get_reset_reason&gt;
+</span></span><span style="display:flex;"><span>403ce074:	45b2                	lw	a1,12(sp)
+</span></span><span style="display:flex;"><span>403ce076:	0808                	addi	a0,sp,16
+</span></span><span style="display:flex;"><span>403ce078:	400030ef          	jal	ra,403d1478 &lt;bootloader_utility_load_boot_image&gt;
+</span></span></code></pre></div><p>The application it loads lives at <code>build/zephyr/zephyr.elf</code>. We can see the
+assembly dump of our <code>main()</code> function in the <code>.flash.text</code> section.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ ~/.local/zephyr-sdk-0.16.0/riscv64-zephyr-elf/bin/riscv64-zephyr-elf-objdump -D -j .flash.text build/zephyr/zephyr.elf | head -20
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>build/zephyr/zephyr.elf:     file format elf32-littleriscv
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Disassembly of section .flash.text:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>42010020 &lt;_OffsetAbsSyms&gt;:
+</span></span><span style="display:flex;"><span>42010020:	00008067          	ret
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>42010024 &lt;main&gt;:
+</span></span><span style="display:flex;"><span>42010024:	3c000537          	lui	a0,0x3c000
+</span></span><span style="display:flex;"><span>42010028:	ff010113          	addi	sp,sp,-16
+</span></span><span style="display:flex;"><span>4201002c:	04050513          	addi	a0,a0,64 # 3c000040 &lt;__rodata_region_start&gt;
+</span></span><span style="display:flex;"><span>42010030:	00112623          	sw	ra,12(sp)
+</span></span><span style="display:flex;"><span>42010034:	fe373097          	auipc	ra,0xfe373
+</span></span><span style="display:flex;"><span>42010038:	ad4080e7          	jalr	-1324(ra) # 40382b08 &lt;printk&gt;
+</span></span><span style="display:flex;"><span>4201003c:	00c12083          	lw	ra,12(sp)
+</span></span><span style="display:flex;"><span>42010040:	00000513          	li	a0,0
+</span></span><span style="display:flex;"><span>42010044:	01010113          	addi	sp,sp,16
+</span></span><span style="display:flex;"><span>42010048:	00008067          	ret
+</span></span></code></pre></div><p>Lastly, we can find our partition table at
+<code>build/esp-idf/build/partitions_singleapp.bin</code>, which looks very similar to the
+one we saw when using <code>esp-idf</code> directly.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ hexdump build/esp-idf/build/partitions_singleapp.bin 
+</span></span><span style="display:flex;"><span>0000000 50aa 0201 9000 0000 6000 0000 766e 0073
+</span></span><span style="display:flex;"><span>0000010 0000 0000 0000 0000 0000 0000 0000 0000
+</span></span><span style="display:flex;"><span>0000020 50aa 0101 f000 0000 1000 0000 6870 5f79
+</span></span><span style="display:flex;"><span>0000030 6e69 7469 0000 0000 0000 0000 0000 0000
+</span></span><span style="display:flex;"><span>0000040 50aa 0000 0000 0001 0000 0010 6166 7463
+</span></span><span style="display:flex;"><span>0000050 726f 0079 0000 0000 0000 0000 0000 0000
+</span></span><span style="display:flex;"><span>0000060 ebeb ffff ffff ffff ffff ffff ffff ffff
+</span></span><span style="display:flex;"><span>0000070 adf4 454f 5638 5d4b 3574 2cb6 b675 2495
+</span></span><span style="display:flex;"><span>0000080 ffff ffff ffff ffff ffff ffff ffff ffff
+</span></span><span style="display:flex;"><span>*
+</span></span><span style="display:flex;"><span>0000c00
+</span></span></code></pre></div><h2 id="flashing-and-running">
+  Flashing and Running
+  <a class="heading-link" href="#flashing-and-running">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>With our three binaries constructed, all that is left to do is flashing and
+running. One thing we skipped in the getting started guide was setting up <a href="https://wiki.debian.org/udev">udev
+rules</a> that allow us to access the board. The
+Zephyr SDK bundles rules from <a href="https://openocd.org/">OpenOCD</a>, but we need to
+ensure that it includes a rule that gives us access to the USB-to-UART bridge
+that lives on the ESP32-C3-DevKitC-02 board. We can use <code>lsusb</code> to determine the
+vendor and product ID for the bridge.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ lsusb | grep UART
+</span></span><span style="display:flex;"><span>Bus 002 Device 009: ID 10c4:ea60 Silicon Labs CP210x UART Bridge
+</span></span></code></pre></div><p>The bundled rules can be found in the
+<code>sysroots/x86_64-pokysdk-linux/usr/share/openocd/contrib/60-openocd.rules</code> file.
+There is not a matching entry for the <code>10c4</code> vendor ID and <code>ea60</code> product ID,
+but we can add one in the following format.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span># Silicon Labs USB-UART bridge
+</span></span><span style="display:flex;"><span>ATTRS{idVendor}==&#34;10c4&#34;, ATTRS{idProduct}==&#34;ea60&#34;, MODE=&#34;660&#34;, GROUP=&#34;plugdev&#34;, TAG+=&#34;uaccess&#34;
+</span></span></code></pre></div><p>After doing so, we can copy these rules into the <code>/etc/udev/rules.d/</code> directory,
+then reload the rules.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ sudo cp ~/.local/zephyr-sdk-0.16.0/sysroots/x86_64-pokysdk-linux/usr/share/openocd/contrib/60-openocd.rules /etc/udev/rules.d/
+</span></span><span style="display:flex;"><span>$ sudo udevadm control --reload
+</span></span></code></pre></div><p>Now we are ready to run <code>west flash</code>. This time we&rsquo;ll supply the <code>-v</code> flag to
+instruct <code>west</code> to emit verbose output, which will allow us to see exactly how
+it is wrapping our Espressif tools.</p>
+<blockquote>
+<p>Note: <code>west flash</code> is also a subcommand provided by Zephyr, not built into
+<code>west</code>. Ensure that your <code>ZEPHYR_BASE</code> is still set to the proper path to use
+it.</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ west -v flash
+</span></span><span style="display:flex;"><span>-- west flash: rebuilding
+</span></span><span style="display:flex;"><span>cmake version 3.22.1 is OK; minimum version is 3.13.1
+</span></span><span style="display:flex;"><span>Running CMake: /usr/bin/cmake --build /home/hasheddan/code/github.com/hasheddan/zephyr-freestanding/build
+</span></span><span style="display:flex;"><span>ninja: no work to do.
+</span></span><span style="display:flex;"><span>-- west flash: using runner esp32
+</span></span><span style="display:flex;"><span>-- runners.esp32: Flashing esp32 chip on None (921600bps)
+</span></span><span style="display:flex;"><span>runners.esp32: /usr/bin/python3 /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/esptool_py/esptool/esptool.py --chip auto --baud 921600 --before default_reset --after hard_reset write_flash -u --flash_mode dio --flash_freq 40m --flash_size detect 0x0 /home/hasheddan/code/github.com/hasheddan/zephyr-freestanding/build/esp-idf/build/bootloader/bootloader.bin 0x8000 /home/hasheddan/code/github.com/hasheddan/zephyr-freestanding/build/esp-idf/build/partitions_singleapp.bin 0x10000 /home/hasheddan/code/github.com/hasheddan/zephyr-freestanding/build/zephyr/zephyr.bin
+</span></span><span style="display:flex;"><span>esptool.py v3.3
+</span></span><span style="display:flex;"><span>Found 1 serial ports
+</span></span><span style="display:flex;"><span>Serial port /dev/ttyUSB0
+</span></span><span style="display:flex;"><span>Connecting....
+</span></span><span style="display:flex;"><span>Detecting chip type... ESP32-C3
+</span></span><span style="display:flex;"><span>Chip is ESP32-C3 (revision 3)
+</span></span><span style="display:flex;"><span>Features: Wi-Fi
+</span></span><span style="display:flex;"><span>Crystal is 40MHz
+</span></span><span style="display:flex;"><span>MAC: 58:cf:79:16:7d:a0
+</span></span><span style="display:flex;"><span>Uploading stub...
+</span></span><span style="display:flex;"><span>Running stub...
+</span></span><span style="display:flex;"><span>Stub running...
+</span></span><span style="display:flex;"><span>Changing baud rate to 921600
+</span></span><span style="display:flex;"><span>Changed.
+</span></span><span style="display:flex;"><span>Configuring flash size...
+</span></span><span style="display:flex;"><span>Auto-detected Flash size: 4MB
+</span></span><span style="display:flex;"><span>Flash will be erased from 0x00000000 to 0x00004fff...
+</span></span><span style="display:flex;"><span>Flash will be erased from 0x00008000 to 0x00008fff...
+</span></span><span style="display:flex;"><span>Flash will be erased from 0x00010000 to 0x00034fff...
+</span></span><span style="display:flex;"><span>Flash params set to 0x0220
+</span></span><span style="display:flex;"><span>Wrote 32768 bytes at 0x00000000 in 0.5 seconds (556.5 kbit/s)...
+</span></span><span style="display:flex;"><span>Hash of data verified.
+</span></span><span style="display:flex;"><span>Wrote 16384 bytes at 0x00008000 in 0.3 seconds (497.4 kbit/s)...
+</span></span><span style="display:flex;"><span>Hash of data verified.
+</span></span><span style="display:flex;"><span>Wrote 163840 bytes at 0x00010000 in 2.2 seconds (589.2 kbit/s)...
+</span></span><span style="display:flex;"><span>Hash of data verified.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Leaving...
+</span></span><span style="display:flex;"><span>Hard resetting via RTS pin...
+</span></span></code></pre></div><p>We are once again using the <code>esptool write_flash</code> command and writing our three
+binaries to flash in the same locations we did when building with <code>esp-idf</code>. We
+can use the <code>west espressif monitor</code> command to reset the board and stream the
+output, or we can connect with <code>minicom</code> and use the RST button.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ minicom -D /dev/ttyUSB0
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ESP-ROM:esp32c3-api1-20210207
+</span></span><span style="display:flex;"><span>Build:Feb  7 2021
+</span></span><span style="display:flex;"><span>rst:0x1 (POWERON),boot:0xc (SPI_FAST_FLASH_BOOT)
+</span></span><span style="display:flex;"><span>SPIWP:0xee
+</span></span><span style="display:flex;"><span>mode:DIO, clock div:2
+</span></span><span style="display:flex;"><span>load:0x3fcd6100,len:0x15e0
+</span></span><span style="display:flex;"><span>load:0x403ce000,len:0x920
+</span></span><span style="display:flex;"><span>load:0x403d0000,len:0x2c4c
+</span></span><span style="display:flex;"><span>SHA-256 comparison failed:
+</span></span><span style="display:flex;"><span>Calculated: b77f73687acc559bca77cc4a4bea5409988930863749b80f171cc4a0501ff313
+</span></span><span style="display:flex;"><span>Expected: 318a48640313d299386e53a1953994f766ddfffed726be1320e4e027aa578799
+</span></span><span style="display:flex;"><span>Attempting to boot anyway...
+</span></span><span style="display:flex;"><span>entry 0x403ce000
+</span></span><span style="display:flex;"><span>I (49) boot: ESP-IDF 73e7af1 2nd stage bootloader
+</span></span><span style="display:flex;"><span>I (49) boot: compile time 22:29:26
+</span></span><span style="display:flex;"><span>I (49) boot: chip revision: 3
+</span></span><span style="display:flex;"><span>I (51) boot.esp32c3: SPI Speed      : 40MHz
+</span></span><span style="display:flex;"><span>I (56) boot.esp32c3: SPI Mode       : DIO
+</span></span><span style="display:flex;"><span>I (60) boot.esp32c3: SPI Flash Size : 4MB
+</span></span><span style="display:flex;"><span>I (65) boot: Enabling RNG early entropy source...
+</span></span><span style="display:flex;"><span>I (70) boot: Partition Table:
+</span></span><span style="display:flex;"><span>I (74) boot: ## Label            Usage          Type ST Offset   Length
+</span></span><span style="display:flex;"><span>I (81) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+</span></span><span style="display:flex;"><span>I (89) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+</span></span><span style="display:flex;"><span>I (96) boot:  2 factory          factory app      00 00 00010000 00100000
+</span></span><span style="display:flex;"><span>I (104) boot: End of partition table
+</span></span><span style="display:flex;"><span>I (108) esp_image: segment 0: paddr=00010020 vaddr=00000020 size=0001ch (    28) 
+</span></span><span style="display:flex;"><span>I (116) esp_image: segment 1: paddr=00010044 vaddr=3fc85020 size=000b8h (   184) load
+</span></span><span style="display:flex;"><span>I (125) esp_image: segment 2: paddr=00010104 vaddr=3fc850d8 size=0023ch (   572) load
+</span></span><span style="display:flex;"><span>I (133) esp_image: segment 3: paddr=00010348 vaddr=40380000 size=02c68h ( 11368) load
+</span></span><span style="display:flex;"><span>I (145) esp_image: segment 4: paddr=00012fb8 vaddr=00000000 size=0d080h ( 53376) 
+</span></span><span style="display:flex;"><span>I (162) esp_image: segment 5: paddr=00020040 vaddr=3c000040 size=007d8h (  2008) map
+</span></span><span style="display:flex;"><span>I (162) esp_image: segment 6: paddr=00020820 vaddr=00000000 size=0f7f8h ( 63480) 
+</span></span><span style="display:flex;"><span>I (181) esp_image: segment 7: paddr=00030020 vaddr=42010020 size=04670h ( 18032) map
+</span></span><span style="display:flex;"><span>I (186) boot: Loaded app from partition at offset 0x10000
+</span></span><span style="display:flex;"><span>I (186) boot: Disabling RNG early entropy source...
+</span></span><span style="display:flex;"><span>�*** Booting Zephyr OS build 07c6af3b8c35 ***
+</span></span><span style="display:flex;"><span>Hello, RISC-V Bytes!
+</span></span></code></pre></div><h2 id="concluding-thoughts">
+  Concluding Thoughts
+  <a class="heading-link" href="#concluding-thoughts">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>Though Zephyr introduces its own flavors of tooling and workflow, we are still
+using the same underlying protocols and bootloader when working with ESP32
+chips. It is not until we actually boot the application that we start to see
+where Zephyr and FreeRTOS diverge. We&rsquo;ll look deeper into these differences in a
+future RISC-V Bytes post.</p>
+<p>As always, these posts are meant to serve as a useful resource for folks who are
+interested in learning more about RISC-V and low-level software in general. If I
+can do a better job of reaching that goal, or you have any questions or
+comments, please feel free to send me a message
+<a href="https://twitter.com/hasheddan">@hasheddan</a> on Twitter or
+<a href="https://types.pl/web/@hasheddan">@hasheddan@types.pl</a> on Mastodon!</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>

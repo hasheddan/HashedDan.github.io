@@ -6,7 +6,16 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 09 Apr 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 17 Apr 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>RISC-V Bytes: Zephyr on the ESP32</title>
+      <link>https://danielmangum.com/posts/risc-v-bytes-zephyr-on-esp32/</link>
+      <pubDate>Mon, 17 Apr 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/risc-v-bytes-zephyr-on-esp32/</guid>
+      <description>In the most recent post in the RISC-V Bytes series, we had our first experience with real hardware, exploring the bootloader on an ESP32-C3-DevKitC-02 module. We were using esp-idf, which, behind the scenes uses an implementation of FreeRTOS. In this post, we&amp;rsquo;ll swap out the Espressif FreeRTOS implementation for Zephyr, exploring some similarities and differences between the build process and produced artifacts. We&amp;rsquo;ll also see how we can slim down a Zephyr installation, only fetching the code and tools that we need to target the ESP32-C3 chipset.</description>
+    </item>
+    
     <item>
       <title>RISC-V Bytes: Exploring a Custom ESP32 Bootloader</title>
       <link>https://danielmangum.com/posts/risc-v-bytes-exploring-custom-esp32-bootloader/</link>
