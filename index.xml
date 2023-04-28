@@ -6,7 +6,17 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 17 Apr 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 28 Apr 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>RISC-V Bytes: Zephyr Before Main</title>
+      <link>https://danielmangum.com/posts/risc-v-bytes-zephyr-before-main/</link>
+      <pubDate>Fri, 28 Apr 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/risc-v-bytes-zephyr-before-main/</guid>
+      <description>In the last two posts in the RISC-V Bytes series we have looked at a bootloader for the ESP32-C3, then built a Zephyr application that was loaded by it. In this post we&amp;rsquo;ll take a closer look at that &amp;ldquo;Hello, World&amp;rdquo; application, diving into what happens prior to printing our message to the UART console.
+Note: all analysis and code samples used in this post correspond to the v3.3.0 release of Zephyr.</description>
+    </item>
+    
     <item>
       <title>RISC-V Bytes: Zephyr on the ESP32</title>
       <link>https://danielmangum.com/posts/risc-v-bytes-zephyr-on-esp32/</link>

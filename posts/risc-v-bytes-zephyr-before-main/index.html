@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  RISC-V Bytes: Zephyr Before Main · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="In the last two posts in the RISC-V Bytes series we have looked at a bootloader for the ESP32-C3, then built a Zephyr application that was loaded by it. In this post we&rsquo;ll take a closer look at that &ldquo;Hello, World&rdquo; application, diving into what happens prior to printing our message to the UART console.
+Note: all analysis and code samples used in this post correspond to the v3.3.0 release of Zephyr.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="RISC-V Bytes: Zephyr Before Main"/>
+<meta name="twitter:description" content="In the last two posts in the RISC-V Bytes series we have looked at a bootloader for the ESP32-C3, then built a Zephyr application that was loaded by it. In this post we&rsquo;ll take a closer look at that &ldquo;Hello, World&rdquo; application, diving into what happens prior to printing our message to the UART console.
+Note: all analysis and code samples used in this post correspond to the v3.3.0 release of Zephyr."/>
+
+<meta property="og:title" content="RISC-V Bytes: Zephyr Before Main" />
+<meta property="og:description" content="In the last two posts in the RISC-V Bytes series we have looked at a bootloader for the ESP32-C3, then built a Zephyr application that was loaded by it. In this post we&rsquo;ll take a closer look at that &ldquo;Hello, World&rdquo; application, diving into what happens prior to printing our message to the UART console.
+Note: all analysis and code samples used in this post correspond to the v3.3.0 release of Zephyr." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/risc-v-bytes-zephyr-before-main/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-04-28T00:10:34-06:00" />
+<meta property="article:modified_time" content="2023-04-28T00:10:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/risc-v-bytes-zephyr-before-main/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/risc-v-bytes-zephyr-before-main/">
+              RISC-V Bytes: Zephyr Before Main
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2023-04-28T00:10:34-06:00">
+                April 28, 2023
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              27-minute read
+            </span>
+          </div>
+          
+          <div class="categories">
+  <i class="fa fa-folder" aria-hidden="true"></i>
+    <a href="https://danielmangum.com/categories/risc-v-bytes/">RISC-V Bytes</a></div>
+
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>In the last two posts in the <a href="https://danielmangum.com/categories/risc-v-bytes/">RISC-V
+Bytes</a> series we have <a href="https://danielmangum.com/posts/risc-v-bytes-exploring-custom-esp32-bootloader/">looked
+at a
+bootloader</a>
+for the <a href="https://www.espressif.com/en/products/socs/esp32-c3">ESP32-C3</a>, then
+<a href="https://danielmangum.com/posts/risc-v-bytes-zephyr-on-esp32/">built a Zephyr
+application</a> that
+was loaded by it. In this post we&rsquo;ll take a closer look at that &ldquo;Hello, World&rdquo;
+application, diving into what happens prior to printing our message to the UART
+console.</p>
+<blockquote>
+<p>Note: all analysis and code samples used in this post correspond to the
+<a href="https://github.com/zephyrproject-rtos/zephyr/releases/tag/v3.3.0">v3.3.0</a>
+release of Zephyr.</p>
+</blockquote>
+<p><img src="../../static/risc_v_zephyr_before_main_header.png" alt="risc-v-zephyr-before-main-header"></p>
+<h2 id="sections">
+  Sections
+  <a class="heading-link" href="#sections">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<ul>
+<li><a href="#finding-the-entrypoint">Finding the Entrypoint</a></li>
+<li><a href="#soc-setup">SoC Setup</a></li>
+<li><a href="#zephyr-threads">Zephyr Threads</a></li>
+<li><a href="#getting-to-main">Getting to Main</a>
+<ul>
+<li><a href="#hardware-initialization">Hardware Initialization</a></li>
+<li><a href="#the-first-thread">The First Thread</a></li>
+<li><a href="#the-kernel-structure">The Kernel Structure</a></li>
+<li><a href="#setting-up-the-main-thread">Setting Up the Main Thread</a></li>
+<li><a href="#switching-to-main">Switching to Main</a></li>
+</ul>
+</li>
+<li><a href="#concluding-thoughts">Concluding Thoughts</a></li>
+</ul>
+<h2 id="finding-the-entrypoint">
+  Finding the Entrypoint
+  <a class="heading-link" href="#finding-the-entrypoint">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>When we installed the <a href="https://github.com/zephyrproject-rtos/sdk-ng">Zephyr
+SDK</a>, we not only acquired a
+compiler for our target platform, but also all supporting tooling needed for the
+build process and subsequent operations. To makes these tools accessible, you
+can add the relevant <code>/bin</code> directory to your <code>PATH</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ export PATH=$PATH:/home/hasheddan/.local/home/hasheddan/.local/zephyr-sdk-0.16.0/riscv64-zephyr-elf/bin
+</span></span></code></pre></div><p>We will primarily be using <a href="https://linux.die.net/man/1/objdump"><code>objdump</code></a> to
+explore our application image. The first step is finding the entrypoint, which
+is where the bootloader will jump after copying the image from ROM into RAM. The
+application image for our <a href="https://danielmangum.com/posts/risc-v-bytes-zephyr-on-esp32/#building-the-image">example in the last
+post</a>
+can be found in the <code>build/zephyr</code> directory. Passing the <code>-f</code> flag to <code>objdump</code>
+will give us only the ELF file header.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ riscv64-zephyr-elf-objdump -f zephyr/zephyr.elf 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>zephyr/zephyr.elf:     file format elf32-littleriscv
+</span></span><span style="display:flex;"><span>architecture: riscv:rv32, flags 0x00000012:
+</span></span><span style="display:flex;"><span>EXEC_P, HAS_SYMS
+</span></span><span style="display:flex;"><span>start address 0x40382bb0
+</span></span></code></pre></div><p>The <code>start address</code> is determined by the <a href="https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_24.html"><code>ENTRY</code>
+command</a> of
+the final linker script, <code>linker.cmd</code> , which also resides in the <code>build/zephyr</code>
+directory.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ cat zephyr/linker.cmd | grep __start
+</span></span><span style="display:flex;"><span>ENTRY(&#34;__start&#34;)
+</span></span></code></pre></div><p>This specifies that execution should begin at the address of the symbol
+<code>__start</code>.</p>
+<h2 id="soc-setup">
+  SoC Setup
+  <a class="heading-link" href="#soc-setup">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>We can see the disassembly of the <code>__start</code> symbol by passing it to <code>objdump</code>
+via the <code>--disassemble</code> flag.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ riscv64-zephyr-elf-riscv64-zephyr-elf-objdump zephyr.elf --disassemble=&#34;__start&#34;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>zephyr.elf:     file format elf32-littleriscv
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Disassembly of section .iram0.text:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>40382bb0 &lt;__start&gt;:
+</span></span><span style="display:flex;"><span>40382bb0:	f2cfd06f          	j	403802dc &lt;__esp_platform_start&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Disassembly of section .flash.text:
+</span></span></code></pre></div><p>All we are doing is jumping to <code>__esp_platform_start</code>, which is clearly specific
+to our Espressif (<code>esp</code>) target. The first steps of a Zephyr application are
+typically defined in the Zephyr repository&rsquo;s <a href="https://github.com/zephyrproject-rtos/zephyr/tree/main/soc"><code>soc/</code> (&ldquo;system on chip&rdquo;)
+directory</a>. This
+directory is where platform-specific code lives, which may be applicable to one
+or more boards defined in the <a href="https://github.com/zephyrproject-rtos/zephyr/tree/main/boards"><code>boards/</code>
+directory</a>. These
+two directories, along with the <a href="https://github.com/zephyrproject-rtos/zephyr/tree/main/arch"><code>arch/</code>
+directory</a>, allow
+for Zephyr to reuse as much functionality as possible, while still being able to
+run on many targets. It is helpful to conceptualize them with increasing levels
+of specificity.</p>
+<ol>
+<li><code>arch/riscv</code>: functionality that is standardized as part of the RISC-V <a href="https://riscv.org/technical/specifications/">set
+of specifications</a> and is
+applicable to all RISC-V platforms.</li>
+<li><code>soc/riscv/&lt;platform&gt;</code>: functionality that is specific to a single platform
+(or &ldquo;system on chip&rdquo;), which may be present on many devices, but always has
+common attributes. It is typical for linker scripts and hardware
+initilization logic to live here.</li>
+<li><code>boards/riscv/&lt;board&gt;</code>: functionality that only applies to a single device
+(or tightly related series of devices). This is where
+<a href="https://www.devicetree.org/">devicetree</a> files are defined that describe the
+board&rsquo;s specific peripherals and their corresponding memory-mapped addresses.</li>
+</ol>
+<blockquote>
+<p>Note: there are other places where platform-specific code may be defined,
+particularly for various drivers. One such example is the <a href="https://github.com/zephyrproject-rtos/zephyr/blob/main/drivers/interrupt_controller/intc_esp32c3.c">ESP32-C3 interrupt
+controller</a>.</p>
+</blockquote>
+<p>For the ESP32-C3, the <code>__start</code> function is defined in
+<code>soc/riscv/esp32c3/loader.c</code>.</p>
+<p><code>soc/riscv/esp32c3/loader.c</code>
+(<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/soc/riscv/esp32c3/loader.c#L71">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">void</span> __start(<span style="color:#fff;font-weight:bold">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_BOOTLOADER_MCUBOOT
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">int</span> err = map_rom_segments();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (err != <span style="color:#ff0;font-weight:bold">0</span>) {
+</span></span><span style="display:flex;"><span>		ets_printf(<span style="color:#0ff;font-weight:bold">&#34;Failed to setup XIP, aborting</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>);
+</span></span><span style="display:flex;"><span>		abort();
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	__esp_platform_start();
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Because we are not using
+<a href="https://www.trustedfirmware.org/projects/mcuboot/index.html">MCUboot</a>, all we
+do is jump to <code>__esp_platform_start</code>, which is defined in
+<code>soc/riscv/esp32c3/soc.c</code>. This function contains all setup required prior to
+starting up the Zephyr kernel, such as:</p>
+<p>Pointing the <code>mtvec</code> CSR (Control &amp; Status Register) <code>_esp32c3_vector_table</code>.</p>
+<p><code>soc/riscv/esp32c3/soc.c</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/soc/riscv/esp32c3/soc.c#L49">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	__asm__ __volatile__(<span style="color:#0ff;font-weight:bold">&#34;la t0, _esp32c3_vector_table</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>
+</span></span><span style="display:flex;"><span>						<span style="color:#0ff;font-weight:bold">&#34;csrw mtvec, t0</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>);
+</span></span></code></pre></div><p>Disabling interrupts.</p>
+<p><code>soc/riscv/esp32c3/soc.c</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/soc/riscv/esp32c3/soc.c#L55">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	<span style="color:#007f7f">/* Disable normal interrupts. */</span>
+</span></span><span style="display:flex;"><span>	csr_read_clear(mstatus, MSTATUS_MIE);
+</span></span></code></pre></div><p>And initializing clocks.</p>
+<p><code>soc/riscv/esp32c3/soc.c</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/soc/riscv/esp32c3/soc.c#L88">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	<span style="color:#007f7f">/* Configures the CPU clock, RTC slow and fast clocks, and performs
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * RTC slow clock calibration.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span>	esp_clk_init();
+</span></span></code></pre></div><p>However, the final step is calling <code>z_cstart()</code>, which  is ultimately where we
+will start the kernel.</p>
+<p><code>soc/riscv/esp32c3/soc.c</code>
+(<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/soc/riscv/esp32c3/soc.c#L100">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	<span style="color:#007f7f">/* Start Zephyr */</span>
+</span></span><span style="display:flex;"><span>	z_cstart();
+</span></span></code></pre></div><p>We can find this same call at the bottom of the symbol disassembly in our binary.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ riscv64-zephyr-elf-objdump zephyr.elf --disassemble=&#34;__esp_platform_start&#34; | tail -5
+</span></span><span style="display:flex;"><span>40380384:	01c93097          	auipc	ra,0x1c93
+</span></span><span style="display:flex;"><span>40380388:	e48080e7          	jalr	-440(ra) # 420131cc &lt;esp_intr_initialize&gt;
+</span></span><span style="display:flex;"><span>4038038c:	434000ef          	jal	ra,403807c0 &lt;z_cstart&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Disassembly of section .flash.text:
+</span></span></code></pre></div><h2 id="zephyr-threads">
+  Zephyr Threads
+  <a class="heading-link" href="#zephyr-threads">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>Much of the early kernel setup in Zephyr depends on whether
+<a href="https://docs.zephyrproject.org/latest/kernel/services/threads/index.html">threads</a>
+are enabled or not. Zephyr threads are much like threads in other execution
+environments: they represent independent sequences of instructions with their
+own associated state. Threads are enabled by default in Zephyr, as evidenced by
+<code>CONFIG_MULTITHREADING</code> being set to <code>y</code> <a href="https://docs.zephyrproject.org/latest/kconfig.html#CONFIG_MULTITHREADING">by
+default</a>.
+Though many threads may be spawned, there are two <a href="https://docs.zephyrproject.org/latest/kernel/services/threads/system_threads.html">system
+threads</a>
+that Zephyr spins up by default: the <code>main</code> thread and the <code>idle</code> thread.</p>
+<p>The <code>main</code> thread is the one in which our application entrypoint will begin
+executing. However, we noticed when <a href="https://danielmangum.com/posts/risc-v-bytes-zephyr-on-esp32/#flashing-and-running">flashing and
+running</a>
+our simple example that, though our <code>main()</code> function returns, the application
+continued running.</p>
+<p><code>main.c</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;zephyr/kernel.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">int</span> main(<span style="color:#fff;font-weight:bold">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	printk(<span style="color:#0ff;font-weight:bold">&#34;Hello, RISC-V Bytes!</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>);
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>This is due to the kernel switching to the <code>idle</code> thread, which will do nothing
+until there is more work to be done. In our example, there never is.</p>
+<h2 id="getting-to-main">
+  Getting to Main
+  <a class="heading-link" href="#getting-to-main">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>The entire dump of <code>z_cstart()</code> is included below. It can be helpful to see it
+all as a single block, but we will break it down into smaller pieces in a
+moment. The first thing you&rsquo;ll notice at the beginning is the function prologue,
+which we are familiar with from previous posts where we have used a stack. The
+<a href="https://github.com/espressif/esp-idf"><code>esp-idf</code></a> bootloader already has setup
+our stack, which is what allows for <code>z_cstart()</code> (and the preceding platform
+setup) to be written in C. The first few instructions show growing our stack
+(<code>addi sp,sp,-192</code>), then storing our
+<a href="https://danielmangum.com/posts/risc-v-bytes-caller-callee-registers/">callee-saved</a>
+registers on it (<code>ra</code>, <code>s0</code>, <code>s1</code>, <code>s2</code>, <code>s3</code>).</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ riscv64-zephyr-elf-objdump zephyr/zephyr.elf --disassemble=z_cstart
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>zephyr/zephyr.elf:     file format elf32-littleriscv
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Disassembly of section .iram0.text:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>403807c0 &lt;z_cstart&gt;:
+</span></span><span style="display:flex;"><span>403807c0:	f4010113          	addi	sp,sp,-192
+</span></span><span style="display:flex;"><span>403807c4:	00000513          	li	    a0,0
+</span></span><span style="display:flex;"><span>403807c8:	0a112e23          	sw	    ra,188(sp)
+</span></span><span style="display:flex;"><span>403807cc:	0a812c23          	sw	    s0,184(sp)
+</span></span><span style="display:flex;"><span>403807d0:	0a912a23          	sw	    s1,180(sp)
+</span></span><span style="display:flex;"><span>403807d4:	0b212823          	sw	    s2,176(sp)
+</span></span><span style="display:flex;"><span>403807d8:	01810493          	addi	s1,sp,24
+</span></span><span style="display:flex;"><span>403807dc:	0b312623          	sw	    s3,172(sp)
+</span></span><span style="display:flex;"><span>403807e0:	3fc83437          	lui	    s0,0x3fc83
+</span></span><span style="display:flex;"><span>403807e4:	df5ff0ef          	jal	    ra,403805d8 &lt;z_sys_init_run_level&gt;
+</span></span><span style="display:flex;"><span>403807e8:	10100793          	li	    a5,257
+</span></span><span style="display:flex;"><span>403807ec:	00048513          	mv	    a0,s1
+</span></span><span style="display:flex;"><span>403807f0:	df040413          	addi	s0,s0,-528 # 3fc82df0 &lt;_kernel&gt;
+</span></span><span style="display:flex;"><span>403807f4:	02f11223          	sh	    a5,36(sp)
+</span></span><span style="display:flex;"><span>403807f8:	1d4010ef          	jal	    ra,403819cc &lt;k_thread_system_pool_assign&gt;
+</span></span><span style="display:flex;"><span>403807fc:	00942423          	sw	    s1,8(s0)
+</span></span><span style="display:flex;"><span>40380800:	d3dff0ef          	jal	    ra,4038053c &lt;z_device_state_init&gt;
+</span></span><span style="display:flex;"><span>40380804:	00100513          	li	    a0,1
+</span></span><span style="display:flex;"><span>40380808:	dd1ff0ef          	jal	    ra,403805d8 &lt;z_sys_init_run_level&gt;
+</span></span><span style="display:flex;"><span>4038080c:	00200513          	li	    a0,2
+</span></span><span style="display:flex;"><span>40380810:	dc9ff0ef          	jal	    ra,403805d8 &lt;z_sys_init_run_level&gt;
+</span></span><span style="display:flex;"><span>40380814:	185000ef          	jal	    ra,40381198 &lt;z_sched_init&gt;
+</span></span><span style="display:flex;"><span>40380818:	3c0007b7          	lui	    a5,0x3c000
+</span></span><span style="display:flex;"><span>4038081c:	73c78793          	addi	a5,a5,1852 # 3c00073c &lt;__pinctrl_state_pins_0__device_dts_ord_39+0x10&gt;
+</span></span><span style="display:flex;"><span>40380820:	3fc834b7          	lui	    s1,0x3fc83
+</span></span><span style="display:flex;"><span>40380824:	00f12223          	sw	    a5,4(sp)
+</span></span><span style="display:flex;"><span>40380828:	403806b7          	lui	    a3,0x40380
+</span></span><span style="display:flex;"><span>4038082c:	00100793          	li	    a5,1
+</span></span><span style="display:flex;"><span>40380830:	00001637          	lui	    a2,0x1
+</span></span><span style="display:flex;"><span>40380834:	3fc845b7          	lui	    a1,0x3fc84
+</span></span><span style="display:flex;"><span>40380838:	d4048913          	addi	s2,s1,-704 # 3fc82d40 &lt;z_main_thread&gt;
+</span></span><span style="display:flex;"><span>4038083c:	00000893          	li	    a7,0
+</span></span><span style="display:flex;"><span>40380840:	00000813          	li	    a6,0
+</span></span><span style="display:flex;"><span>40380844:	00000713          	li	    a4,0
+</span></span><span style="display:flex;"><span>40380848:	68468693          	addi	a3,a3,1668 # 40380684 &lt;bg_thread_main&gt;
+</span></span><span style="display:flex;"><span>4038084c:	80060613          	addi	a2,a2,-2048 # 800 &lt;CONFIG_ISR_STACK_SIZE&gt;
+</span></span><span style="display:flex;"><span>40380850:	82058593          	addi	a1,a1,-2016 # 3fc83820 &lt;z_main_stack&gt;
+</span></span><span style="display:flex;"><span>40380854:	00f12023          	sw	    a5,0(sp)
+</span></span><span style="display:flex;"><span>40380858:	d4048513          	addi	a0,s1,-704
+</span></span><span style="display:flex;"><span>4038085c:	00000793          	li	    a5,0
+</span></span><span style="display:flex;"><span>40380860:	01242c23          	sw	    s2,24(s0)
+</span></span><span style="display:flex;"><span>40380864:	060000ef          	jal	    ra,403808c4 &lt;z_setup_new_thread&gt;
+</span></span><span style="display:flex;"><span>40380868:	00d94783          	lbu	    a5,13(s2)
+</span></span><span style="display:flex;"><span>4038086c:	d4048513          	addi	a0,s1,-704
+</span></span><span style="display:flex;"><span>40380870:	ffb7f793          	andi	a5,a5,-5
+</span></span><span style="display:flex;"><span>40380874:	00f906a3          	sb	    a5,13(s2)
+</span></span><span style="display:flex;"><span>40380878:	714000ef          	jal	    ra,40380f8c &lt;z_ready_thread&gt;
+</span></span><span style="display:flex;"><span>4038087c:	00000513          	li	    a0,0
+</span></span><span style="display:flex;"><span>40380880:	e7dff0ef          	jal	    ra,403806fc &lt;z_init_cpu&gt;
+</span></span><span style="display:flex;"><span>40380884:	30047973          	csrrci	s2,mstatus,8
+</span></span><span style="display:flex;"><span>40380888:	00842983          	lw	    s3,8(s0)
+</span></span><span style="display:flex;"><span>4038088c:	ff500793          	li	    a5,-11
+</span></span><span style="display:flex;"><span>40380890:	06f9ac23          	sw	    a5,120(s3)
+</span></span><span style="display:flex;"><span>40380894:	300477f3          	csrrci	a5,mstatus,8
+</span></span><span style="display:flex;"><span>40380898:	0d5000ef          	jal	    ra,4038116c &lt;z_swap_next_thread&gt;
+</span></span><span style="display:flex;"><span>4038089c:	02a98063          	beq	    s3,a0,403808bc &lt;z_cstart+0xfc&gt;
+</span></span><span style="display:flex;"><span>403808a0:	00050493          	mv	    s1,a0
+</span></span><span style="display:flex;"><span>403808a4:	00a42423          	sw	    a0,8(s0)
+</span></span><span style="display:flex;"><span>403808a8:	1e0000ef          	jal	    ra,40380a88 &lt;z_reset_time_slice&gt;
+</span></span><span style="display:flex;"><span>403808ac:	07c4a503          	lw	    a0,124(s1)
+</span></span><span style="display:flex;"><span>403808b0:	00098593          	mv	    a1,s3
+</span></span><span style="display:flex;"><span>403808b4:	01c93097          	auipc	ra,0x1c93
+</span></span><span style="display:flex;"><span>403808b8:	818080e7          	jalr	-2024(ra) # 420130cc &lt;z_riscv_switch&gt;
+</span></span><span style="display:flex;"><span>403808bc:	00897913          	andi	s2,s2,8
+</span></span><span style="display:flex;"><span>403808c0:	30092073          	csrs	mstatus,s2
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Disassembly of section .flash.text:
+</span></span></code></pre></div><h3 id="hardware-initialization">
+  Hardware Initialization
+  <a class="heading-link" href="#hardware-initialization">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
+<p>Following the prologue, we encounter the first invocation of the
+<code>z_sys_init_run_level()</code> function (<code>jal ra,403805d8</code>), which incrementally
+initializes various objects throughout kernel startup according to a specified
+level. The first level is <code>INIT_LEVEL_EARLY</code>.</p>
+<p><code>kernel/init.c</code>
+(<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/init.c#L502">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	<span style="color:#007f7f">/* initialize early init calls */</span>
+</span></span><span style="display:flex;"><span>	z_sys_init_run_level(INIT_LEVEL_EARLY);
+</span></span></code></pre></div><p>Prior to our <code>jal</code> instruction, there is a <code>li a0,0</code> instruction in the middle
+of the function prologue. This corresponds to passing <code>INIT_LEVEL_EARLY</code>, which
+is the <code>0</code> level. Throughout <code>z_cstart()</code>, there are two more calls to
+<code>z_sys_init_run_level()</code>, one with a preceding <code>li a0,1</code> and another with a
+preceding <code>li a0,2</code> for <code>INIT_LEVEL_PRE_KERNEL_1</code> and <code>INIT_LEVEL_PRE_KERNEL_2</code>
+respectively.</p>
+<p><code>kernel/init.c</code>
+(<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/init.c#L526">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	<span style="color:#007f7f">/* perform basic hardware initialization */</span>
+</span></span><span style="display:flex;"><span>	z_sys_init_run_level(INIT_LEVEL_PRE_KERNEL_1);
+</span></span><span style="display:flex;"><span>	z_sys_init_run_level(INIT_LEVEL_PRE_KERNEL_2);
+</span></span></code></pre></div><h3 id="the-first-thread">
+  The First Thread
+  <a class="heading-link" href="#the-first-thread">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
+<p>Between the first initialization call and the second and third, we perform the
+first step in boostrapping threads.</p>
+<p><code>kernel/init.c</code>
+(<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/init.c#L515">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_MULTITHREADING)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* Note: The z_ready_thread() call in prepare_multithreading() requires
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * a dummy thread even if CONFIG_ARCH_HAS_CUSTOM_SWAP_TO_MAIN=y
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">struct</span> k_thread dummy_thread;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	z_dummy_thread_init(&amp;dummy_thread);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span></code></pre></div><p>Though <code>CONFIG_MULTITHREADING</code> is defined, we don&rsquo;t see a <a href="https://github.com/zephyrproject-rtos/zephyr/blob/a0ad7b7752e6345ff295d24445964f0f12dbe7e4/kernel/include/kswap.h#L215">call to
+<code>z_dummy_thread_init()</code></a>
+due to the function being specified as <code>inline</code>.</p>
+<p><code>kernel/include/kswap.h</code>
+(<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/include/kswap.h#L215">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">inline</span> <span style="color:#fff;font-weight:bold">void</span> z_dummy_thread_init(<span style="color:#fff;font-weight:bold">struct</span> k_thread *dummy_thread)
+</span></span></code></pre></div><p>Instead we see a sequence of instructions that are setting up our first thread
+(<code>dummy_thread</code>).</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>403807d8:	01810493          	addi	s1,sp,24
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>403807e8:	10100793          	li	    a5,257
+</span></span><span style="display:flex;"><span>403807ec:	00048513          	mv	    a0,s1
+</span></span><span style="display:flex;"><span>403807f0:	df040413          	addi	s0,s0,-528 # 3fc82df0 &lt;_kernel&gt;
+</span></span><span style="display:flex;"><span>403807f4:	02f11223          	sh	    a5,36(sp)
+</span></span><span style="display:flex;"><span>403807f8:	1d4010ef          	jal	    ra,403819cc &lt;k_thread_system_pool_assign&gt;
+</span></span><span style="display:flex;"><span>403807fc:	00942423          	sw	    s1,8(s0)
+</span></span></code></pre></div><p>Included from earlier in the <code>z_cstart()</code> disassembly is the <code>addi s1,sp,24</code>,
+which is storing a pointer to a stack location into the <code>s1</code> callee-saved
+register. This happens to be the pointer to <code>dummy_thread</code>, which is declared in
+the function body. In the <code>z_dummy_thread_init()</code> body, we make a call to
+<code>k_thread_system_pool_assign()</code>.</p>
+<p><code>kernel/include/kswap.h</code>
+(<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/include/kswap.h#L229">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if (CONFIG_HEAP_MEM_POOL_SIZE &gt; 0)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	k_thread_system_pool_assign(dummy_thread);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span></code></pre></div><p>It takes an arugment of the <code>struct</code> pointer that was passed to
+<code>z_dummy_thread_init()</code>. To do so, we load the pointer from <code>s1</code> into the first
+argument register, <code>a0</code>, with <code>mv a0,s1</code>. Before we call
+<code>k_thread_system_pool_assign()</code>, we also load the address of the <code>_kernel</code>
+symbol into the <code>s0</code> callee-saved register. <code>k_thread_system_pool_assign()</code> is a
+fairly simple function that just assigns the <code>SYSTEM_HEAP</code> to the passed
+thread&rsquo;s resource pool.</p>
+<p><code>kernel/mempool.c</code>
+(<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/mempool.c#L116">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">void</span> k_thread_system_pool_assign(<span style="color:#fff;font-weight:bold">struct</span> k_thread *<span style="color:#fff;font-weight:bold">thread</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">thread</span>-&gt;resource_pool = _SYSTEM_HEAP;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="the-kernel-structure">
+  The Kernel Structure
+  <a class="heading-link" href="#the-kernel-structure">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
+<p>Upon returning to the call, we assign the pointer to <code>dummy_thread</code> in <code>s1</code> to
+an offset of the address of <code>_kernel</code> stored in <code>s0</code> with <code>sw s1,8(s0)</code>.
+<code>_kernel</code> is the central data structure, as one might guess, in Zephyr kernel
+operations. It is defined as the only instance of <code>z_kernel</code> in <code>init.c</code>.</p>
+<p><code>kernel/init.c</code>
+(<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/init.c#L40">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#007f7f">/* the only struct z_kernel instance */</span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">struct</span> z_kernel _kernel;
+</span></span></code></pre></div><p>The <code>z_kernel</code> structure varies based on enabled features, but it always
+contains an <a href="https://github.com/zephyrproject-rtos/zephyr/blob/6c93cbf7b496229172fa9508b561417bf91df0ae/include/zephyr/kernel_structs.h#L100">array of
+<code>_cpu</code></a>.</p>
+<p><code>include/zephyr/kernel_struct.h</code>
+(<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/include/zephyr/kernel_structs.h#L158">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">struct</span> z_kernel {
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">struct</span> _cpu cpus[CONFIG_MP_MAX_NUM_CPUS];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_PM
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">int32_t</span> idle; <span style="color:#007f7f">/* Number of ticks for kernel idling */</span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * ready queue: can be big, keep after small fields, since some
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * assembly (e.g. ARC) are limited in the encoding of the offset
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifndef CONFIG_SCHED_CPU_MASK_PIN_ONLY
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">struct</span> _ready_q ready_q;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_FPU_SHARING
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * A &#39;current_sse&#39; field does not exist in addition to the &#39;current_fp&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * field since it&#39;s not possible to divide the IA-32 non-integer
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * registers into 2 distinct blocks owned by differing threads.  In
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * other words, given that the &#39;fxnsave/fxrstor&#39; instructions
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * save/restore both the X87 FPU and XMM registers, it&#39;s not possible
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * for a thread to only &#34;own&#34; the XMM registers.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* thread that owns the FP regs */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">struct</span> k_thread *current_fp;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_THREAD_MONITOR)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">struct</span> k_thread *threads; <span style="color:#007f7f">/* singly linked list of ALL threads */</span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_SMP) &amp;&amp; defined(CONFIG_SCHED_IPI_SUPPORTED)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* Need to signal an IPI at the next scheduling point */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">bool</span> pending_ipi;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>};
+</span></span></code></pre></div><p>There is only 1 hart in the ESP32-C3, so the <code>cpus</code> array is of length 1. This
+can be verified by grepping for the <code>CONFIG_MP_MAX_NUM_CPUS</code> value in the
+<code>build/</code> directory.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ grep -r CONFIG_MP_MAX_NUM_CPUS=
+</span></span><span style="display:flex;"><span>zephyr/.config:CONFIG_MP_MAX_NUM_CPUS=1
+</span></span></code></pre></div><p>The offset of <code>8</code> corresponds to the <code>current</code> thread for the first hart, which
+is the final operation in the <code>z_dummy_thread_init()</code> function.</p>
+<p><code>kernel/include/kswap.h</code>
+(<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/include/kswap.h#L239">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	_current_cpu-&gt;current = dummy_thread;
+</span></span></code></pre></div><h3 id="setting-up-the-main-thread">
+  Setting up the Main Thread
+  <a class="heading-link" href="#setting-up-the-main-thread">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
+<p>Returning back to <code>z_cstart()</code>, we are now ready to start up the scheduler and
+switch to the main thread.</p>
+<p><code>kernel/init.c</code>
+(<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/init.c#L544">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_MULTITHREADING
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	switch_to_main_thread(prepare_multithreading());
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span></code></pre></div><p>Both <code>prepare_multithreading()</code> and <code>switch_to_main_thread()</code> are inlined. The
+first call in <code>prepare_multithreading()</code> is to initialize the scheduler.</p>
+<p><code>kernel/sched.c</code>
+(<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/sched.c#L1297">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">void</span> z_sched_init(<span style="color:#fff;font-weight:bold">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_SCHED_CPU_MASK_PIN_ONLY
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">unsigned</span> <span style="color:#fff;font-weight:bold">int</span> num_cpus = arch_num_cpus();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">for</span> (<span style="color:#fff;font-weight:bold">int</span> i = <span style="color:#ff0;font-weight:bold">0</span>; i &lt; num_cpus; i++) {
+</span></span><span style="display:flex;"><span>		init_ready_q(&amp;_kernel.cpus[i].ready_q);
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	init_ready_q(&amp;_kernel.ready_q);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_TIMESLICING
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	k_sched_time_slice_set(CONFIG_TIMESLICE_SIZE,
+</span></span><span style="display:flex;"><span>		CONFIG_TIMESLICE_PRIORITY);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>}
+</span></span></code></pre></div><p>In our case, this resolves to a call to <code>init_ready_q()</code>, which sets up a
+doubly-linked list via <code>sys_dlist_init()</code>.</p>
+<p><code>kernel/sched.c</code>
+(<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/sched.c#L1280">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">void</span> init_ready_q(<span style="color:#fff;font-weight:bold">struct</span> _ready_q *rq)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_SCHED_SCALABLE)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	rq-&gt;runq = (<span style="color:#fff;font-weight:bold">struct</span> _priq_rb) {
+</span></span><span style="display:flex;"><span>		.tree = {
+</span></span><span style="display:flex;"><span>			.lessthan_fn = z_priq_rb_lessthan,
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	};
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#elif defined(CONFIG_SCHED_MULTIQ)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">for</span> (<span style="color:#fff;font-weight:bold">int</span> i = <span style="color:#ff0;font-weight:bold">0</span>; i &lt; ARRAY_SIZE(_kernel.ready_q.runq.queues); i++) {
+</span></span><span style="display:flex;"><span>		sys_dlist_init(&amp;rq-&gt;runq.queues[i]);
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	sys_dlist_init(&amp;rq-&gt;runq);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>}
+</span></span></code></pre></div><p>The next few calls are to setup the main and idle threads.</p>
+<p><code>kernel/init.c</code>
+(<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/init.c#L418">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	stack_ptr = z_setup_new_thread(&amp;z_main_thread, z_main_stack,
+</span></span><span style="display:flex;"><span>				       CONFIG_MAIN_STACK_SIZE, bg_thread_main,
+</span></span><span style="display:flex;"><span>				       <span style="color:#fff;font-weight:bold">NULL</span>, <span style="color:#fff;font-weight:bold">NULL</span>, <span style="color:#fff;font-weight:bold">NULL</span>,
+</span></span><span style="display:flex;"><span>				       CONFIG_MAIN_THREAD_PRIORITY,
+</span></span><span style="display:flex;"><span>				       K_ESSENTIAL, <span style="color:#0ff;font-weight:bold">&#34;main&#34;</span>);
+</span></span><span style="display:flex;"><span>	z_mark_thread_as_started(&amp;z_main_thread);
+</span></span><span style="display:flex;"><span>	z_ready_thread(&amp;z_main_thread);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	z_init_cpu(<span style="color:#ff0;font-weight:bold">0</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> stack_ptr;
+</span></span></code></pre></div><p><code>z_setup_new_thread()</code> dominates the majority of the instructions in the
+<code>z_cstart()</code> disassembly, primarily due to the number of arguments it accepts.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>40380818:	3c0007b7          	lui	    a5,0x3c000
+</span></span><span style="display:flex;"><span>4038081c:	73c78793          	addi	a5,a5,1852 # 3c00073c &lt;__pinctrl_state_pins_0__device_dts_ord_39+0x10&gt;
+</span></span><span style="display:flex;"><span>40380820:	3fc834b7          	lui	    s1,0x3fc83
+</span></span><span style="display:flex;"><span>40380824:	00f12223          	sw	    a5,4(sp)
+</span></span><span style="display:flex;"><span>40380828:	403806b7          	lui	    a3,0x40380
+</span></span><span style="display:flex;"><span>4038082c:	00100793          	li	    a5,1
+</span></span><span style="display:flex;"><span>40380830:	00001637          	lui	    a2,0x1
+</span></span><span style="display:flex;"><span>40380834:	3fc845b7          	lui	    a1,0x3fc84
+</span></span><span style="display:flex;"><span>40380838:	d4048913          	addi	s2,s1,-704 # 3fc82d40 &lt;z_main_thread&gt;
+</span></span><span style="display:flex;"><span>4038083c:	00000893          	li	    a7,0
+</span></span><span style="display:flex;"><span>40380840:	00000813          	li	    a6,0
+</span></span><span style="display:flex;"><span>40380844:	00000713          	li	    a4,0
+</span></span><span style="display:flex;"><span>40380848:	68468693          	addi	a3,a3,1668 # 40380684 &lt;bg_thread_main&gt;
+</span></span><span style="display:flex;"><span>4038084c:	80060613          	addi	a2,a2,-2048 # 800 &lt;CONFIG_ISR_STACK_SIZE&gt;
+</span></span><span style="display:flex;"><span>40380850:	82058593          	addi	a1,a1,-2016 # 3fc83820 &lt;z_main_stack&gt;
+</span></span><span style="display:flex;"><span>40380854:	00f12023          	sw	    a5,0(sp)
+</span></span><span style="display:flex;"><span>40380858:	d4048513          	addi	a0,s1,-704
+</span></span><span style="display:flex;"><span>4038085c:	00000793          	li	    a5,0
+</span></span><span style="display:flex;"><span>40380860:	01242c23          	sw	    s2,24(s0)
+</span></span><span style="display:flex;"><span>40380864:	060000ef          	jal	    ra,403808c4 &lt;z_setup_new_thread&gt;
+</span></span></code></pre></div><p>The first thing you&rsquo;ll notice is a seemingly odd reference to
+<code>__pinctrl_state_pins_0__device_dts_ord_39+0x10</code>, with the address subsequently
+being stored on the stack (<code>sw a5,4(sp)</code>). Most of the other operations are
+expected as they are loading either values or addresses into argument registers
+before calling <code>z_setup_new_thread()</code>. However, there is another stack operation
+(<code>sw a5,0(sp</code>)) prior to the call, and the location on the stack for these two
+operations should give us a hint to what is going on.</p>
+<p>In a <a href="https://danielmangum.com/posts/risc-v-bytes-passing-on-the-stack/">previous
+post</a>, we
+examined a function that accepted 10 arguments. It just so happens that we are
+accepting 10 arguments here and experiencing the same behavior as we saw before:
+spilling arguments on the stack. As specified in the <a href="https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc#integer-calling-convention">RISC-V calling
+conventions</a>,
+we are using the lowest addresses on the stack to pass our spilled arguments.</p>
+<blockquote>
+<p>The stack grows downwards (towards lower addresses) and the stack pointer
+shall be aligned to a 128-bit boundary upon procedure entry. The first
+argument passed on the stack is located at offset zero of the stack pointer on
+function entry; following arguments are stored at correspondingly higher
+addresses.</p>
+</blockquote>
+<p>So we know why we are storing arguments on the stack, but the significance of
+the address is still not obvious. We can again use <code>objdump</code> to investigate.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ riscv64-zephyr-elf-objdump zephyr/zephyr.elf -j rodata --disassemble=&#34;__pinctrl_state_pins_0__device_dts_ord_39&#34;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>zephyr/zephyr.elf:     file format elf32-littleriscv
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Disassembly of section rodata:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>3c00072c &lt;__pinctrl_state_pins_0__device_dts_ord_39&gt;:
+</span></span><span style="display:flex;"><span>3c00072c:	d5 7f 03 00 00 00 00 00 94 81 ff 00 02 00 00 00     ................
+</span></span><span style="display:flex;"><span>3c00073c:	6d 61 69 6e 00 00 00 00                             main....
+</span></span></code></pre></div><p><code>objdump</code> helpfully decodes the 4 bytes at the <code>0x10</code> offset into their ASCII
+representation, with <code>6d 61 69 61</code> translating to <code>main</code>, which is the final
+argument to the <code>z_setup_new_thread()</code> call. Looking at the
+<code>z_setup_new_thread()</code> declaration, we can observe the purpose of all passed
+arguments.</p>
+<p><code>kernel/include/kernel_internal.h</code>
+(<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/include/kernel_internal.h#L67">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">extern</span> <span style="color:#fff;font-weight:bold">char</span> *z_setup_new_thread(<span style="color:#fff;font-weight:bold">struct</span> k_thread *new_thread,
+</span></span><span style="display:flex;"><span>				<span style="color:#fff;font-weight:bold">k_thread_stack_t</span> *stack, <span style="color:#fff;font-weight:bold">size_t</span> stack_size,
+</span></span><span style="display:flex;"><span>				<span style="color:#fff;font-weight:bold">k_thread_entry_t</span> entry,
+</span></span><span style="display:flex;"><span>				<span style="color:#fff;font-weight:bold">void</span> *p1, <span style="color:#fff;font-weight:bold">void</span> *p2, <span style="color:#fff;font-weight:bold">void</span> *p3,
+</span></span><span style="display:flex;"><span>				<span style="color:#fff;font-weight:bold">int</span> prio, <span style="color:#fff;font-weight:bold">uint32_t</span> options, <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">char</span> *name);
+</span></span></code></pre></div><p>Of particular interest in the <code>entry</code> argument, which is where we are passing
+<code>bg_thread_main</code>. Later on, following setup and switch to the <code>main</code> thread,
+<code>bg_thread_main</code> is where we will begin executing instructions. This is
+configured via a few operations in the body of <code>z_setup_new_thread()</code>. The first
+of note is a call to <code>arch_new_thread()</code>.</p>
+<p><code>kernel/thread.c</code>
+(<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/thread.c#L564">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	arch_new_thread(new_thread, stack, stack_ptr, entry, p1, p2, p3);
+</span></span></code></pre></div><p>This call is defined for the specific target architecture, <a href="https://github.com/zephyrproject-rtos/zephyr/blob/f7331e0d66da4eed3bcfea20850626c38c5e82c6/arch/riscv/core/thread.c#L21">in this case
+RISC-V</a>.
+All architecture-specific thread setup can be performed in this function, such
+as setting up the initial stack frame for the thread.</p>
+<p><code>arch/riscv/core/thread.c</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/arch/riscv/core/thread.c#L21">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">void</span> arch_new_thread(<span style="color:#fff;font-weight:bold">struct</span> k_thread *<span style="color:#fff;font-weight:bold">thread</span>, <span style="color:#fff;font-weight:bold">k_thread_stack_t</span> *stack,
+</span></span><span style="display:flex;"><span>		     <span style="color:#fff;font-weight:bold">char</span> *stack_ptr, <span style="color:#fff;font-weight:bold">k_thread_entry_t</span> entry,
+</span></span><span style="display:flex;"><span>		     <span style="color:#fff;font-weight:bold">void</span> *p1, <span style="color:#fff;font-weight:bold">void</span> *p2, <span style="color:#fff;font-weight:bold">void</span> *p3)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">extern</span> <span style="color:#fff;font-weight:bold">void</span> z_riscv_thread_start(<span style="color:#fff;font-weight:bold">void</span>);
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">struct</span> __esf *stack_init;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_RISCV_SOC_CONTEXT_SAVE
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">struct</span> soc_esf soc_esf_init = {SOC_ESF_INIT};
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Initial stack frame for thread */</span>
+</span></span><span style="display:flex;"><span>	stack_init = (<span style="color:#fff;font-weight:bold">struct</span> __esf *)Z_STACK_PTR_ALIGN(
+</span></span><span style="display:flex;"><span>				Z_STACK_PTR_TO_FRAME(<span style="color:#fff;font-weight:bold">struct</span> __esf, stack_ptr)
+</span></span><span style="display:flex;"><span>				);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Setup the initial stack frame */</span>
+</span></span><span style="display:flex;"><span>	stack_init-&gt;a0 = (<span style="color:#fff;font-weight:bold">unsigned</span> <span style="color:#fff;font-weight:bold">long</span>)entry;
+</span></span><span style="display:flex;"><span>	stack_init-&gt;a1 = (<span style="color:#fff;font-weight:bold">unsigned</span> <span style="color:#fff;font-weight:bold">long</span>)p1;
+</span></span><span style="display:flex;"><span>	stack_init-&gt;a2 = (<span style="color:#fff;font-weight:bold">unsigned</span> <span style="color:#fff;font-weight:bold">long</span>)p2;
+</span></span><span style="display:flex;"><span>	stack_init-&gt;a3 = (<span style="color:#fff;font-weight:bold">unsigned</span> <span style="color:#fff;font-weight:bold">long</span>)p3;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * Following the RISC-V architecture,
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * the MSTATUS register (used to globally enable/disable interrupt),
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * as well as the MEPC register (used to by the core to save the
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * value of the program counter at which an interrupt/exception occurs)
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * need to be saved on the stack, upon an interrupt/exception
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * and restored prior to returning from the interrupt/exception.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * This shall allow to handle nested interrupts.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 *
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * Given that thread startup happens through the exception exit
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * path, initially set:
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * 1) MSTATUS to MSTATUS_DEF_RESTORE in the thread stack to enable
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 *    interrupts when the newly created thread will be scheduled;
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * 2) MEPC to the address of the z_thread_entry in the thread
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 *    stack.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * Hence, when going out of an interrupt/exception/context-switch,
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * after scheduling the newly created thread:
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * 1) interrupts will be enabled, as the MSTATUS register will be
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 *    restored following the MSTATUS value set within the thread stack;
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * 2) the core will jump to z_thread_entry, as the program
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 *    counter will be restored following the MEPC value set within the
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 *    thread stack.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span>	stack_init-&gt;mstatus = MSTATUS_DEF_RESTORE;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_FPU_SHARING)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* thread birth happens through the exception return path */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">thread</span>-&gt;arch.exception_depth = <span style="color:#ff0;font-weight:bold">1</span>;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#elif defined(CONFIG_FPU)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* Unshared FP mode: enable FPU of each thread. */</span>
+</span></span><span style="display:flex;"><span>	stack_init-&gt;mstatus |= MSTATUS_FS_INIT;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_USERSPACE)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* Clear user thread context */</span>
+</span></span><span style="display:flex;"><span>	z_riscv_pmp_usermode_init(<span style="color:#fff;font-weight:bold">thread</span>);
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">thread</span>-&gt;arch.priv_stack_start = <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* CONFIG_USERSPACE */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Assign thread entry point and mstatus.MPRV mode. */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (IS_ENABLED(CONFIG_USERSPACE)
+</span></span><span style="display:flex;"><span>	    &amp;&amp; (<span style="color:#fff;font-weight:bold">thread</span>-&gt;base.user_options &amp; K_USER)) {
+</span></span><span style="display:flex;"><span>		<span style="color:#007f7f">/* User thread */</span>
+</span></span><span style="display:flex;"><span>		stack_init-&gt;mepc = (<span style="color:#fff;font-weight:bold">unsigned</span> <span style="color:#fff;font-weight:bold">long</span>)k_thread_user_mode_enter;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	} <span style="color:#fff;font-weight:bold">else</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#007f7f">/* Supervisor thread */</span>
+</span></span><span style="display:flex;"><span>		stack_init-&gt;mepc = (<span style="color:#fff;font-weight:bold">unsigned</span> <span style="color:#fff;font-weight:bold">long</span>)z_thread_entry;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_PMP_STACK_GUARD)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>		<span style="color:#007f7f">/* Enable PMP in mstatus.MPRV mode for RISC-V machine mode
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">		 * if thread is supervisor thread.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">		 */</span>
+</span></span><span style="display:flex;"><span>		stack_init-&gt;mstatus |= MSTATUS_MPRV;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* CONFIG_PMP_STACK_GUARD */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_PMP_STACK_GUARD)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* Setup PMP regions of PMP stack guard of thread. */</span>
+</span></span><span style="display:flex;"><span>	z_riscv_pmp_stackguard_prepare(<span style="color:#fff;font-weight:bold">thread</span>);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* CONFIG_PMP_STACK_GUARD */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_RISCV_SOC_CONTEXT_SAVE
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	stack_init-&gt;soc_context = soc_esf_init;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">thread</span>-&gt;callee_saved.sp = (<span style="color:#fff;font-weight:bold">unsigned</span> <span style="color:#fff;font-weight:bold">long</span>)stack_init;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* where to go when returning from z_riscv_switch() */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">thread</span>-&gt;callee_saved.ra = (<span style="color:#fff;font-weight:bold">unsigned</span> <span style="color:#fff;font-weight:bold">long</span>)z_riscv_thread_start;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* our switch handle is the thread pointer itself */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">thread</span>-&gt;switch_handle = <span style="color:#fff;font-weight:bold">thread</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><blockquote>
+<p>Note: We&rsquo;ll explore RISC-V thread support in more depth in a future post.</p>
+</blockquote>
+<p>Following the architecture-specific setup, we set the entrypoint to <code>entry</code>,
+then add the thread to the doubly-linked list in the <code>_kernel</code>.</p>
+<p><code>kernel/thread.c</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/thread.c#L582">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	new_thread-&gt;entry.pEntry = entry;
+</span></span><span style="display:flex;"><span>	new_thread-&gt;entry.parameter1 = p1;
+</span></span><span style="display:flex;"><span>	new_thread-&gt;entry.parameter2 = p2;
+</span></span><span style="display:flex;"><span>	new_thread-&gt;entry.parameter3 = p3;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">k_spinlock_key_t</span> key = k_spin_lock(&amp;z_thread_monitor_lock);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	new_thread-&gt;next_thread = _kernel.threads;
+</span></span><span style="display:flex;"><span>	_kernel.threads = new_thread;
+</span></span><span style="display:flex;"><span>	k_spin_unlock(&amp;z_thread_monitor_lock, key);
+</span></span></code></pre></div><p>After all setup is complete, <code>z_setup_new_thread()</code> returns the stack pointer
+for the new thread.</p>
+<p><code>kernel/thread.c</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/thread.c#L637">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> new_thread;
+</span></span></code></pre></div><p>Back in the inlined <code>prepare_multithreading()</code> function, the call to
+<code>z_mark_thread_as_started()</code> is inlined as the following instructions.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>40380868:	00d94783          	lbu	    a5,13(s2)
+</span></span><span style="display:flex;"><span>4038086c:	d4048513          	addi	a0,s1,-704
+</span></span><span style="display:flex;"><span>40380870:	ffb7f793          	andi	a5,a5,-5
+</span></span><span style="display:flex;"><span>40380874:	00f906a3          	sb	    a5,13(s2)
+</span></span></code></pre></div><p>We previously loaded the address of <code>z_main_thread</code> into <code>s2</code>, so we are simply
+changing the <code>base.thread_state</code> as evidenced by the definition of
+<code>z_mark_thread_as_started()</code>.</p>
+<p><code>kernel/include/ksched.h</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/include/ksched.h#L155">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">inline</span> <span style="color:#fff;font-weight:bold">void</span> z_mark_thread_as_started(<span style="color:#fff;font-weight:bold">struct</span> k_thread *<span style="color:#fff;font-weight:bold">thread</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">thread</span>-&gt;base.thread_state &amp;= ~_THREAD_PRESTART;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>This is followed by adding the thread to the ready queue, with a call to
+<code>z_ready_thread()</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>40380878:	714000ef          	jal	    ra,40380f8c &lt;z_ready_thread&gt;
+</span></span></code></pre></div><p>The last operation before finishing up mulithread preparation is to initialize
+the hart (CPU). We specify hart <code>0</code> in the <code>a0</code> argument register then jump to
+<code>z_init_cpu()</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>4038087c:	00000513          	li	    a0,0
+</span></span><span style="display:flex;"><span>40380880:	e7dff0ef          	jal	    ra,403806fc &lt;z_init_cpu&gt;
+</span></span></code></pre></div><p><code>z_init_cpu()</code> initializes the CPU&rsquo;s interrupt stack, but also sets up its idle
+thread, which we mentioned all the way back in the <a href="#zephyr-threads">overview of Zephyr system
+threads</a>.</p>
+<p><code>kernel/init.c</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/init.c#L372">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">void</span> z_init_cpu(<span style="color:#fff;font-weight:bold">int</span> id)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	init_idle_thread(id);
+</span></span><span style="display:flex;"><span>	_kernel.cpus[id].idle_thread = &amp;z_idle_threads[id];
+</span></span><span style="display:flex;"><span>	_kernel.cpus[id].id = id;
+</span></span><span style="display:flex;"><span>	_kernel.cpus[id].irq_stack =
+</span></span><span style="display:flex;"><span>		(Z_KERNEL_STACK_BUFFER(z_interrupt_stacks[id]) +
+</span></span><span style="display:flex;"><span>		 K_KERNEL_STACK_SIZEOF(z_interrupt_stacks[id]));
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_SCHED_THREAD_USAGE_ALL
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	_kernel.cpus[id].usage.track_usage =
+</span></span><span style="display:flex;"><span>		CONFIG_SCHED_THREAD_USAGE_AUTO_ENABLE;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>}
+</span></span></code></pre></div><p>Setup for the idle thread looks somewhat similar to the main thread setup
+previously performed.</p>
+<p><code>kernel/init.c</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/init.c#L343">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">void</span> init_idle_thread(<span style="color:#fff;font-weight:bold">int</span> i)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">struct</span> k_thread *<span style="color:#fff;font-weight:bold">thread</span> = &amp;z_idle_threads[i];
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">k_thread_stack_t</span> *stack = z_idle_stacks[i];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_THREAD_NAME
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if CONFIG_MP_MAX_NUM_CPUS &gt; 1
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">char</span> tname[<span style="color:#ff0;font-weight:bold">8</span>];
+</span></span><span style="display:flex;"><span>	snprintk(tname, <span style="color:#ff0;font-weight:bold">8</span>, <span style="color:#0ff;font-weight:bold">&#34;idle %02d&#34;</span>, i);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">char</span> *tname = <span style="color:#0ff;font-weight:bold">&#34;idle&#34;</span>;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">char</span> *tname = <span style="color:#fff;font-weight:bold">NULL</span>;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* CONFIG_THREAD_NAME */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>	z_setup_new_thread(<span style="color:#fff;font-weight:bold">thread</span>, stack,
+</span></span><span style="display:flex;"><span>			  CONFIG_IDLE_STACK_SIZE, idle, &amp;_kernel.cpus[i],
+</span></span><span style="display:flex;"><span>			  <span style="color:#fff;font-weight:bold">NULL</span>, <span style="color:#fff;font-weight:bold">NULL</span>, K_IDLE_PRIO, K_ESSENTIAL,
+</span></span><span style="display:flex;"><span>			  tname);
+</span></span><span style="display:flex;"><span>	z_mark_thread_as_started(<span style="color:#fff;font-weight:bold">thread</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_SMP
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">thread</span>-&gt;base.is_idle = <span style="color:#ff0;font-weight:bold">1U</span>;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>}
+</span></span></code></pre></div><p>Finally, we are ready to begin the process of switching to the <code>main</code> thread,
+returning its stack pointer to <code>switch_to_main_thread()</code>. RISC-V does not define
+a custom swap to main function, so we immediately call <code>z_swap_unlocked()</code>,
+which, you guessed it, is also inlined.</p>
+<p><code>kernel/init.c</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/init.c#L432">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>__boot_func
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> FUNC_NORETURN <span style="color:#fff;font-weight:bold">void</span> switch_to_main_thread(<span style="color:#fff;font-weight:bold">char</span> *stack_ptr)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_ARCH_HAS_CUSTOM_SWAP_TO_MAIN
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	arch_switch_to_main_thread(&amp;z_main_thread, stack_ptr, bg_thread_main);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	ARG_UNUSED(stack_ptr);
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * Context switch to main task (entry function is _main()): the
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * current fake thread is not on a wait queue or ready queue, so it
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * will never be rescheduled in.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span>	z_swap_unlocked();
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	CODE_UNREACHABLE; <span style="color:#007f7f">/* LCOV_EXCL_LINE */</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="switching-to-main">
+  Switching to Main
+  <a class="heading-link" href="#switching-to-main">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h3>
+<p><code>z_swap_unlocked()</code> calls <code>do_swap()</code>, but before doing so it needs to acquire
+the interrupt request (IRQ) lock to avoid being interrupted while swapping
+threads.</p>
+<p><code>kernel/include/kswap.h</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/include/kswap.h#L172">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">inline</span> <span style="color:#fff;font-weight:bold">void</span> z_swap_unlocked(<span style="color:#fff;font-weight:bold">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	(<span style="color:#fff;font-weight:bold">void</span>) do_swap(arch_irq_lock(), <span style="color:#fff;font-weight:bold">NULL</span>, <span style="color:#fff;font-weight:bold">true</span>);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>As with most functions prefixed with <code>arch_</code>, <code>arch_irq_lock()</code> is
+architecture-specific, and for RISC-V it involves modifying the machine
+interrupt enable (<code>MIE</code>) bit in the <code>mstatus</code> <a href="https://danielmangum.com/posts/risc-v-bytes-privilege-levels/#control-and-status-registers-csrs">Control &amp; Status Register
+(CSR)</a>.</p>
+<p><code>include/zephyr/arch/riscv/arch.h</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/include/zephyr/arch/riscv/arch.h#L223">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#007f7f">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"> * use atomic instruction csrrc to lock global irq
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"> * csrrc: atomic read and clear bits in CSR register
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"> */</span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> ALWAYS_INLINE <span style="color:#fff;font-weight:bold">unsigned</span> <span style="color:#fff;font-weight:bold">int</span> arch_irq_lock(<span style="color:#fff;font-weight:bold">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_RISCV_SOC_HAS_CUSTOM_IRQ_LOCK_OPS
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">return</span> z_soc_irq_lock();
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">unsigned</span> <span style="color:#fff;font-weight:bold">int</span> key;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	__asm__ <span style="color:#fff;font-weight:bold">volatile</span> (<span style="color:#0ff;font-weight:bold">&#34;csrrc %0, mstatus, %1&#34;</span>
+</span></span><span style="display:flex;"><span>			  : <span style="color:#0ff;font-weight:bold">&#34;=r&#34;</span> (key)
+</span></span><span style="display:flex;"><span>			  : <span style="color:#0ff;font-weight:bold">&#34;rK&#34;</span> (MSTATUS_IEN)
+</span></span><span style="display:flex;"><span>			  : <span style="color:#0ff;font-weight:bold">&#34;memory&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> key;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>}
+</span></span></code></pre></div><p>The atomic read and clear immediate (<code>csrrci</code>) instruction is next in our
+disassembly. <code>MSTATUS_IEN</code> translates to <code>8</code>, as the <code>MIE</code> bit is in the 4th
+position in <code>mstatus</code>, so we can clear it with <code>1000</code>. The value of <code>mstatus</code>
+<em>before</em> the bit is cleared is stored in <code>s2</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>40380884:	30047973          	csrrci	s2,mstatus,8
+</span></span><span style="display:flex;"><span>40380888:	00842983          	lw	    s3,8(s0)
+</span></span><span style="display:flex;"><span>4038088c:	ff500793          	li	    a5,-11
+</span></span><span style="display:flex;"><span>40380890:	06f9ac23          	sw	    a5,120(s3)
+</span></span><span style="display:flex;"><span>40380894:	300477f3          	csrrci	a5,mstatus,8
+</span></span></code></pre></div><p>The subsequent instructions are inlined from <code>do_swap()</code>. The first is loading
+our <code>_current</code> thread from the <code>_kernel</code> structure, the address of which we
+previously stored in <code>s0</code>. We used the <code>8</code> bit offset in the <code>_kernel</code> structure
+earlier to set <code>_current</code> to the <code>dummy_thread</code>, and now are loading it back
+into <code>s3</code>.</p>
+<p><code>kernel/include/kswap.h</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/include/kswap.h#L89">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	old_thread = _current;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	z_check_stack_sentinel();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	old_thread-&gt;swap_retval = -EAGAIN;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* We always take the scheduler spinlock if we don&#39;t already
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * have it.  We &#34;release&#34; other spinlocks here.  But we never
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * drop the interrupt lock.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (is_spinlock &amp;&amp; lock != <span style="color:#fff;font-weight:bold">NULL</span> &amp;&amp; lock != &amp;sched_spinlock) {
+</span></span><span style="display:flex;"><span>		k_spin_release(lock);
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (!is_spinlock || lock != &amp;sched_spinlock) {
+</span></span><span style="display:flex;"><span>		(<span style="color:#fff;font-weight:bold">void</span>) k_spin_lock(&amp;sched_spinlock);
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	new_thread = z_swap_next_thread();
+</span></span></code></pre></div><p><code>z_check_stack_sentinel()</code> is a no-op as we don&rsquo;t have
+<a href="https://docs.zephyrproject.org/latest/kconfig.html#CONFIG_STACK_SENTINEL"><code>CONFIG_STACK_SENTINEL</code></a>
+enabled, so the next operation is to set the <code>dummy_thread</code> swap return value to
+<code>-EAGAIN</code>, which corresponds to the <code>li a5,-11</code> and <code>sw a5,120(s3)</code>
+instructions. Because we passed <code>NULL</code> as <code>lock</code> to <code>do_swap()</code>, we then call
+<code>k_spin_lock()</code>, which causes, in this case, an extraneous second disabling of
+the machine-level interrupts in <code>mstatus</code> (<code>csrrci a5,mstatus,8</code>). We now are
+ready to swap to the next thread on the queue with <code>z_swap_next_thread()</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>40380898:	0d5000ef          	jal	    ra,4038116c &lt;z_swap_next_thread&gt;
+</span></span></code></pre></div><p>We previously added the <code>main</code> thread to the queue when we called
+<code>z_ready_thread()</code>, so it will be assigned as <code>new_thread</code>.</p>
+<p><code>kernel/sched.c</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/sched.c#L1018">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">struct</span> k_thread *z_swap_next_thread(<span style="color:#fff;font-weight:bold">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_SMP
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">struct</span> k_thread *ret = next_up();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (ret == _current) {
+</span></span><span style="display:flex;"><span>		<span style="color:#007f7f">/* When not swapping, have to signal IPIs here.  In
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">		 * the context switch case it must happen later, after
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">		 * _current gets requeued.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">		 */</span>
+</span></span><span style="display:flex;"><span>		signal_pending_ipi();
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> ret;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">return</span> _kernel.ready_q.cache;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>}
+</span></span></code></pre></div><p>When we return, we check that <code>new_thread</code> is not the same as <code>old_thread</code>,
+which is true in this case, meaning we have some additional operations to
+perform.</p>
+<p><code>kernel/include/kswap.h</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/include/kswap.h#L108">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (new_thread != old_thread) {
+</span></span><span style="display:flex;"><span>		z_sched_usage_switch(new_thread);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_SMP
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>		_current_cpu-&gt;swap_ok = <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span>		new_thread-&gt;base.cpu = arch_curr_cpu()-&gt;id;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">if</span> (!is_spinlock) {
+</span></span><span style="display:flex;"><span>			z_smp_release_global_lock(new_thread);
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>		z_thread_mark_switched_out();
+</span></span><span style="display:flex;"><span>		wait_for_switch(new_thread);
+</span></span><span style="display:flex;"><span>		_current_cpu-&gt;current = new_thread;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_TIMESLICING
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>		z_reset_time_slice(new_thread);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_SPIN_VALIDATE
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>		z_spin_lock_set_owner(&amp;sched_spinlock);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>		arch_cohere_stacks(old_thread, <span style="color:#fff;font-weight:bold">NULL</span>, new_thread);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_SMP
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>		<span style="color:#007f7f">/* Add _current back to the run queue HERE. After
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">		 * wait_for_switch() we are guaranteed to reach the
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">		 * context switch in finite time, avoiding a potential
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">		 * deadlock.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">		 */</span>
+</span></span><span style="display:flex;"><span>		z_requeue_current(old_thread);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>		<span style="color:#fff;font-weight:bold">void</span> *newsh = new_thread-&gt;switch_handle;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">if</span> (IS_ENABLED(CONFIG_SMP)) {
+</span></span><span style="display:flex;"><span>			<span style="color:#007f7f">/* Active threads MUST have a null here */</span>
+</span></span><span style="display:flex;"><span>			new_thread-&gt;switch_handle = <span style="color:#fff;font-weight:bold">NULL</span>;
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		k_spin_release(&amp;sched_spinlock);
+</span></span><span style="display:flex;"><span>		arch_switch(newsh, &amp;old_thread-&gt;switch_handle);
+</span></span><span style="display:flex;"><span>	} <span style="color:#fff;font-weight:bold">else</span> {
+</span></span><span style="display:flex;"><span>		k_spin_release(&amp;sched_spinlock);
+</span></span><span style="display:flex;"><span>	}
+</span></span></code></pre></div><p>Most of the functionality in this block is omitted, or is a no-op for this use
+case. All we end up doing before making the final switch is setting the
+<code>current</code> thread of <code>_current_cpu</code> to <code>new_thread</code> (<code>mv s1,a0</code> and <code>sw a0,8(s0)</code>) before resetting the time slice with <code>z_reset_time_slice()</code>, which
+receives <code>new_thread</code> via the <code>a0</code> argument register.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>4038089c:	02a98063          	beq	    s3,a0,403808bc &lt;z_cstart+0xfc&gt;
+</span></span><span style="display:flex;"><span>403808a0:	00050493          	mv	    s1,a0
+</span></span><span style="display:flex;"><span>403808a4:	00a42423          	sw	    a0,8(s0)
+</span></span><span style="display:flex;"><span>403808a8:	1e0000ef          	jal	    ra,40380a88 &lt;z_reset_time_slice&gt;
+</span></span></code></pre></div><p>Finally we call <code>arch_switch()</code>, which is inlined as a call to
+<code>z_riscv_switch()</code>.</p>
+<p><code>arch/riscv/include/kernel_arch_func.h</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/arch/riscv/include/kernel_arch_func.h#L59">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> ALWAYS_INLINE <span style="color:#fff;font-weight:bold">void</span>
+</span></span><span style="display:flex;"><span>arch_switch(<span style="color:#fff;font-weight:bold">void</span> *switch_to, <span style="color:#fff;font-weight:bold">void</span> **switched_from)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">extern</span> <span style="color:#fff;font-weight:bold">void</span> z_riscv_switch(<span style="color:#fff;font-weight:bold">struct</span> k_thread *new, <span style="color:#fff;font-weight:bold">struct</span> k_thread *old);
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">struct</span> k_thread *new = switch_to;
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">struct</span> k_thread *old = CONTAINER_OF(switched_from, <span style="color:#fff;font-weight:bold">struct</span> k_thread,
+</span></span><span style="display:flex;"><span>					    switch_handle);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_RISCV_ALWAYS_SWITCH_THROUGH_ECALL
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	arch_syscall_invoke2((<span style="color:#fff;font-weight:bold">uintptr_t</span>)new, (<span style="color:#fff;font-weight:bold">uintptr_t</span>)old, RV_ECALL_SCHEDULE);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	z_riscv_switch(new, old);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>}
+</span></span></code></pre></div><p>We pass the <code>switch_handle</code> for the <code>new_thread</code> (<code>s1</code>) and the <code>old_thread</code>
+(<code>s3</code>) in argument registers <code>a0</code> and <code>a1</code> respectively.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>403808ac:	07c4a503          	lw	    a0,124(s1)
+</span></span><span style="display:flex;"><span>403808b0:	00098593          	mv	    a1,s3
+</span></span><span style="display:flex;"><span>403808b4:	01c93097          	auipc	ra,0x1c93
+</span></span><span style="display:flex;"><span>403808b8:	818080e7          	jalr	-2024(ra) # 420130cc &lt;z_riscv_switch&gt;
+</span></span></code></pre></div><p><code>z_riscv_switch()</code> appears to be doing quite a bit, but as we&rsquo;ll see shortly,
+for our simple use case it is just storing registers from the old thread and
+loading them for the new one.</p>
+<p><code>arch/riscv/core/switch.S</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/arch/riscv/core/switch.S#L38">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#007f7f">/* void z_riscv_switch(k_thread_t *switch_to, k_thread_t *switch_from) */</span>
+</span></span><span style="display:flex;"><span>SECTION_FUNC(TEXT, z_riscv_switch)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Save the old thread&#39;s callee-saved registers */</span>
+</span></span><span style="display:flex;"><span>	DO_CALLEE_SAVED(sr, a1)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Save the old thread&#39;s stack pointer */</span>
+</span></span><span style="display:flex;"><span>	sr sp, _thread_offset_to_sp(a1)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Set thread-&gt;switch_handle = thread to mark completion */</span>
+</span></span><span style="display:flex;"><span>	sr a1, ___thread_t_switch_handle_OFFSET(a1)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Get the new thread&#39;s stack pointer */</span>
+</span></span><span style="display:flex;"><span>	lr sp, _thread_offset_to_sp(a0)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_THREAD_LOCAL_STORAGE)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* Get the new thread&#39;s tls pointer */</span>
+</span></span><span style="display:flex;"><span>	lr tp, _thread_offset_to_tls(a0)
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_FPU_SHARING)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	 <span style="color:#007f7f">/* Preserve a0 across following call. s0 is not yet restored. */</span>
+</span></span><span style="display:flex;"><span>	mv s0, a0
+</span></span><span style="display:flex;"><span>	call z_riscv_fpu_thread_context_switch
+</span></span><span style="display:flex;"><span>	mv a0, s0
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_PMP_STACK_GUARD)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* Stack guard has priority over user space for PMP usage. */</span>
+</span></span><span style="display:flex;"><span>	mv s0, a0
+</span></span><span style="display:flex;"><span>	call z_riscv_pmp_stackguard_enable
+</span></span><span style="display:flex;"><span>	mv a0, s0
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#elif defined(CONFIG_USERSPACE)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * When stackguard is not enabled, we need to configure the PMP only
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * at context switch time as the PMP is not in effect while inm-mode.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * (it is done on every exception return otherwise).
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span>	lb t0, _thread_offset_to_user_options(a0)
+</span></span><span style="display:flex;"><span>	andi t0, t0, K_USER
+</span></span><span style="display:flex;"><span>	beqz t0, not_user_task
+</span></span><span style="display:flex;"><span>	mv s0, a0
+</span></span><span style="display:flex;"><span>	call z_riscv_pmp_usermode_enable
+</span></span><span style="display:flex;"><span>	mv a0, s0
+</span></span><span style="display:flex;"><span>not_user_task:
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if CONFIG_INSTRUMENT_THREAD_SWITCHING
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	mv s0, a0
+</span></span><span style="display:flex;"><span>	call z_thread_mark_switched_in
+</span></span><span style="display:flex;"><span>	mv a0, s0
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Restore the new thread&#39;s callee-saved registers */</span>
+</span></span><span style="display:flex;"><span>	DO_CALLEE_SAVED(lr, a0)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Return to arch_switch() or _irq_wrapper() */</span>
+</span></span><span style="display:flex;"><span>	ret
+</span></span></code></pre></div><p>The disassembly reveals that we are mostly only performing <code>DO_CALLEE_SAVED</code>
+operations, as well as loading and storing stack pointers (<code>sp</code>) and setting the
+old thread&rsquo;s <code>switch_handle</code>. However, the most critical operation is part of
+restoring the new thread&rsquo;s callee-saved registers.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>420130cc &lt;z_riscv_switch&gt;:
+</span></span><span style="display:flex;"><span>420130cc:	0215aa23          	sw	ra,52(a1)
+</span></span><span style="display:flex;"><span>420130d0:	0285ac23          	sw	s0,56(a1)
+</span></span><span style="display:flex;"><span>420130d4:	0295ae23          	sw	s1,60(a1)
+</span></span><span style="display:flex;"><span>420130d8:	0525a023          	sw	s2,64(a1)
+</span></span><span style="display:flex;"><span>420130dc:	0535a223          	sw	s3,68(a1)
+</span></span><span style="display:flex;"><span>420130e0:	0545a423          	sw	s4,72(a1)
+</span></span><span style="display:flex;"><span>420130e4:	0555a623          	sw	s5,76(a1)
+</span></span><span style="display:flex;"><span>420130e8:	0565a823          	sw	s6,80(a1)
+</span></span><span style="display:flex;"><span>420130ec:	0575aa23          	sw	s7,84(a1)
+</span></span><span style="display:flex;"><span>420130f0:	0585ac23          	sw	s8,88(a1)
+</span></span><span style="display:flex;"><span>420130f4:	0595ae23          	sw	s9,92(a1)
+</span></span><span style="display:flex;"><span>420130f8:	07a5a023          	sw	s10,96(a1)
+</span></span><span style="display:flex;"><span>420130fc:	07b5a223          	sw	s11,100(a1)
+</span></span><span style="display:flex;"><span>42013100:	0225a823          	sw	sp,48(a1)
+</span></span><span style="display:flex;"><span>42013104:	06b5ae23          	sw	a1,124(a1)
+</span></span><span style="display:flex;"><span>42013108:	03052103          	lw	sp,48(a0)
+</span></span><span style="display:flex;"><span>4201310c:	03452083          	lw	ra,52(a0)
+</span></span><span style="display:flex;"><span>42013110:	03852403          	lw	s0,56(a0)
+</span></span><span style="display:flex;"><span>42013114:	03c52483          	lw	s1,60(a0)
+</span></span><span style="display:flex;"><span>42013118:	04052903          	lw	s2,64(a0)
+</span></span><span style="display:flex;"><span>4201311c:	04452983          	lw	s3,68(a0)
+</span></span><span style="display:flex;"><span>42013120:	04852a03          	lw	s4,72(a0)
+</span></span><span style="display:flex;"><span>42013124:	04c52a83          	lw	s5,76(a0)
+</span></span><span style="display:flex;"><span>42013128:	05052b03          	lw	s6,80(a0)
+</span></span><span style="display:flex;"><span>4201312c:	05452b83          	lw	s7,84(a0)
+</span></span><span style="display:flex;"><span>42013130:	05852c03          	lw	s8,88(a0)
+</span></span><span style="display:flex;"><span>42013134:	05c52c83          	lw	s9,92(a0)
+</span></span><span style="display:flex;"><span>42013138:	06052d03          	lw	s10,96(a0)
+</span></span><span style="display:flex;"><span>4201313c:	06452d83          	lw	s11,100(a0)
+</span></span><span style="display:flex;"><span>42013140:	00008067          	ret
+</span></span></code></pre></div><p>Ealier when calling the RISC-V implementation of <code>arch_new_thread()</code>, we
+performed the following operation prior to returning.</p>
+<p><code>arch/riscv/core/thread.c</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/arch/riscv/core/thread.c#L112">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	<span style="color:#007f7f">/* where to go when returning from z_riscv_switch() */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">thread</span>-&gt;callee_saved.ra = (<span style="color:#fff;font-weight:bold">unsigned</span> <span style="color:#fff;font-weight:bold">long</span>)z_riscv_thread_start;
+</span></span></code></pre></div><p>We are now loading the address of <code>z_riscv_thread_start()</code> into <code>ra</code>, meaning
+that when we execute <code>ret</code>, the program counter will jump to executing there.
+<code>z_riscv_thread_start()</code> is similar to <code>z_riscv_switch()</code> in that it has the
+potential to be quite complex, but for our program it is doing a few fundamental
+operations.</p>
+<p><code>arch/riscv/core/isr.S</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/arch/riscv/core/isr.S#L585">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>z_riscv_thread_start:
+</span></span><span style="display:flex;"><span>might_have_rescheduled:
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* reload s0 with &amp;_current_cpu as it might have changed or be unset */</span>
+</span></span><span style="display:flex;"><span>	get_current_cpu s0
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>no_reschedule:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_RISCV_SOC_CONTEXT_SAVE
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* Restore context at SOC level */</span>
+</span></span><span style="display:flex;"><span>	addi a0, sp, __z_arch_esf_t_soc_context_OFFSET
+</span></span><span style="display:flex;"><span>	jal ra, __soc_restore_context
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* CONFIG_RISCV_SOC_CONTEXT_SAVE */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_FPU_SHARING)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* FPU handling upon exception mode exit */</span>
+</span></span><span style="display:flex;"><span>	mv a0, sp
+</span></span><span style="display:flex;"><span>	call z_riscv_fpu_exit_exc
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* decrement _current-&gt;arch.exception_depth */</span>
+</span></span><span style="display:flex;"><span>	lr t0, ___cpu_t_current_OFFSET(s0)
+</span></span><span style="display:flex;"><span>	lb t1, _thread_offset_to_exception_depth(t0)
+</span></span><span style="display:flex;"><span>	add t1, t1, -<span style="color:#ff0;font-weight:bold">1</span>
+</span></span><span style="display:flex;"><span>	sb t1, _thread_offset_to_exception_depth(t0)
+</span></span><span style="display:flex;"><span>fp_trap_exit:
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Restore MEPC and MSTATUS registers */</span>
+</span></span><span style="display:flex;"><span>	lr t0, __z_arch_esf_t_mepc_OFFSET(sp)
+</span></span><span style="display:flex;"><span>	lr t2, __z_arch_esf_t_mstatus_OFFSET(sp)
+</span></span><span style="display:flex;"><span>	csrw mepc, t0
+</span></span><span style="display:flex;"><span>	csrw mstatus, t2
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_USERSPACE
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * Check if we are returning to user mode. If so then we must
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * set is_user_mode to true and preserve our kernel mode stack for
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * the next exception to come.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span>	li t1, MSTATUS_MPP
+</span></span><span style="display:flex;"><span>	and t0, t2, t1
+</span></span><span style="display:flex;"><span>	bnez t0, <span style="color:#ff0;font-weight:bold">1f</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_PMP_STACK_GUARD
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* Remove kernel stack guard and Reconfigure PMP for user mode */</span>
+</span></span><span style="display:flex;"><span>	lr a0, ___cpu_t_current_OFFSET(s0)
+</span></span><span style="display:flex;"><span>	call z_riscv_pmp_usermode_enable
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Set our per-thread usermode flag */</span>
+</span></span><span style="display:flex;"><span>	li t1, <span style="color:#ff0;font-weight:bold">1</span>
+</span></span><span style="display:flex;"><span>	lui t0, %tprel_hi(is_user_mode)
+</span></span><span style="display:flex;"><span>	add t0, t0, tp, %tprel_add(is_user_mode)
+</span></span><span style="display:flex;"><span>	sb t1, %tprel_lo(is_user_mode)(t0)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* preserve stack pointer for next exception entry */</span>
+</span></span><span style="display:flex;"><span>	add t0, sp, __z_arch_esf_t_SIZEOF
+</span></span><span style="display:flex;"><span>	sr t0, _curr_cpu_arch_user_exc_sp(s0)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	j <span style="color:#ff0;font-weight:bold">2f</span>
+</span></span><span style="display:flex;"><span><span style="color:#ff0;font-weight:bold">1</span>:
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * We are returning to kernel mode. Store the stack pointer to
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * be re-loaded further down.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span>	addi t0, sp, __z_arch_esf_t_SIZEOF
+</span></span><span style="display:flex;"><span>	sr t0, __z_arch_esf_t_sp_OFFSET(sp)
+</span></span><span style="display:flex;"><span><span style="color:#ff0;font-weight:bold">2</span>:
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Restore s0 (it is no longer ours) */</span>
+</span></span><span style="display:flex;"><span>	lr s0, __z_arch_esf_t_s0_OFFSET(sp)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_RISCV_SOC_HAS_ISR_STACKING
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	SOC_ISR_SW_UNSTACKING
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* Restore caller-saved registers from thread stack */</span>
+</span></span><span style="display:flex;"><span>	DO_CALLER_SAVED(lr)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_USERSPACE
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* retrieve saved stack pointer */</span>
+</span></span><span style="display:flex;"><span>	lr sp, __z_arch_esf_t_sp_OFFSET(sp)
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* remove esf from the stack */</span>
+</span></span><span style="display:flex;"><span>	addi sp, sp, __z_arch_esf_t_SIZEOF
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* CONFIG_RISCV_SOC_HAS_ISR_STACKING */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>	mret
+</span></span></code></pre></div><p>Looking at the disassembly one last time, we can see that <code>ra</code> is subsequently
+being restored, this time as part of <code>DO_CALLER_SAVED</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>4038024c &lt;z_riscv_thread_start&gt;:
+</span></span><span style="display:flex;"><span>4038024c:	ff903417          	auipc	s0,0xff903
+</span></span><span style="display:flex;"><span>40380250:	ba440413          	addi	s0,s0,-1116 # 3fc82df0 &lt;_kernel&gt;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>40380254 &lt;no_reschedule&gt;:
+</span></span><span style="display:flex;"><span>40380254:	04012283          	lw  	t0,64(sp)
+</span></span><span style="display:flex;"><span>40380258:	04412383          	lw	    t2,68(sp)
+</span></span><span style="display:flex;"><span>4038025c:	34129073          	csrw	mepc,t0
+</span></span><span style="display:flex;"><span>40380260:	30039073          	csrw	mstatus,t2
+</span></span><span style="display:flex;"><span>40380264:	04812403          	lw	    s0,72(sp)
+</span></span><span style="display:flex;"><span>40380268:	00412283          	lw	    t0,4(sp)
+</span></span><span style="display:flex;"><span>4038026c:	00812303          	lw	    t1,8(sp)
+</span></span><span style="display:flex;"><span>40380270:	00c12383          	lw	    t2,12(sp)
+</span></span><span style="display:flex;"><span>40380274:	01012e03          	lw	    t3,16(sp)
+</span></span><span style="display:flex;"><span>40380278:	01412e83          	lw	    t4,20(sp)
+</span></span><span style="display:flex;"><span>4038027c:	01812f03          	lw	    t5,24(sp)
+</span></span><span style="display:flex;"><span>40380280:	01c12f83          	lw	    t6,28(sp)
+</span></span><span style="display:flex;"><span>40380284:	02012503          	lw	    a0,32(sp)
+</span></span><span style="display:flex;"><span>40380288:	02412583          	lw	    a1,36(sp)
+</span></span><span style="display:flex;"><span>4038028c:	02812603          	lw	    a2,40(sp)
+</span></span><span style="display:flex;"><span>40380290:	02c12683          	lw	    a3,44(sp)
+</span></span><span style="display:flex;"><span>40380294:	03012703          	lw	    a4,48(sp)
+</span></span><span style="display:flex;"><span>40380298:	03412783          	lw	    a5,52(sp)
+</span></span><span style="display:flex;"><span>4038029c:	03812803          	lw	    a6,56(sp)
+</span></span><span style="display:flex;"><span>403802a0:	03c12883          	lw	    a7,60(sp)
+</span></span><span style="display:flex;"><span>403802a4:	00012083          	lw	    ra,0(sp)
+</span></span><span style="display:flex;"><span>403802a8:	05010113          	addi	sp,sp,80
+</span></span><span style="display:flex;"><span>403802ac:	30200073          	mret
+</span></span></code></pre></div><p>This is once again available due to operations performed earlier  in
+<code>arch_new_thread()</code>, where we stored the address of the thread&rsquo;s entrypoint as
+the first value on the stack (<code>0(sp)</code>).</p>
+<p><code>arch/riscv/core/thread.c</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/arch/riscv/core/thread.c#L38">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	<span style="color:#007f7f">/* Setup the initial stack frame */</span>
+</span></span><span style="display:flex;"><span>	stack_init-&gt;a0 = (<span style="color:#fff;font-weight:bold">unsigned</span> <span style="color:#fff;font-weight:bold">long</span>)entry;
+</span></span></code></pre></div><p>When we return (<code>mret</code>), we&rsquo;ll begin executing at the thread entrypoint.
+However, we didn&rsquo;t pass our <code>main()</code> as the thread entrypoint, but rather
+<code>bg_thread_main()</code>. <code>bg_thread_main()</code> simply performs some final setup, before
+eventually invoking <code>main()</code>.</p>
+<p><code>kernel/init.c</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/07c6af3b8c35c1e49186578ca61a25c76e2fb308/kernel/init.c#L277">source</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>__boot_func
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">void</span> bg_thread_main(<span style="color:#fff;font-weight:bold">void</span> *unused1, <span style="color:#fff;font-weight:bold">void</span> *unused2, <span style="color:#fff;font-weight:bold">void</span> *unused3)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	ARG_UNUSED(unused1);
+</span></span><span style="display:flex;"><span>	ARG_UNUSED(unused2);
+</span></span><span style="display:flex;"><span>	ARG_UNUSED(unused3);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_MMU
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* Invoked here such that backing store or eviction algorithms may
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * initialize kernel objects, and that all POST_KERNEL and later tasks
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * may perform memory management tasks (except for z_phys_map() which
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * is allowed at any time)
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span>	z_mem_manage_init();
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* CONFIG_MMU */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	z_sys_post_kernel = <span style="color:#fff;font-weight:bold">true</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	z_sys_init_run_level(INIT_LEVEL_POST_KERNEL);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if CONFIG_STACK_POINTER_RANDOM
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	z_stack_adjust_initialized = <span style="color:#ff0;font-weight:bold">1</span>;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	boot_banner();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_CPP)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">void</span> z_cpp_init_static(<span style="color:#fff;font-weight:bold">void</span>);
+</span></span><span style="display:flex;"><span>	z_cpp_init_static();
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Final init level before app starts */</span>
+</span></span><span style="display:flex;"><span>	z_sys_init_run_level(INIT_LEVEL_APPLICATION);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	z_init_static_threads();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_KERNEL_COHERENCE
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	__ASSERT_NO_MSG(arch_mem_coherent(&amp;_kernel));
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_SMP
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">if</span> (!IS_ENABLED(CONFIG_SMP_BOOT_DELAY)) {
+</span></span><span style="display:flex;"><span>		z_smp_init();
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	z_sys_init_run_level(INIT_LEVEL_SMP);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_MMU
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	z_mem_manage_boot_finish();
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* CONFIG_MMU */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">extern</span> <span style="color:#fff;font-weight:bold">int</span> main(<span style="color:#fff;font-weight:bold">void</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	(<span style="color:#fff;font-weight:bold">void</span>)main();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Mark nonessential since main() has no more work to do */</span>
+</span></span><span style="display:flex;"><span>	z_main_thread.base.user_options &amp;= ~K_ESSENTIAL;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_COVERAGE_DUMP
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* Dump coverage data once the main() has exited. */</span>
+</span></span><span style="display:flex;"><span>	gcov_coverage_dump();
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>}
+</span></span></code></pre></div><p><code>main()</code> may return, as our example does. In that case, the <code>main</code> thread is
+marked as nonessential and is free to terminate without causing a crash. At long
+last we have made it to <code>main()</code>!</p>
+<h2 id="concluding-thoughts">
+  Concluding Thoughts
+  <a class="heading-link" href="#concluding-thoughts">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>There is a lot of complexity in Zephyr&rsquo;s thread architecture that we haven&rsquo;t
+covered in this post, but we have explored the core setup that almost all
+applications go through. Much of the logic used in this phase of execution is
+also used for scheduling subsequent threads and managing their lifecycle. In a
+future post we&rsquo;ll explore a more sophisticated example, as well as alternative
+<a href="https://docs.zephyrproject.org/latest/kernel/services/scheduling/index.html#scheduling-algorithm">scheduling algorithms and
+configuration</a>.</p>
+<p>As always, these posts are meant to serve as a useful resource for folks who are
+interested in learning more about RISC-V and low-level software in general. If I
+can do a better job of reaching that goal, or you have any questions or
+comments, please feel free to send me a message
+<a href="https://twitter.com/hasheddan">@hasheddan</a> Twitter,
+<a href="https://types.pl/web/@hasheddan">@hasheddan@types.pl</a> on Mastodon, or
+<a href="https://staging.bsky.app/profile/danielmangum.com">@danielmangum.com</a> on
+Bluesky (yeah, I guess we&rsquo;re doing that now)!</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
