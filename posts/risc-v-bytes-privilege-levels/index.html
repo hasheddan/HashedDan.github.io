@@ -439,11 +439,21 @@ Let&rsquo;s go ahead and assemble and link our program:</p>
 <p>Now let&rsquo;s walk through what it&rsquo;s actually doing. We can run QEMU and attach to
 it, similarly to the steps we took when debugging user space programs, but we&rsquo;ll
 need to provide some additional arguments this time:</p>
-<p><code>qemu-system-riscv64 -machine virt -cpu rv64 -smp 1 -s -S -nographic -bios none -kernel entry</code></p>
+<p><code>qemu-system-riscv64 -machine virt -cpu rv64,pmp=false -smp 1 -s -S -nographic -bios none -kernel entry</code></p>
 <p>Here we are specifying:</p>
 <ul>
 <li>Use the QEMU virtual machine as our emulation target (<code>-machine virt</code>)</li>
-<li>Use the generic <code>rv64</code> CPU architecture (<code>cpu rv64</code>)</li>
+<li>Use the generic <code>rv64</code> CPU architecture (<code>cpu rv64</code>)
+<ul>
+<li><strong>Update (5/26/23)</strong>: Physical Memory Protection (PMP) is now enabled by
+default in <code>qemu-system-riscv64</code>
+(<a href="https://gitlab.com/qemu-project/qemu/-/blob/f9bdb3818faae00b950f6a09eda1fa40193ef1f5/target/riscv/cpu.c#L1530">ref</a>).
+We disable with the <code>pmp=false</code> flag to avoid our first <code>mret</code> instruction
+causing an exception and trapping to <code>m_trap</code> rather than returning to
+<code>supervisor</code>. Thanks to <a href="https://twitter.com/kevinkwxue">Kevin Xue</a> for
+reporting this!</li>
+</ul>
+</li>
 <li>Run with a single hart (<code>-smp 1</code>)</li>
 <li>Run as a <code>gdbstub</code> (<code>-s</code> is shorthand for <code>-gdb tcp::1234</code>)</li>
 <li>Wait for command before starting execution (<code>-S</code>)</li>
