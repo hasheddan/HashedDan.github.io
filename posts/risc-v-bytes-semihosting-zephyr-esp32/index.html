@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  RISC-V Bytes: Semihosting with Zephyr on an ESP32 · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="Note: all analysis and code samples used in this post correspond to the v3.3.0 release of Zephyr.
+Having a good debugging workflow is critical to developing software quickly with high confidence. Fortunately, writing software for computers is often done, well, on a computer, meaning that while writing programs we can run other programs that help us understand the behavior of what we are writing. Typically the machine we are writing software for, though it may run in a data center and have a different form factor, doesn&rsquo;t look so different from the machine we are writing it on.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="RISC-V Bytes: Semihosting with Zephyr on an ESP32"/>
+<meta name="twitter:description" content="Note: all analysis and code samples used in this post correspond to the v3.3.0 release of Zephyr.
+Having a good debugging workflow is critical to developing software quickly with high confidence. Fortunately, writing software for computers is often done, well, on a computer, meaning that while writing programs we can run other programs that help us understand the behavior of what we are writing. Typically the machine we are writing software for, though it may run in a data center and have a different form factor, doesn&rsquo;t look so different from the machine we are writing it on."/>
+
+<meta property="og:title" content="RISC-V Bytes: Semihosting with Zephyr on an ESP32" />
+<meta property="og:description" content="Note: all analysis and code samples used in this post correspond to the v3.3.0 release of Zephyr.
+Having a good debugging workflow is critical to developing software quickly with high confidence. Fortunately, writing software for computers is often done, well, on a computer, meaning that while writing programs we can run other programs that help us understand the behavior of what we are writing. Typically the machine we are writing software for, though it may run in a data center and have a different form factor, doesn&rsquo;t look so different from the machine we are writing it on." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/risc-v-bytes-semihosting-zephyr-esp32/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-05-30T00:10:34-06:00" />
+<meta property="article:modified_time" content="2023-05-30T00:10:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/risc-v-bytes-semihosting-zephyr-esp32/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/risc-v-bytes-semihosting-zephyr-esp32/">
+              RISC-V Bytes: Semihosting with Zephyr on an ESP32
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2023-05-30T00:10:34-06:00">
+                May 30, 2023
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              22-minute read
+            </span>
+          </div>
+          
+          <div class="categories">
+  <i class="fa fa-folder" aria-hidden="true"></i>
+    <a href="https://danielmangum.com/categories/risc-v-bytes/">RISC-V Bytes</a></div>
+
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <blockquote>
+<p>Note: all analysis and code samples used in this post correspond to the
+<a href="https://github.com/zephyrproject-rtos/zephyr/releases/tag/v3.3.0">v3.3.0</a>
+release of Zephyr.</p>
+</blockquote>
+<p><img src="../../static/risc_v_semihost_header.png" alt="risc-v-semihosting-header"></p>
+<p>Having a good debugging workflow is critical to developing software quickly with
+high confidence. Fortunately, writing software for computers is often done,
+well, on a computer, meaning that while writing programs we can run other
+programs that help us understand the behavior of what we are writing. Typically
+the machine we are writing software for, though it may run in a data center and
+have a different form factor, doesn&rsquo;t look so different from the machine we are
+writing it on. My <a href="https://system76.com/">System76</a> laptop is not the same as
+the servers racked in <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html">US East
+1</a>,
+but it is a close enough approximation.</p>
+<p>However, when writing embedded software, the target machine looks quite
+different than the machine that the software is developed on, and it is
+frequently significantly more resource constrained. One option is to run an
+emulator, such as <a href="https://www.qemu.org/">QEMU</a>, on the host machine and connect your debugger. This
+is the strategy we have used in previous <a href="https://danielmangum.com/posts/risc-v-bytes-qemu-gdb/">RISC-V Bytes
+posts</a>, and the built-in
+<a href="https://wiki.qemu.org/Features/gdbstub">gdbstub</a> functionality makes connecting
+<a href="https://www.sourceware.org/gdb/">gdb</a> straightforward.</p>
+<p>There is nothing like the real hardware though, and many systems allow for
+debugging the software running on a device by communicating over
+<a href="https://en.wikipedia.org/wiki/JTAG">JTAG</a> from the host machine. Some even
+provide built-in USB-to-JTAG circuitry, absolving developers of the need to use
+additional adapters. The drawback of using real hardware is that simulating
+certain input and output to a program can be difficult. Furthermore, if testing against a
+single component of a larger system, the components providing input and output
+may not be available at the time of writing software.</p>
+<p>To improve the development experience in these scenarios, some chips implement
+<a href="https://developer.arm.com/documentation/dui0471/g/Bgbjjgij">semihosting</a>, which
+can greatly enhance an embedded development workflow by allowing a program
+running on a device to perform operations on the host.</p>
+<h2 id="sections">
+  Sections
+  <a class="heading-link" href="#sections">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<ul>
+<li><a href="#overview-of-semihosting">Overview of Semihosting</a></li>
+<li><a href="#zephyr-semihosting-support">Zephyr Semihosting Support</a></li>
+<li><a href="#debugger-setup">Debugger Setup</a></li>
+<li><a href="#writing-to-the-host-filesystem">Writing to the Host Filesystem</a></li>
+<li><a href="#concluding-thoughts">Concluding Thoughts</a></li>
+</ul>
+<h2 id="overview-of-semihosting">
+  Overview of Semihosting
+  <a class="heading-link" href="#overview-of-semihosting">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>As we have explored in many posts in the RISC-V Bytes series, computer programs
+are just a sequence of binary instructions that a CPU has been designed to
+interpret in a specific manner. When writing software on a host machine, then
+running it under a debugger, the debugger typically controls the child program
+using functionality exposed by the operating system, such as
+<a href="https://man7.org/linux/man-pages/man2/ptrace.2.html"><code>ptrace(2)</code></a> on Linux.
+This allows the debugger to selectively feed instructions from the child program
+to the CPU, optionally injecting additional instructions or performing some
+computation between issuing subsequent instructions.</p>
+<p>When working with an embedded device, there are two systems at play: the host
+and the device. This complicates the architecture, but similar functionality can
+be accomplished, typically using interfaces such as the aforementioned JTAG or
+<a href="https://developer.arm.com/documentation/ihi0031/a/The-Serial-Wire-Debug-Port--SW-DP-/Introduction-to-the-ARM-Serial-Wire-Debug--SWD--protocol">ARM Serial Wire Debug
+(SWD)</a>.</p>
+<blockquote>
+<p>There is a lot of information online about JTAG, but because it can be
+utilized for many different functions, it is easy to get confused about
+what it offers on its own. I have found the <a href="https://openocd.org/doc-release/doxygen/primerjtag.html">OpenOCD JTAG
+primer</a> to be one of
+the most succinct and helpful descriptions, especially for the context in
+which JTAG will be used in this post.</p>
+</blockquote>
+<p>These interfaces are quite different, but both enable communication with a
+processor running on a device. However, the processor itself must offer
+debugging functionality, much like it supports executing instructions defined by
+its instruction set architecture (ISA). RISC-V has a dedicated <a href="https://github.com/riscv/riscv-debug-spec/blob/master/riscv-debug-stable.pdf">debugging
+specification</a>,
+which defines how a system can expose hardware debugging support both internally
+and externally.</p>
+<p>When using an external system (i.e. host) for debugging, communication with
+RISC-V hardware debugging components happens over the <strong>Debug Transport Module
+(DTM)</strong>. As shown in the diagram below, there could be multiple transports used
+to implement a DTM, but the specification only defines one for JTAG at this
+point in time.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/risc_v_semihost_0.png"
+    alt="risc-v-semihosting-0"
+  />
+</div>
+<blockquote>
+<p>Diagram showing optional and required components in the RISC-V debug
+specification.</p>
+</blockquote>
+<p>When being controlled by an external debugger, a RISC-V hart is said to be in
+<strong>Debug Mode (D)</strong>, which can be considered an additional <a href="https://danielmangum.com/posts/risc-v-bytes-privilege-levels/">privilege
+level</a>. When
+implemented, this is the maximum privilege level, as it provides even lower
+level access than <strong>Machine Mode (M)</strong>. While the the debug specification
+details a variety of required and optional functionality, the <a href="https://riscv.org/technical/specifications/">privileged and
+unprivileged specifications</a> define
+the <code>EBREAK</code> instruction, which is similar to the <code>ECALL</code> instruction we have
+used in previous posts to perform system calls and trap to higher privilege
+levels. The <code>EBREAK</code> instruction instead will transfer control to the debugging
+environment, effectively implementing a <a href="https://en.wikipedia.org/wiki/Breakpoint">software
+breakpoint</a>. This type of breakpoint
+is interesting because, unlike triggers and hardware breakpoints where the
+debugger is forcing the program to halt, software breakpoints, though they may
+be inserted by the debugger, are the program &ldquo;asking to be halted&rdquo;.</p>
+<p>While the typical purpose of this behavior is to allow for examining state at
+the breakpoint, it can be thought of as a general purpose communication channel.
+That is, the program can form a &ldquo;request&rdquo; in its state, issue an <code>EBREAK</code>, then
+read a &ldquo;response&rdquo; from the debugger that has been written in the program state.
+This is the basic idea behind semihosting.</p>
+<p>Fortunately for existing debugging software, RISC-V opted to use a very similar
+implementation for semihosting as the one initially defined for ARM processors.
+The unofficial <a href="https://github.com/riscv-software-src/riscv-semihosting/blob/main/riscv-semihosting-spec.adoc">semihosting
+specification</a>
+defines the following sequence of instructions for a program to indicate to a
+debugger that the encountered breakpoint is a semihosting request.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>slli x0, x0, 0x1f       # 0x01f01013    Entry NOP
+</span></span><span style="display:flex;"><span>ebreak                  # 0x00100073    Break to debugger
+</span></span><span style="display:flex;"><span>srai x0, x0, 7          # 0x40705013    NOP encoding the semihosting call number 7
+</span></span></code></pre></div><p>On both 32-bit and 64-bit harts, the <code>a0</code> register is used to specify the type
+of
+<a href="https://github.com/ARM-software/abi-aa/blob/main/semihosting/semihosting.rst#semihosting-operations">operation</a>
+being requested, and <code>a1</code> is used to supply parameters. <code>a0</code> is used to supply
+responses. Depending on the type of operation, the request parameter in <code>a1</code> or
+the response in <code>a0</code> may be either a value or a memory address of the data
+block. In this manner, arbitrary data may be transferred between host and
+device.</p>
+<h2 id="zephyr-semihosting-support">
+  Zephyr Semihosting Support
+  <a class="heading-link" href="#zephyr-semihosting-support">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>In the last few posts, we&rsquo;ve explored the <a href="https://www.zephyrproject.org/">Zephyr
+RTOS</a>. Zephyr conveniently offers support for
+semihosting on ARM and RISC-V targets using a generic interface, which we&rsquo;ll use
+in this post to communicate with an <a href="https://www.espressif.com/en/products/socs/esp32-c3">Espressif
+ESP32-C3</a>. The ESP32-C3
+implements the RISC-V debug specification, and the DevKitC-02 has built-in
+USB-to-JTAG circuitry, meaning that we can connect gdb on our host machine to
+the hart on the device using OpenOCD (more on this in a bit).</p>
+<p>The Zephyr semihosting interface is defined in <code>semihost.h</code>, where operation
+enums are defined, as well as signatures for a few common operations. A codensed
+representation is provided below.</p>
+<p><code>include/zephyr/arch/common/semihost.h</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/4babd545cc1b1ddef190aaedeabd1c3db3fbb8a2/include/zephyr/arch/common/semihost.h">ref</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">long</span> semihost_exec(<span style="color:#fff;font-weight:bold">enum</span> semihost_instr instr, <span style="color:#fff;font-weight:bold">void</span> *args);
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">char</span> semihost_poll_in(<span style="color:#fff;font-weight:bold">void</span>);
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">void</span> semihost_poll_out(<span style="color:#fff;font-weight:bold">char</span> c);
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">long</span> semihost_open(<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">char</span> *path, <span style="color:#fff;font-weight:bold">long</span> mode);
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">long</span> semihost_close(<span style="color:#fff;font-weight:bold">long</span> fd);
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">long</span> semihost_flen(<span style="color:#fff;font-weight:bold">long</span> fd);
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">long</span> semihost_seek(<span style="color:#fff;font-weight:bold">long</span> fd, <span style="color:#fff;font-weight:bold">long</span> offset);
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">long</span> semihost_read(<span style="color:#fff;font-weight:bold">long</span> fd, <span style="color:#fff;font-weight:bold">void</span> *buf, <span style="color:#fff;font-weight:bold">long</span> len);
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">long</span> semihost_write(<span style="color:#fff;font-weight:bold">long</span> fd, <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">void</span> *buf, <span style="color:#fff;font-weight:bold">long</span> len);
+</span></span></code></pre></div><p>In reality, all functions listed are just helpful wrappers around
+<code>semihost_exec</code>, meaning that they can all be implemented generically, while
+<code>semihost_exec</code> must be defined for each architecture. For example, the
+implementation of <code>semihost_close</code> looks as follows.</p>
+<p><code>arch/common/semihost.c</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/4babd545cc1b1ddef190aaedeabd1c3db3fbb8a2/arch/common/semihost.c#L73">ref</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">long</span> semihost_close(<span style="color:#fff;font-weight:bold">long</span> fd)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">struct</span> semihost_close_args args = {
+</span></span><span style="display:flex;"><span>		.fd = fd
+</span></span><span style="display:flex;"><span>	};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> semihost_exec(SEMIHOST_CLOSE, &amp;args);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The corresponding <code>semihost_exec</code> implementation for RISC-V mirrors what we
+previously saw in the unofficial specification, written in C with inline
+assembly.</p>
+<p><code>arch/riscv/core/semihost.c</code> (<a href="https://github.com/zephyrproject-rtos/zephyr/blob/4babd545cc1b1ddef190aaedeabd1c3db3fbb8a2/arch/riscv/core/semihost.c#L21">ref</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#007f7f">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"> * QEMU requires that the semihosting trap instruction sequence, consisting of
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"> * three uncompressed instructions, lie in the same page, and refuses to
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"> * interpret the trap sequence if these instructions are placed across two
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"> * different pages.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"> *
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"> * The `semihost_exec` function, which occupies 12 bytes, is aligned at a
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"> * 16-byte boundary to ensure that the three trap sequence instructions are
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"> * never placed across two different pages.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"> */</span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">long</span> __aligned(<span style="color:#ff0;font-weight:bold">16</span>) semihost_exec(<span style="color:#fff;font-weight:bold">enum</span> semihost_instr instr, <span style="color:#fff;font-weight:bold">void</span> *args)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">register</span> <span style="color:#fff;font-weight:bold">unsigned</span> <span style="color:#fff;font-weight:bold">long</span> a0 __asm__ (<span style="color:#0ff;font-weight:bold">&#34;a0&#34;</span>) = instr;
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">register</span> <span style="color:#fff;font-weight:bold">void</span> *a1 __asm__ (<span style="color:#0ff;font-weight:bold">&#34;a1&#34;</span>) = args;
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">register</span> <span style="color:#fff;font-weight:bold">long</span> ret __asm__ (<span style="color:#0ff;font-weight:bold">&#34;a0&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	__asm__ <span style="color:#fff;font-weight:bold">volatile</span> (
+</span></span><span style="display:flex;"><span>		<span style="color:#0ff;font-weight:bold">&#34;.option push</span><span style="color:#0ff;font-weight:bold">\n\t</span><span style="color:#0ff;font-weight:bold">&#34;</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#0ff;font-weight:bold">&#34;.option norvc</span><span style="color:#0ff;font-weight:bold">\n\t</span><span style="color:#0ff;font-weight:bold">&#34;</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#0ff;font-weight:bold">&#34;slli zero, zero, 0x1f</span><span style="color:#0ff;font-weight:bold">\n\t</span><span style="color:#0ff;font-weight:bold">&#34;</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#0ff;font-weight:bold">&#34;ebreak</span><span style="color:#0ff;font-weight:bold">\n\t</span><span style="color:#0ff;font-weight:bold">&#34;</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#0ff;font-weight:bold">&#34;srai zero, zero, 0x7</span><span style="color:#0ff;font-weight:bold">\n\t</span><span style="color:#0ff;font-weight:bold">&#34;</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#0ff;font-weight:bold">&#34;.option pop&#34;</span>
+</span></span><span style="display:flex;"><span>		: <span style="color:#0ff;font-weight:bold">&#34;=r&#34;</span> (ret) : <span style="color:#0ff;font-weight:bold">&#34;r&#34;</span> (a0), <span style="color:#0ff;font-weight:bold">&#34;r&#34;</span> (a1) : <span style="color:#0ff;font-weight:bold">&#34;memory&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> ret;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="debugger-setup">
+  Debugger Setup
+  <a class="heading-link" href="#debugger-setup">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>While the ESP32-C3-DevKitC-02 does have built-in USB-to-JTAG support, it cannot
+be accessed over the built-in Micro-USB port. Instead, a dual-channel USB
+interface is available on the GPIO18 (<code>D-</code>) and GPIO19 (<code>D+</code>) pins, meaning that
+a single connection can be used to simultaneously provide USB terminal and JTAG
+access. I unfortunately did not have a USB breakout cable on hand, so I had to
+pull out the wire cutters / strippers.</p>
+<p><img src="../../static/risc_v_semihost_1.jpg" alt="risc-v-semihosting-1"></p>
+<blockquote>
+<p>Picture of my heinous wire-stripping job.</p>
+</blockquote>
+<p>After exposing the wires, I used female-to-male jumpers to connect <code>D-</code>, <code>D+</code>,
+<code>5V</code>, and <code>GND</code> to a breadboard where I had placed the development kit. I
+plugged it into my host and saw signs of life!</p>
+<p><img src="../../static/risc_v_semihost_2.jpg" alt="risc-v-semihosting-2"></p>
+<blockquote>
+<p>Picture of LED lit up on the ESP32-C3-DevKitC-02 with USB wires attached to
+appropriate pins via breadboard.</p>
+</blockquote>
+<p>There is an excellent <a href="https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/api-guides/jtag-debugging/">JTAG debugging
+guide</a>
+hidden in the the ESP32-C3 documentation that explains setup, but if you
+followed along with the previous <a href="https://danielmangum.com/posts/risc-v-bytes-exploring-custom-esp32-bootloader/">Exploring a Custom ESP32
+Bootloader</a>
+and <a href="https://danielmangum.com/posts/risc-v-bytes-zephyr-on-esp32/">Zephyr on the
+ESP32</a> posts, you
+should already have all of your Espressif and Zephyr tools installed.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ ls ~/.espressif/
+</span></span><span style="display:flex;"><span>dist  espidf.constraints.v5.1.txt  idf-env.json  python_env  tools
+</span></span><span style="display:flex;"><span>$ ls ~/.local/zephyr-sdk-0.16.0/
+</span></span><span style="display:flex;"><span>arm-zephyr-eabi  cmake  environment-setup-x86_64-pokysdk-linux  riscv64-zephyr-elf  sdk_toolchains  sdk_version  setup.sh  sysroots  version-x86_64-pokysdk-linux  zephyr-sdk-x86_64-hosttools-standalone-0.9.sh
+</span></span></code></pre></div><p>With the USB cable connected to the host machine, we should be able to find the device.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ lsusb | grep Espressif
+</span></span><span style="display:flex;"><span>Bus 002 Device 008: ID 303a:1001 Espressif USB JTAG/serial debug unit
+</span></span></code></pre></div><p>One tool we haven&rsquo;t used in previous posts is <a href="https://openocd.org/doc-release/html/About.html#What-is-OpenOCD_003f">Open On-Chip Debugger
+(OpenOCD)</a>.
+OpenOCD is both magical and maddening. It is magical in that it enables
+communicating with a wide variety of hardware, and maddening in that vendors
+will frequently fork the project and deliver custom distributions, meaning the
+you&rsquo;ll quickly find yourself with many builds of the tool on your local machine.
+Espressif follows this pattern by providing <a href="https://github.com/espressif/openocd-esp32">their own OpenOCD
+build</a>, which is included in the
+previously acquired tooling.</p>
+<p>OpenOCD is intended to be configuration driven, and there are <a href="https://openocd.org/doc-release/html/OpenOCD-Project-Setup.html#User-Config-Files">three types of
+configuration
+files</a>
+that inform how the software will talk with a device: <strong>board</strong>, <strong>interface</strong>,
+and <strong>target</strong>. The relevant configuration for the ESP32-C3 can be found in the
+OpenOCD <code>scripts</code> directory. The one we will actually reference is the board
+file.</p>
+<p><code>~/.espressif/tools/openocd-esp32/v0.12.0-esp32-20230313/openocd-esp32/share/openocd/scripts/board/esp32c3-builtin.cfg</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span># SPDX-License-Identifier: GPL-2.0-or-later
+</span></span><span style="display:flex;"><span>#
+</span></span><span style="display:flex;"><span># Example OpenOCD configuration file for ESP32-C3 connected via builtin USB-JTAG adapter.
+</span></span><span style="display:flex;"><span>#
+</span></span><span style="display:flex;"><span># For example, OpenOCD can be started for ESP32-C3 debugging on
+</span></span><span style="display:flex;"><span>#
+</span></span><span style="display:flex;"><span>#   openocd -f board/esp32c3-builtin.cfg
+</span></span><span style="display:flex;"><span>#
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span># Source the JTAG interface configuration file
+</span></span><span style="display:flex;"><span>source [find interface/esp_usb_jtag.cfg]
+</span></span><span style="display:flex;"><span># Source the ESP32-C3 configuration file
+</span></span><span style="display:flex;"><span>source [find target/esp32c3.cfg]
+</span></span></code></pre></div><p>For the ESP32-C3 &ldquo;built-in&rdquo;, the board file simply references the interface, which is USB /
+JTAG, and the chip, which is the ESP32-C3. The interface file is relatively
+uninteresting, though you will notice it matches our <code>lsusb</code> output above.</p>
+<p><code>~/.espressif/tools/openocd-esp32/v0.12.0-esp32-20230313/openocd-esp32/share/openocd/scripts/interface/esp_usb_jtag.cfg</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span># SPDX-License-Identifier: GPL-2.0-or-later
+</span></span><span style="display:flex;"><span>#
+</span></span><span style="display:flex;"><span># ESP32-C3 builtin USB-JTAG adapter
+</span></span><span style="display:flex;"><span>#
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>adapter driver esp_usb_jtag
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>espusbjtag vid_pid 0x303a 0x1001
+</span></span><span style="display:flex;"><span>espusbjtag caps_descriptor 0x2000
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>#max speed
+</span></span><span style="display:flex;"><span>adapter speed 40000
+</span></span></code></pre></div><p>The target file, on the other hand, provides extensive information about how the
+debug functionality works, and provides configuration to make gdb work properly.
+We don&rsquo;t break down all parts in-depth in this post, but we&rsquo;ll explore more
+about how OpenOCD works in the future.</p>
+<p><code>~/.espressif/tools/openocd-esp32/v0.12.0-esp32-20230313/openocd-esp32/share/openocd/scripts/target/esp32c3.cfg</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span># SPDX-License-Identifier: GPL-2.0-or-later
+</span></span><span style="display:flex;"><span># 
+</span></span><span style="display:flex;"><span># The ESP32-C3 only supports JTAG.
+</span></span><span style="display:flex;"><span>transport select jtag
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>set CPU_MAX_ADDRESS 0xFFFFFFFF
+</span></span><span style="display:flex;"><span>source [find bitsbytes.tcl]
+</span></span><span style="display:flex;"><span>source [find memory.tcl]
+</span></span><span style="display:flex;"><span>source [find mmr_helpers.tcl]
+</span></span><span style="display:flex;"><span># Source the ESP common configuration file
+</span></span><span style="display:flex;"><span>source [find target/esp_common.cfg]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span># Target specific registers
+</span></span><span style="display:flex;"><span>set EFUSE_MAC_ADDR_REG  0x60008844
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>if { [info exists CHIPNAME] } {
+</span></span><span style="display:flex;"><span>	set _CHIPNAME $CHIPNAME
+</span></span><span style="display:flex;"><span>} else {
+</span></span><span style="display:flex;"><span>	set _CHIPNAME esp32c3
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>if { [info exists CPUTAPID] } {
+</span></span><span style="display:flex;"><span>	set _CPUTAPID $CPUTAPID
+</span></span><span style="display:flex;"><span>} else {
+</span></span><span style="display:flex;"><span>	set _CPUTAPID 0x00005c25
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>set _TARGETNAME $_CHIPNAME
+</span></span><span style="display:flex;"><span>set _CPUNAME cpu
+</span></span><span style="display:flex;"><span>set _TAPNAME $_CHIPNAME.$_CPUNAME
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>jtag newtap $_CHIPNAME $_CPUNAME -irlen 5 -expected-id $_CPUTAPID
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>proc esp32c3_wdt_disable { } {
+</span></span><span style="display:flex;"><span>    # Halt event can occur during config phase (before &#34;init&#34; is done).
+</span></span><span style="display:flex;"><span>    # Ignore it since mww commands don&#39;t work at that time.
+</span></span><span style="display:flex;"><span>    if { [string compare [command mode] config] == 0 } {
+</span></span><span style="display:flex;"><span>        return
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    # Timer Group 0 &amp; 1 WDTs
+</span></span><span style="display:flex;"><span>    mww 0x6001f064 0x50D83AA1
+</span></span><span style="display:flex;"><span>    mww 0x6001F048 0
+</span></span><span style="display:flex;"><span>    mww 0x60020064 0x50D83AA1
+</span></span><span style="display:flex;"><span>    mww 0x60020048 0
+</span></span><span style="display:flex;"><span>    # RTC WDT
+</span></span><span style="display:flex;"><span>    mww 0x600080a8 0x50D83AA1
+</span></span><span style="display:flex;"><span>    mww 0x60008090 0
+</span></span><span style="display:flex;"><span>    # SWD
+</span></span><span style="display:flex;"><span>    mww 0x600080b0 0x8F1D312A
+</span></span><span style="display:flex;"><span>    mww 0x600080ac 0x84B00000
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>proc esp32c3_soc_reset { } {
+</span></span><span style="display:flex;"><span>    # This procedure does &#34;digital system reset&#34;, i.e. resets
+</span></span><span style="display:flex;"><span>    # all the peripherals except for the RTC block.
+</span></span><span style="display:flex;"><span>    # It is called from reset-assert-post target event callback,
+</span></span><span style="display:flex;"><span>    # after assert_reset procedure was called.
+</span></span><span style="display:flex;"><span>    # Since we need the hart to to execute a write to RTC_CNTL_SW_SYS_RST,
+</span></span><span style="display:flex;"><span>    # temporarily take it out of reset. Save the dmcontrol state before
+</span></span><span style="display:flex;"><span>    # doing so.
+</span></span><span style="display:flex;"><span>    riscv dmi_write 0x10 0x80000001
+</span></span><span style="display:flex;"><span>    # Trigger the reset
+</span></span><span style="display:flex;"><span>    mww 0x60008000 0x9c00a000
+</span></span><span style="display:flex;"><span>    # Workaround for stuck in cpu start during calibration.
+</span></span><span style="display:flex;"><span>    # By writing zero to TIMG_RTCCALICFG_REG, we are disabling calibration
+</span></span><span style="display:flex;"><span>    mww 0x6001F068 0
+</span></span><span style="display:flex;"><span>    # Wait for the reset to happen
+</span></span><span style="display:flex;"><span>    sleep 10
+</span></span><span style="display:flex;"><span>    poll
+</span></span><span style="display:flex;"><span>    # Disable the watchdogs again
+</span></span><span style="display:flex;"><span>    esp32c3_wdt_disable
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    # Here debugger reads allresumeack and allhalted bits as set (0x330a2)
+</span></span><span style="display:flex;"><span>    # We will clean allhalted state by resuming the core.
+</span></span><span style="display:flex;"><span>    riscv dmi_write 0x10 0x40000001
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    # Put the hart back into reset state. Note that we need to keep haltreq set.
+</span></span><span style="display:flex;"><span>    riscv dmi_write 0x10 0x80000003
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>proc esp32c3_memprot_is_enabled { } {
+</span></span><span style="display:flex;"><span>    # IRAM0 PMS lock, SENSITIVE_CORE_X_IRAM0_PMS_CONSTRAIN_0_REG
+</span></span><span style="display:flex;"><span>    if { [get_mmr_bit 0x600C10A8 0] != 0 } {
+</span></span><span style="display:flex;"><span>        return 1
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    # DRAM0 PMS lock, SENSITIVE_CORE_X_DRAM0_PMS_CONSTRAIN_0_REG
+</span></span><span style="display:flex;"><span>    if { [get_mmr_bit 0x600C10C0 0] != 0 } {
+</span></span><span style="display:flex;"><span>        return 1
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    return 0
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>if { $_RTOS == &#34;none&#34; } {
+</span></span><span style="display:flex;"><span>    target create $_TARGETNAME esp32c3 -chain-position $_TAPNAME
+</span></span><span style="display:flex;"><span>} else {
+</span></span><span style="display:flex;"><span>    target create $_TARGETNAME esp32c3 -chain-position $_TAPNAME -rtos $_RTOS
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$_TARGETNAME configure -event reset-assert-post { esp32c3_soc_reset }
+</span></span><span style="display:flex;"><span>$_TARGETNAME configure -event halted {
+</span></span><span style="display:flex;"><span>    esp32c3_wdt_disable
+</span></span><span style="display:flex;"><span>    esp halted_event_handler
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>$_TARGETNAME configure -event examine-end {
+</span></span><span style="display:flex;"><span>    # Need this to handle &#39;apptrace init&#39; syscall correctly because semihosting is not enabled by default
+</span></span><span style="display:flex;"><span>    arm semihosting enable
+</span></span><span style="display:flex;"><span>    arm semihosting_resexit enable
+</span></span><span style="display:flex;"><span>    if { [info exists _SEMIHOST_BASEDIR] } {
+</span></span><span style="display:flex;"><span>        if { $_SEMIHOST_BASEDIR != &#34;&#34; } {
+</span></span><span style="display:flex;"><span>            arm semihosting_basedir $_SEMIHOST_BASEDIR
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$_TARGETNAME configure -event gdb-detach {
+</span></span><span style="display:flex;"><span>	$_TARGETNAME esp gdb_detach_handler
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>$_TARGETNAME configure -event gdb-attach {
+</span></span><span style="display:flex;"><span>    # &#39;halt&#39; is necessary to auto-probe flash bank when GDB is connected and generate proper memory map
+</span></span><span style="display:flex;"><span>    halt 1000
+</span></span><span style="display:flex;"><span>    if { [esp32c3_memprot_is_enabled] } {
+</span></span><span style="display:flex;"><span>        # &#39;reset halt&#39; to disable memory protection and allow flasher to work correctly
+</span></span><span style="display:flex;"><span>        echo &#34;Memory protection is enabled. Reset target to disable it...&#34;
+</span></span><span style="display:flex;"><span>        reset halt
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    # by default mask interrupts while stepping
+</span></span><span style="display:flex;"><span>    riscv set_maskisr steponly
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span># stub flasher may need a lot of memory in case of compressed writes to flash (~107KB):
+</span></span><span style="display:flex;"><span># - for apptrace: 2x16KB up buffers + 32KB down buffer
+</span></span><span style="display:flex;"><span># - for uncompression: 32KB for unzip buffer size + 11KB for inflator data structs
+</span></span><span style="display:flex;"><span># TODO: In general when up buffers are swapped apptrace copies `host-&gt;target` data from new up buffer to down buffer to free space for `target-&gt;host` data.
+</span></span><span style="display:flex;"><span># In case of flash writes we use apptrace transfers in one direction only. So we can avoid copying and re-use up buffer instead of down one.
+</span></span><span style="display:flex;"><span>configure_esp_workarea $_TARGETNAME 0x40380000 0x4000 0x3FC84000 0x20000
+</span></span><span style="display:flex;"><span>configure_esp_flash_bank $_TARGETNAME $_TARGETNAME $_FLASH_SIZE
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>if { $_FLASH_SIZE == 0 } {
+</span></span><span style="display:flex;"><span>	gdb_breakpoint_override hard
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>riscv set_reset_timeout_sec 2
+</span></span><span style="display:flex;"><span>riscv set_command_timeout_sec 5
+</span></span><span style="display:flex;"><span>riscv set_mem_access sysbus progbuf abstract
+</span></span><span style="display:flex;"><span>riscv set_ebreakm on
+</span></span><span style="display:flex;"><span>riscv set_ebreaks on
+</span></span><span style="display:flex;"><span>riscv set_ebreaku on
+</span></span></code></pre></div><p>We can reference the board file to ensure OpenOCD has all the necessary
+information to connect to the device successfully.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ ~/.espressif/tools/openocd-esp32/v0.12.0-esp32-20230313/openocd-esp32/bin/openocd -f ~/.espressif/tools/openocd-esp32/v0.12.0-esp32-20230313/openocd-esp32/share/openocd/scripts/board/esp32c3-builtin.cfg
+</span></span><span style="display:flex;"><span>Open On-Chip Debugger v0.12.0-esp32-20230313 (2023-03-13-09:07)
+</span></span><span style="display:flex;"><span>Licensed under GNU GPL v2
+</span></span><span style="display:flex;"><span>For bug reports, read
+</span></span><span style="display:flex;"><span>	http://openocd.org/doc/doxygen/bugs.html
+</span></span><span style="display:flex;"><span>Info : only one transport option; autoselecting &#39;jtag&#39;
+</span></span><span style="display:flex;"><span>Info : esp_usb_jtag: VID set to 0x303a and PID to 0x1001
+</span></span><span style="display:flex;"><span>Info : esp_usb_jtag: capabilities descriptor set to 0x2000
+</span></span><span style="display:flex;"><span>Warn : Transport &#34;jtag&#34; was already selected
+</span></span><span style="display:flex;"><span>Info : Listening on port 6666 for tcl connections
+</span></span><span style="display:flex;"><span>Info : Listening on port 4444 for telnet connections
+</span></span><span style="display:flex;"><span>Info : esp_usb_jtag: serial (58:CF:79:16:7D:A0)
+</span></span><span style="display:flex;"><span>Info : esp_usb_jtag: Device found. Base speed 40000KHz, div range 1 to 255
+</span></span><span style="display:flex;"><span>Info : clock speed 40000 kHz
+</span></span><span style="display:flex;"><span>Info : JTAG tap: esp32c3.cpu tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+</span></span><span style="display:flex;"><span>Info : datacount=2 progbufsize=16
+</span></span><span style="display:flex;"><span>Info : Examined RISC-V core; found 1 harts
+</span></span><span style="display:flex;"><span>Info :  hart 0: XLEN=32, misa=0x40101104
+</span></span><span style="display:flex;"><span>Info : starting gdb server for esp32c3 on 3333
+</span></span><span style="display:flex;"><span>Info : Listening on port 3333 for gdb connections
+</span></span></code></pre></div><p>We can now connect gdb to port <code>3333</code>, just as we did when <a href="https://danielmangum.com/posts/risc-v-bytes-qemu-gdb/">working with
+QEMU</a>. However, before
+doing so, we need to write some software to debug!</p>
+<h2 id="writing-to-the-host-filesystem">
+  Writing to the Host Filesystem
+  <a class="heading-link" href="#writing-to-the-host-filesystem">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>Our Zephyr semihosting project will look similar to the <a href="https://danielmangum.com/posts/risc-v-bytes-zephyr-on-esp32/#building-the-image">&ldquo;Hello, RISC-V Bytes!&rdquo;
+example</a>,
+but this time instead of printing to the UART console, we&rsquo;ll write to a file on
+the host system.</p>
+<p><code>zephyr-riscv-semihosting</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>.
+</span></span><span style="display:flex;"><span>├── CMakeLists.txt
+</span></span><span style="display:flex;"><span>├── gdbinit
+</span></span><span style="display:flex;"><span>├── prj.conf
+</span></span><span style="display:flex;"><span>├── src
+</span></span><span style="display:flex;"><span>│   └── main.c
+</span></span></code></pre></div><p>The new files are <code>prj.conf</code> and <code>gdbinit</code>. The former is used to <a href="https://docs.zephyrproject.org/latest/kconfig.html#CONFIG_SEMIHOST">enable
+semihosting
+support</a>,
+which is disabled by default for the EPS32-C3 in Zephyr.</p>
+<p><code>prj.conf</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>CONFIG_SEMIHOST=y
+</span></span></code></pre></div><p><code>gdbinit</code> is a set of startup commands provided by Espressif that makes getting
+started debugging easier. It first connects to OpenOCD&rsquo;s gdbserver, then
+performs some configuration before instructing OpenOCD to reset the hart and
+immediately halt startup (<code>mon reset halt</code>). After flushing registers, the <code>thb</code>
+command is used to set a temporary hardware breakpoint at <code>main</code>, meaning that
+the first time we encounter <code>main</code> an exception should be triggered, then that
+hardware breakpoint should be discarded. Lastly, the <code>c</code> command is used to
+continue util we hit that hardware breakpoint.</p>
+<p><code>gdbinit</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>target remote :3333
+</span></span><span style="display:flex;"><span>set remote hardware-watchpoint-limit 2
+</span></span><span style="display:flex;"><span>mon reset halt
+</span></span><span style="display:flex;"><span>flushregs
+</span></span><span style="display:flex;"><span>thb main
+</span></span><span style="display:flex;"><span>c
+</span></span></code></pre></div><p>The only change in <code>CMakeLists</code> is the name of the project.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>cmake_minimum_required(VERSION 3.20.0)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>find_package(Zephyr 3.3.0 REQUIRED)
+</span></span><span style="display:flex;"><span>project(zephyr-riscv-semihosting)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>target_sources(app PRIVATE src/main.c)
+</span></span></code></pre></div><p>The program itself is a fairly minimal adaptation of the example from the
+<a href="https://github.com/zephyrproject-rtos/zephyr/blob/5f5b34793dc89a3ee5a33c566333760323e57fa0/doc/hardware/arch/semihost.rst">Zephyr semihosting
+guide</a>,
+and likely looks familiar to basic file input / ouput code you may have written
+before. We start by opening a file for writing text (<code>SEMIHOST_OPEN_WT</code>), write
+the contents of our buffer, then close the file.</p>
+<p><code>main.c</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;zephyr/arch/common/semihost.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;zephyr/kernel.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">int</span> main(<span style="color:#fff;font-weight:bold">void</span>) {
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">char</span> *path = <span style="color:#0ff;font-weight:bold">&#34;./semihost.txt&#34;</span>;
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">long</span> fd, write;
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">uint8_t</span> buffer[] = {<span style="color:#0ff;font-weight:bold">&#39;H&#39;</span>, <span style="color:#0ff;font-weight:bold">&#39;e&#39;</span>, <span style="color:#0ff;font-weight:bold">&#39;l&#39;</span>, <span style="color:#0ff;font-weight:bold">&#39;l&#39;</span>, <span style="color:#0ff;font-weight:bold">&#39;o&#39;</span>, <span style="color:#0ff;font-weight:bold">&#39;,&#39;</span>, <span style="color:#0ff;font-weight:bold">&#39; &#39;</span>, <span style="color:#0ff;font-weight:bold">&#39;R&#39;</span>, <span style="color:#0ff;font-weight:bold">&#39;I&#39;</span>, <span style="color:#0ff;font-weight:bold">&#39;S&#39;</span>, <span style="color:#0ff;font-weight:bold">&#39;C&#39;</span>,
+</span></span><span style="display:flex;"><span>                      <span style="color:#0ff;font-weight:bold">&#39;-&#39;</span>, <span style="color:#0ff;font-weight:bold">&#39;V&#39;</span>, <span style="color:#0ff;font-weight:bold">&#39; &#39;</span>, <span style="color:#0ff;font-weight:bold">&#39;B&#39;</span>, <span style="color:#0ff;font-weight:bold">&#39;y&#39;</span>, <span style="color:#0ff;font-weight:bold">&#39;t&#39;</span>, <span style="color:#0ff;font-weight:bold">&#39;e&#39;</span>, <span style="color:#0ff;font-weight:bold">&#39;s&#39;</span>, <span style="color:#0ff;font-weight:bold">&#39;!&#39;</span>, <span style="color:#0ff;font-weight:bold">&#39;\n&#39;</span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  fd = semihost_open(path, SEMIHOST_OPEN_WB);
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">if</span> (fd &lt; <span style="color:#ff0;font-weight:bold">0</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> -ENOENT;
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>  write = semihost_write(fd, buffer, <span style="color:#ff0;font-weight:bold">21</span>);
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">if</span> (write &lt; <span style="color:#ff0;font-weight:bold">0</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> -ENOENT;
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>  semihost_close(fd);
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">return</span> <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><blockquote>
+<p>Note: we use &ldquo;write binary&rdquo; (<code>WB</code>) instead of &ldquo;write text&rdquo; (<code>WT</code>) because <code>t</code>
+is <a href="https://github.com/ARM-software/abi-aa/blob/main/semihosting/semihosting.rst#note-1">not supported as a
+mode</a>
+in the ARM semihosting specification.</p>
+</blockquote>
+<p>Now we can build the project using <code>west</code> as we have done in the past.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ export ZEPHYR_BASE=~/code/github.com/zephyrproject/workspaces/v3.3.0/zephyr
+</span></span><span style="display:flex;"><span>$ west build -b esp32c3_devkitm
+</span></span><span style="display:flex;"><span>west build -b esp32c3_devkitm
+</span></span><span style="display:flex;"><span>-- west build: generating a build system
+</span></span><span style="display:flex;"><span>Loading Zephyr default modules (Zephyr base).
+</span></span><span style="display:flex;"><span>-- Application: /home/hasheddan/code/github.com/hasheddan/zephyr-riscv-semihosting
+</span></span><span style="display:flex;"><span>-- CMake version: 3.22.1
+</span></span><span style="display:flex;"><span>-- Found Python3: /usr/bin/python3.10 (found suitable exact version &#34;3.10.6&#34;) found components: Interpreter 
+</span></span><span style="display:flex;"><span>-- Cache files will be written to: /home/hasheddan/.cache/zephyr
+</span></span><span style="display:flex;"><span>-- Zephyr version: 3.3.0 (/home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/zephyr)
+</span></span><span style="display:flex;"><span>-- Found west (found suitable version &#34;1.0.0&#34;, minimum required is &#34;0.7.1&#34;)
+</span></span><span style="display:flex;"><span>-- Board: esp32c3_devkitm
+</span></span><span style="display:flex;"><span>-- ZEPHYR_TOOLCHAIN_VARIANT not set, trying to locate Zephyr SDK
+</span></span><span style="display:flex;"><span>-- Found host-tools: zephyr 0.16.0 (/home/hasheddan/.local/zephyr-sdk-0.16.0)
+</span></span><span style="display:flex;"><span>-- Found toolchain: zephyr 0.16.0 (/home/hasheddan/.local/zephyr-sdk-0.16.0)
+</span></span><span style="display:flex;"><span>-- Found Dtc: /home/hasheddan/.local/zephyr-sdk-0.16.0/sysroots/x86_64-pokysdk-linux/usr/bin/dtc (found suitable version &#34;1.6.0&#34;, minimum required is &#34;1.4.6&#34;) 
+</span></span><span style="display:flex;"><span>-- Found BOARD.dts: /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/zephyr/boards/riscv/esp32c3_devkitm/esp32c3_devkitm.dts
+</span></span><span style="display:flex;"><span>-- Generated zephyr.dts: /home/hasheddan/code/github.com/hasheddan/zephyr-riscv-semihosting/build/zephyr/zephyr.dts
+</span></span><span style="display:flex;"><span>-- Generated devicetree_generated.h: /home/hasheddan/code/github.com/hasheddan/zephyr-riscv-semihosting/build/zephyr/include/generated/devicetree_generated.h
+</span></span><span style="display:flex;"><span>-- Including generated dts.cmake file: /home/hasheddan/code/github.com/hasheddan/zephyr-riscv-semihosting/build/zephyr/dts.cmake
+</span></span><span style="display:flex;"><span>Parsing /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/zephyr/Kconfig
+</span></span><span style="display:flex;"><span>Loaded configuration &#39;/home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/zephyr/boards/riscv/esp32c3_devkitm/esp32c3_devkitm_defconfig&#39;
+</span></span><span style="display:flex;"><span>Merged configuration &#39;/home/hasheddan/code/github.com/hasheddan/zephyr-riscv-semihosting/prj.conf&#39;
+</span></span><span style="display:flex;"><span>Configuration saved to &#39;/home/hasheddan/code/github.com/hasheddan/zephyr-riscv-semihosting/build/zephyr/.config&#39;
+</span></span><span style="display:flex;"><span>Kconfig header saved to &#39;/home/hasheddan/code/github.com/hasheddan/zephyr-riscv-semihosting/build/zephyr/include/generated/autoconf.h&#39;
+</span></span><span style="display:flex;"><span>-- The C compiler identification is GNU 12.2.0
+</span></span><span style="display:flex;"><span>-- The CXX compiler identification is GNU 12.2.0
+</span></span><span style="display:flex;"><span>-- The ASM compiler identification is GNU
+</span></span><span style="display:flex;"><span>-- Found assembler: /home/hasheddan/.local/zephyr-sdk-0.16.0/riscv64-zephyr-elf/bin/riscv64-zephyr-elf-gcc
+</span></span><span style="display:flex;"><span>-- Configuring done
+</span></span><span style="display:flex;"><span>-- Generating done
+</span></span><span style="display:flex;"><span>-- Build files have been written to: /home/hasheddan/code/github.com/hasheddan/zephyr-riscv-semihosting/build
+</span></span><span style="display:flex;"><span>-- west build: building application
+</span></span><span style="display:flex;"><span>[1/181] Preparing syscall dependency handling
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[2/181] Generating include/generated/version.h
+</span></span><span style="display:flex;"><span>-- Zephyr version: 3.3.0 (/home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/zephyr), build: 07c6af3b8c35
+</span></span><span style="display:flex;"><span>[164/181] Performing configure step for &#39;EspIdfBootloader&#39;
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>-- Build files have been written to: /home/hasheddan/code/github.com/hasheddan/zephyr-riscv-semihosting/build/esp-idf/build/bootloader
+</span></span><span style="display:flex;"><span>[165/181] Performing build step for &#39;EspIdfBootloader&#39;
+</span></span><span style="display:flex;"><span>[1/88] Generating project_elf_src_esp32c3.c
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>[87/88] Generating binary image from built executable
+</span></span><span style="display:flex;"><span>esptool.py v3.3
+</span></span><span style="display:flex;"><span>Creating esp32c3 image...
+</span></span><span style="display:flex;"><span>Merged 1 ELF section
+</span></span><span style="display:flex;"><span>Successfully created esp32c3 image.
+</span></span><span style="display:flex;"><span>Generated /home/hasheddan/code/github.com/hasheddan/zephyr-riscv-semihosting/build/esp-idf/build/bootloader/bootloader.bin
+</span></span><span style="display:flex;"><span>[88/88] cd /home/hasheddan/code/github.com/hasheddan/zephyr-riscv-semihosting/build/esp-idf/build/bootloader/esp-idf/esptool_py &amp;&amp; /usr/bin/python3.10 /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/modules/hal/espressif/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x0 /home/hasheddan/code/github.com/hasheddan/zephyr-riscv-semihosting/build/esp-idf/build/bootloader/bootloader.bin
+</span></span><span style="display:flex;"><span>Bootloader binary size 0x4ba0 bytes. 0x3460 bytes (41%) free.
+</span></span><span style="display:flex;"><span>[171/181] Linking C executable zephyr/zephyr_pre0.elf
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[175/181] Linking C executable zephyr/zephyr_pre1.elf
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>[181/181] Linking C executable zephyr/zephyr.elf
+</span></span><span style="display:flex;"><span>Memory region         Used Size  Region Size  %age Used
+</span></span><span style="display:flex;"><span>     mcuboot_hdr:          32 B         32 B    100.00%
+</span></span><span style="display:flex;"><span>        metadata:          28 B         32 B     87.50%
+</span></span><span style="display:flex;"><span>             ROM:       32560 B    4194240 B      0.78%
+</span></span><span style="display:flex;"><span>     iram0_0_seg:       11536 B       320 KB      3.52%
+</span></span><span style="display:flex;"><span>     irom0_0_seg:       83792 B    4194272 B      2.00%
+</span></span><span style="display:flex;"><span>     drom0_0_seg:        2024 B    4194240 B      0.05%
+</span></span><span style="display:flex;"><span>     dram0_0_seg:       21428 B       320 KB      6.54%
+</span></span><span style="display:flex;"><span>    rtc_iram_seg:          0 GB         8 KB      0.00%
+</span></span><span style="display:flex;"><span>        IDT_LIST:          0 GB         8 KB      0.00%
+</span></span><span style="display:flex;"><span>esptool.py v3.3
+</span></span><span style="display:flex;"><span>Creating esp32c3 image...
+</span></span><span style="display:flex;"><span>Merged 6 ELF sections
+</span></span><span style="display:flex;"><span>Successfully created esp32c3 image.
+</span></span></code></pre></div><p>Then flash the program with <code>west flash</code>.</p>
+<blockquote>
+<p>Note: I had to disconnect OpenOCD and reset the board via the <code>RST</code> button to
+get <code>west flash</code> to work properly.</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ west flash
+</span></span><span style="display:flex;"><span>-- west flash: rebuilding
+</span></span><span style="display:flex;"><span>ninja: no work to do.
+</span></span><span style="display:flex;"><span>-- west flash: using runner esp32
+</span></span><span style="display:flex;"><span>-- runners.esp32: Flashing esp32 chip on None (921600bps)
+</span></span><span style="display:flex;"><span>esptool.py v3.3
+</span></span><span style="display:flex;"><span>Found 1 serial ports
+</span></span><span style="display:flex;"><span>Serial port /dev/ttyACM0
+</span></span><span style="display:flex;"><span>Connecting...
+</span></span><span style="display:flex;"><span>Detecting chip type... ESP32-C3
+</span></span><span style="display:flex;"><span>Chip is ESP32-C3 (revision 3)
+</span></span><span style="display:flex;"><span>Features: Wi-Fi
+</span></span><span style="display:flex;"><span>Crystal is 40MHz
+</span></span><span style="display:flex;"><span>MAC: 58:cf:79:16:7d:a0
+</span></span><span style="display:flex;"><span>Uploading stub...
+</span></span><span style="display:flex;"><span>Running stub...
+</span></span><span style="display:flex;"><span>Stub running...
+</span></span><span style="display:flex;"><span>Changing baud rate to 921600
+</span></span><span style="display:flex;"><span>Changed.
+</span></span><span style="display:flex;"><span>Configuring flash size...
+</span></span><span style="display:flex;"><span>Auto-detected Flash size: 4MB
+</span></span><span style="display:flex;"><span>Flash will be erased from 0x00000000 to 0x00004fff...
+</span></span><span style="display:flex;"><span>Flash will be erased from 0x00008000 to 0x00008fff...
+</span></span><span style="display:flex;"><span>Flash will be erased from 0x00010000 to 0x00034fff...
+</span></span><span style="display:flex;"><span>Flash params set to 0x0220
+</span></span><span style="display:flex;"><span>Wrote 32768 bytes at 0x00000000 in 0.4 seconds (734.3 kbit/s)...
+</span></span><span style="display:flex;"><span>Hash of data verified.
+</span></span><span style="display:flex;"><span>Wrote 16384 bytes at 0x00008000 in 0.2 seconds (763.2 kbit/s)...
+</span></span><span style="display:flex;"><span>Hash of data verified.
+</span></span><span style="display:flex;"><span>Wrote 163840 bytes at 0x00010000 in 1.6 seconds (808.7 kbit/s)...
+</span></span><span style="display:flex;"><span>Hash of data verified.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Leaving...
+</span></span><span style="display:flex;"><span>Hard resetting via RTS pin...
+</span></span></code></pre></div><p>With the software running on the board, we can connect gdb to OpenOCD by passing
+the <code>gdbinit</code> script and specifying the ELF file to get debugging symbols.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ ~/.espressif/tools/riscv32-esp-elf-gdb/12.1_20221002/riscv32-esp-elf-gdb/bin/riscv32-esp-elf-gdb -x gdbinit ../zephyr-riscv-semihosting/build/zephyr/zephyr.elf 
+</span></span><span style="display:flex;"><span>GNU gdb (esp-gdb) 12.1_20221002
+</span></span><span style="display:flex;"><span>Copyright (C) 2022 Free Software Foundation, Inc.
+</span></span><span style="display:flex;"><span>License GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;
+</span></span><span style="display:flex;"><span>This is free software: you are free to change and redistribute it.
+</span></span><span style="display:flex;"><span>There is NO WARRANTY, to the extent permitted by law.
+</span></span><span style="display:flex;"><span>Type &#34;show copying&#34; and &#34;show warranty&#34; for details.
+</span></span><span style="display:flex;"><span>This GDB was configured as &#34;--host=x86_64-linux-gnu --target=riscv32-esp-elf&#34;.
+</span></span><span style="display:flex;"><span>Type &#34;show configuration&#34; for configuration details.
+</span></span><span style="display:flex;"><span>For bug reporting instructions, please see:
+</span></span><span style="display:flex;"><span>&lt;https://www.gnu.org/software/gdb/bugs/&gt;.
+</span></span><span style="display:flex;"><span>Find the GDB manual and other documentation resources online at:
+</span></span><span style="display:flex;"><span>    &lt;http://www.gnu.org/software/gdb/documentation/&gt;.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>For help, type &#34;help&#34;.
+</span></span><span style="display:flex;"><span>Type &#34;apropos word&#34; to search for commands related to &#34;word&#34;...
+</span></span><span style="display:flex;"><span>Reading symbols from ../zephyr-riscv-semihosting/build/zephyr/zephyr.elf...
+</span></span><span style="display:flex;"><span>arch_system_halt (reason=reason@entry=0) at /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/zephyr/kernel/fatal.c:32
+</span></span><span style="display:flex;"><span>32		for (;;) {
+</span></span><span style="display:flex;"><span>JTAG tap: esp32c3.cpu tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+</span></span><span style="display:flex;"><span>Reset cause (3) - (Software core reset)
+</span></span><span style="display:flex;"><span>Warning: &#39;flushregs&#39;, an alias for the command &#39;maintenance flush register-cache&#39;, is deprecated.
+</span></span><span style="display:flex;"><span>Use &#39;maintenance flush register-cache&#39;.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Hardware assisted breakpoint 1 at 0x42010038: file /home/hasheddan/code/github.com/hasheddan/zephyr-riscv-semihosting/src/main.c, line 7.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Temporary breakpoint 1, main () at /home/hasheddan/code/github.com/hasheddan/zephyr-riscv-semihosting/src/main.c:7
+</span></span><span style="display:flex;"><span>7	  uint8_t buffer[] = {&#39;H&#39;, &#39;e&#39;, &#39;l&#39;, &#39;l&#39;, &#39;o&#39;, &#39;,&#39;, &#39; &#39;, &#39;R&#39;, &#39;I&#39;, &#39;S&#39;,
+</span></span><span style="display:flex;"><span>(gdb) 
+</span></span></code></pre></div><p>The establishing of the connection can be observed in the OpenOCD logs.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Info : accepting &#39;gdb&#39; connection on tcp/3333
+</span></span><span style="display:flex;"><span>Info : [esp32c3] Halt cause (3) - (Hardware Breakpoint/Watchpoint or EBREAK)
+</span></span><span style="display:flex;"><span>Warn : No symbols for FreeRTOS!
+</span></span><span style="display:flex;"><span>Info : [esp32c3] Halt cause (3) - (Hardware Breakpoint/Watchpoint or EBREAK)
+</span></span><span style="display:flex;"><span>Info : [esp32c3] Found 8 triggers
+</span></span><span style="display:flex;"><span>Info : Flash mapping 0: 0x20040 -&gt; 0x3c000040, 1 KB
+</span></span><span style="display:flex;"><span>Info : Flash mapping 1: 0x30020 -&gt; 0x42010020, 17 KB
+</span></span><span style="display:flex;"><span>Info : [esp32c3] Halt cause (3) - (Hardware Breakpoint/Watchpoint or EBREAK)
+</span></span><span style="display:flex;"><span>Info : Auto-detected flash bank &#39;esp32c3.flash&#39; size 4096 KB
+</span></span><span style="display:flex;"><span>Info : Using flash bank &#39;esp32c3.flash&#39; size 4096 KB
+</span></span><span style="display:flex;"><span>Info : [esp32c3] Halt cause (3) - (Hardware Breakpoint/Watchpoint or EBREAK)
+</span></span><span style="display:flex;"><span>Info : Flash mapping 0: 0x20040 -&gt; 0x3c000040, 1 KB
+</span></span><span style="display:flex;"><span>Info : Flash mapping 1: 0x30020 -&gt; 0x42010020, 17 KB
+</span></span><span style="display:flex;"><span>Info : Using flash bank &#39;esp32c3.irom&#39; size 20 KB
+</span></span><span style="display:flex;"><span>Info : [esp32c3] Halt cause (3) - (Hardware Breakpoint/Watchpoint or EBREAK)
+</span></span><span style="display:flex;"><span>Info : Flash mapping 0: 0x20040 -&gt; 0x3c000040, 1 KB
+</span></span><span style="display:flex;"><span>Info : Flash mapping 1: 0x30020 -&gt; 0x42010020, 17 KB
+</span></span><span style="display:flex;"><span>Info : Using flash bank &#39;esp32c3.drom&#39; size 4 KB
+</span></span><span style="display:flex;"><span>Warn : negative reply, retrying
+</span></span><span style="display:flex;"><span>Warn : Prefer GDB command &#34;target extended-remote :3333&#34; instead of &#34;target remote :3333&#34;
+</span></span><span style="display:flex;"><span>Warn : RTOS FreeRTOS not detected. (GDB could not find symbol &#39;pxReadyTasksLists&#39;)
+</span></span><span style="display:flex;"><span>Info : JTAG tap: esp32c3.cpu tap/device found: 0x00005c25 (mfg: 0x612 (Espressif Systems), part: 0x0005, ver: 0x0)
+</span></span><span style="display:flex;"><span>Info : Reset cause (3) - (Software core reset)
+</span></span><span style="display:flex;"><span>Error: Don&#39;t have the number of threads in FreeRTOS!
+</span></span></code></pre></div><p>Just like when we are debugging locally, we are able to step through the
+program. Stepping twice will move us past the initial file open operation.</p>
+<blockquote>
+<p>Note: you may see a <code>Don't have the number of threads in FreeRTOS!</code> warning
+emitted from gdb. These can safely be ignored for our scenario.</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>(gdb) n
+</span></span><span style="display:flex;"><span>Note: automatically using hardware breakpoints for read-only addresses.
+</span></span><span style="display:flex;"><span>10	  fd = semihost_open(path, SEMIHOST_OPEN_WB);
+</span></span><span style="display:flex;"><span>(gdb) n
+</span></span><span style="display:flex;"><span>11	  if (fd &lt; 0) {
+</span></span></code></pre></div><p>At this point, we have already exercised semihosting once, and we should be able
+to see the <code>semihost.txt</code> file on the host in the same directory where gdb is
+running, though the contents should be empty.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ ls -la semihost.txt 
+</span></span><span style="display:flex;"><span>-rw-r--r-- 1 hasheddan hasheddan 0 May 29 17:55 semihost.txt
+</span></span></code></pre></div><p>To see the instructions that were executed and resulted in the creation of
+<code>semihost.txt</code>, we can instruct gdb to disassemble the function.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>(gdb) disass semihost_open
+</span></span><span style="display:flex;"><span>Dump of assembler code for function semihost_open:
+</span></span><span style="display:flex;"><span>   0x420100a8 &lt;+0&gt;:	    addi	sp,sp,-32
+</span></span><span style="display:flex;"><span>   0x420100ac &lt;+4&gt;:	    sw	ra,28(sp)
+</span></span><span style="display:flex;"><span>   0x420100b0 &lt;+8&gt;:	    sw	a1,8(sp)
+</span></span><span style="display:flex;"><span>   0x420100b4 &lt;+12&gt;:	sw	a0,4(sp)
+</span></span><span style="display:flex;"><span>   0x420100b8 &lt;+16&gt;:	auipc	ra,0xfe373
+</span></span><span style="display:flex;"><span>   0x420100bc &lt;+20&gt;:	jalr	-1284(ra) # 0x40382bb4 &lt;strlen&gt;
+</span></span><span style="display:flex;"><span>   0x420100c0 &lt;+24&gt;:	sw	a0,12(sp)
+</span></span><span style="display:flex;"><span>   0x420100c4 &lt;+28&gt;:	addi	a1,sp,4
+</span></span><span style="display:flex;"><span>   0x420100c8 &lt;+32&gt;:	li	a0,1
+</span></span><span style="display:flex;"><span>   0x420100cc &lt;+36&gt;:	jal	ra,0x42010020 &lt;semihost_exec&gt;
+</span></span><span style="display:flex;"><span>   0x420100d0 &lt;+40&gt;:	lw	ra,28(sp)
+</span></span><span style="display:flex;"><span>   0x420100d4 &lt;+44&gt;:	addi	sp,sp,32
+</span></span><span style="display:flex;"><span>   0x420100d8 &lt;+48&gt;:	ret
+</span></span><span style="display:flex;"><span>End of assembler dump.
+</span></span></code></pre></div><p>After the prologue, the address of the data block for the path and mode
+parameters is stored in <code>a1</code>, while the <code>li a0,1</code> sets the operation to be
+performed to
+<a href="https://github.com/zephyrproject-rtos/zephyr/blob/5f5b34793dc89a3ee5a33c566333760323e57fa0/include/zephyr/arch/common/semihost.h#L32"><code>SEMIHOST_OPEN</code></a>.
+Execution then jumps to to <code>semihost_exec</code>, where the actual semihosting
+instruction sequence is performed.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>(gdb) disass semihost_exec
+</span></span><span style="display:flex;"><span>Dump of assembler code for function semihost_exec:
+</span></span><span style="display:flex;"><span>   0x42010020 &lt;+0&gt;:	    slli	zero,zero,0x1f
+</span></span><span style="display:flex;"><span>   0x42010024 &lt;+4&gt;:	    ebreak
+</span></span><span style="display:flex;"><span>   0x42010028 &lt;+8&gt;:	    srai	zero,zero,0x7
+</span></span><span style="display:flex;"><span>   0x4201002c &lt;+12&gt;:	ret
+</span></span><span style="display:flex;"><span>End of assembler dump.
+</span></span></code></pre></div><p>The following semihosting operations follow the same pattern. If we continue,
+the write and file close will be executed and <code>main</code> will return, causing the
+program to sit in the idle thread.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>(gdb) c
+</span></span><span style="display:flex;"><span>Continuing.
+</span></span><span style="display:flex;"><span>^C
+</span></span><span style="display:flex;"><span>Program received signal SIGINT, Interrupt.
+</span></span><span style="display:flex;"><span>0x420104fc in arch_cpu_idle () at /home/hasheddan/code/github.com/zephyrproject/workspaces/v3.3.0/zephyr/soc/riscv/esp32c3/idle.c:27
+</span></span><span style="display:flex;"><span>27	}
+</span></span></code></pre></div><p>Now if we examine the contents of <code>semihost.txt</code>, we should see our message!</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ cat semihost.txt 
+</span></span><span style="display:flex;"><span>Hello, RISC-V Bytes!
+</span></span></code></pre></div><h2 id="concluding-thoughts">
+  Concluding Thoughts
+  <a class="heading-link" href="#concluding-thoughts">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>We have only scratched the surface of cases where semihosting can be useful when
+working with embedded systems. For example, Zephyr supports using semihosting as
+a <a href="https://github.com/zephyrproject-rtos/zephyr/blob/5f5b34793dc89a3ee5a33c566333760323e57fa0/drivers/console/semihost_console.c">console
+driver</a>.
+However, with knowledge of its general purpose input / output capabilities, we
+can start to utilize it as a tool across projects.</p>
+<p>As always, these posts are meant to serve as a useful resource for folks who are
+interested in learning more about RISC-V and low-level software in general. If I
+can do a better job of reaching that goal, or you have any questions or
+comments, please feel free to send me a message
+<a href="https://twitter.com/hasheddan">@hasheddan</a> Twitter,
+<a href="https://types.pl/web/@hasheddan">@hasheddan@types.pl</a> on Mastodon, or
+<a href="https://staging.bsky.app/profile/danielmangum.com">@danielmangum.com</a> on
+Bluesky!</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>

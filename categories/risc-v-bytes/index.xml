@@ -6,7 +6,17 @@
     <description>Recent content in RISC-V Bytes on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Fri, 28 Apr 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/categories/risc-v-bytes/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 30 May 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/categories/risc-v-bytes/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>RISC-V Bytes: Semihosting with Zephyr on an ESP32</title>
+      <link>https://danielmangum.com/posts/risc-v-bytes-semihosting-zephyr-esp32/</link>
+      <pubDate>Tue, 30 May 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/risc-v-bytes-semihosting-zephyr-esp32/</guid>
+      <description>Note: all analysis and code samples used in this post correspond to the v3.3.0 release of Zephyr.
+Having a good debugging workflow is critical to developing software quickly with high confidence. Fortunately, writing software for computers is often done, well, on a computer, meaning that while writing programs we can run other programs that help us understand the behavior of what we are writing. Typically the machine we are writing software for, though it may run in a data center and have a different form factor, doesn&amp;rsquo;t look so different from the machine we are writing it on.</description>
+    </item>
+    
     <item>
       <title>RISC-V Bytes: Zephyr Before Main</title>
       <link>https://danielmangum.com/posts/risc-v-bytes-zephyr-before-main/</link>
