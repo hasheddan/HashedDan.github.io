@@ -6,7 +6,16 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 30 May 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 19 Jul 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>A Three Year Bet on Chip Design</title>
+      <link>https://danielmangum.com/posts/a-three-year-bet-on-chip-design/</link>
+      <pubDate>Wed, 19 Jul 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/a-three-year-bet-on-chip-design/</guid>
+      <description>I turn 27 years old today, which feels both very old and very young. 30 is often seen as a milestone, perhaps because you have spent nearly a decade operating as an “adult”, but likely are still considered in the earlier part of your career. I am a firm believer that doing most things of significance takes at least 3 years, which makes 27 a good time to decide to commit to “doing something before you are 30”.</description>
+    </item>
+    
     <item>
       <title>RISC-V Bytes: Semihosting with Zephyr on an ESP32</title>
       <link>https://danielmangum.com/posts/risc-v-bytes-semihosting-zephyr-esp32/</link>
