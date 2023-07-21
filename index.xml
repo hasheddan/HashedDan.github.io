@@ -6,7 +6,17 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Wed, 19 Jul 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 21 Jul 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Why Create a New Instruction Set Architecture?</title>
+      <link>https://danielmangum.com/posts/why-create-new-isa/</link>
+      <pubDate>Fri, 21 Jul 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/why-create-new-isa/</guid>
+      <description>TL;DR: even if you&amp;rsquo;re not being pragmatic, you probably don&amp;rsquo;t need to.
+One of the things I have been thinking about while starting to work on moss again is whether I should implement one of the many RISC-V flavors, or whether I should design an entirely new instruction set architecture (ISA). Designing a new one might seem like the ultimate bike-shedding effort, and if my immediate goal was getting something useful into production, I almost certainly would not embark on the journey.</description>
+    </item>
+    
     <item>
       <title>A Three Year Bet on Chip Design</title>
       <link>https://danielmangum.com/posts/a-three-year-bet-on-chip-design/</link>
