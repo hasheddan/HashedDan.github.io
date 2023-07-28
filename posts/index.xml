@@ -6,7 +6,18 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Fri, 21 Jul 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 28 Jul 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Single-Cycle and Multicycle Do Not Describe Processor Performance</title>
+      <link>https://danielmangum.com/posts/single-cycle-multicycle-processor-performance/</link>
+      <pubDate>Fri, 28 Jul 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/single-cycle-multicycle-processor-performance/</guid>
+      <description>If you read most literature about processor design, you’ll inevitably be presented with three broad categories of CPU architectures:
+Single-Cycle Multicycle Pipelined We’ll just be focusing on the first two for today.
+In fact, my favorite introductory book on computer architecture, Computer Organization and Design (Patterson &amp;amp; Hennessy) progresses through Chapter 4: The Processor by explaining these three models in sequence. The first big idea can be synthesized into the following logic:</description>
+    </item>
+    
     <item>
       <title>Why Create a New Instruction Set Architecture?</title>
       <link>https://danielmangum.com/posts/why-create-new-isa/</link>

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  Single-Cycle and Multicycle Do Not Describe Processor Performance · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="If you read most literature about processor design, you’ll inevitably be presented with three broad categories of CPU architectures:
+Single-Cycle Multicycle Pipelined We’ll just be focusing on the first two for today.
+In fact, my favorite introductory book on computer architecture, Computer Organization and Design (Patterson &amp; Hennessy) progresses through Chapter 4: The Processor by explaining these three models in sequence. The first big idea can be synthesized into the following logic:">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="Single-Cycle and Multicycle Do Not Describe Processor Performance"/>
+<meta name="twitter:description" content="If you read most literature about processor design, you’ll inevitably be presented with three broad categories of CPU architectures:
+Single-Cycle Multicycle Pipelined We’ll just be focusing on the first two for today.
+In fact, my favorite introductory book on computer architecture, Computer Organization and Design (Patterson &amp; Hennessy) progresses through Chapter 4: The Processor by explaining these three models in sequence. The first big idea can be synthesized into the following logic:"/>
+
+<meta property="og:title" content="Single-Cycle and Multicycle Do Not Describe Processor Performance" />
+<meta property="og:description" content="If you read most literature about processor design, you’ll inevitably be presented with three broad categories of CPU architectures:
+Single-Cycle Multicycle Pipelined We’ll just be focusing on the first two for today.
+In fact, my favorite introductory book on computer architecture, Computer Organization and Design (Patterson &amp; Hennessy) progresses through Chapter 4: The Processor by explaining these three models in sequence. The first big idea can be synthesized into the following logic:" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/single-cycle-multicycle-processor-performance/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-07-28T00:10:34-06:00" />
+<meta property="article:modified_time" content="2023-07-28T00:10:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/single-cycle-multicycle-processor-performance/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/single-cycle-multicycle-processor-performance/">
+              Single-Cycle and Multicycle Do Not Describe Processor Performance
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2023-07-28T00:10:34-06:00">
+                July 28, 2023
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              4-minute read
+            </span>
+          </div>
+          
+          <div class="categories">
+  <i class="fa fa-folder" aria-hidden="true"></i>
+    <a href="https://danielmangum.com/categories/moss/">moss</a></div>
+
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>If you read most literature about processor design, you’ll inevitably be
+presented with three broad categories of CPU architectures:</p>
+<p><img src="../../static/moss_single_multi_0.png" alt="moss-single-multi-0"></p>
+<ul>
+<li>Single-Cycle</li>
+<li>Multicycle</li>
+<li>Pipelined</li>
+</ul>
+<blockquote>
+<p>We’ll just be focusing on the first two for today.</p>
+</blockquote>
+<p>In fact, my favorite introductory book on computer architecture, <a href="https://shop.elsevier.com/books/computer-organization-and-design-risc-v-edition/patterson/978-0-12-820331-6"><em>Computer
+Organization and Design (Patterson &amp;
+Hennessy)</em></a>
+progresses through <em>Chapter 4: The Processor</em> by explaining these three models
+in sequence. The first big idea can be synthesized into the following logic:</p>
+<ol>
+<li>There are some set of instructions defined in an instruction set architecture
+(ISA).</li>
+<li>Some instructions in the set are more complex than others (i.e. take longer
+to execute).</li>
+<li>If you spend the same amount of time on every instruction, then that amount
+of time must be at least as long as the time required to execute the most
+complex instruction.</li>
+</ol>
+<p>(3) is where the inefficiency arises: for some less complex instructions, you
+are spending more time executing them than is required. A processor that
+operates in this manner is usually classified as a <strong>single-cycle processor</strong>.
+However, this common categorization has always bothered me because it focuses on
+the number of cycles, when the real issue is related to the time spent executing
+each instruction; specifically that the time spent executing each instruction is
+<strong>constant</strong>. This conflation <a href="https://stackoverflow.com/questions/63693436/is-a-single-cycle-cpu-possible-if-asynchronous-components-are-used">can lead to
+confusion</a>,
+especially when a processor that is decidedly not single-cycle is categorized as
+such.</p>
+<p>Perhaps the reason why the term single-cycle is used rather than <strong>constant</strong> or
+<strong>fixed</strong> time is because literally spending one clock cycle (i.e. from one
+positive edge of the clock to the next) <strong>necessitates</strong> constant time
+per-instruction, assuming a single clock and lack of support for variable clock
+speed. If you instead slice the execution into stages, such as the classic 5
+stages of <strong>Fetch</strong>, <strong>Decode</strong>, <strong>Execute</strong>, <strong>Memory Access</strong>, and
+<strong>Write-Back</strong>, you can opt to skip a stage when an instruction does not require
+it (e.g. a simple add instruction that sums the values in two registers and
+stores the result in a third does not need to access memory). If clock speed is
+remaining constant (i.e. each stage takes the same amount of time), then
+skipping a stage means that some instructions are executed more quickly than
+others, reducing the inefficiency in a single-cycle implementation.</p>
+<p>But a multicycle implementation <em>allows</em> you to skip stages, it doesn’t
+necessitate it. Therefore, characterizing a processor as single-cycle or
+multicycle doesn’t really tell us anything about its performance. You could have
+a processor with multiple stages that executed every stage for every
+instruction, whether it was needed or not. This would technically be a
+multicycle implementation, and there could even be advantages to doing this. In
+<em>Section 4.5</em> of <em>Computer Organization and Design</em> (which is companion material
+to the textbook and <a href="https://www.elsevier.com/__data/assets/pdf_file/0004/1129072/Ch04_e1.pdf">available online for
+anyone</a>),
+advantages of converting a single-cycle design to multicycle is described:</p>
+<blockquote>
+<p><em>“By introducing a few registers and multiplexors, we are able to reduce the
+number of memory units from two to one and eliminate two adders. Since
+registers and multiplexors are fairly small compared to a memory unit or ALU,
+this could yield a substantial reduction in the hardware cost.”</em></p>
+</blockquote>
+<p>Nevertheless, this is not a statement about performance. <em>Computer Organization
+and Design</em> defines performance explicitly in <em>Chapter 1</em>:</p>
+<blockquote>
+<p><em>“Time is the measure of computer performance: the computer that performs the
+same amount of work in the least time is the fastest.”</em></p>
+</blockquote>
+<p>This definition is manifested in the CPU performance equation.</p>
+<p><img src="../../static/moss_single_multi_1.png" alt="moss-single-multi-1"></p>
+<p>Moving from single-cycle to multicycle without any additional optimizations
+results in an increase in Clock Rate, which improves performance by driving up
+the denominator, but that improvement is offset by a corresponding increase in
+Cycles Per Instruction (CPI), which drives up the numerator. In the classic 5
+stage example, the equation would be modified as follows.</p>
+<p><img src="../../static/moss_single_multi_2.png" alt="moss-single-multi-2"></p>
+<p>This analysis also reveals where you might start to see performance
+improvements. If some instructions are able to skip stages in the multicycle
+implementation, then CPI may increase less than clock rate increases, resulting
+in an overall reduction in CPU time. The situation can be improved even further
+if one stage can be acting on one instruction, while another stage is acting on
+the next (pipelining). It may seem pedantic to distinguish the performance
+improvement from the implementation model when in practice the latter typically
+implies the former, but being specific about what is causing a performance
+improvement, rather than just enabling one, helps us better understand how
+hardware actually works.</p>
+<h2 id="what-are-we-building">
+  What are we building?
+  <a class="heading-link" href="#what-are-we-building">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>Tying this back to <code>moss</code>, our <a href="https://danielmangum.com/posts/why-create-new-isa/">last
+entry</a> included the decision
+to use the RISC-V 64-bit integer ISA (<code>RV64I</code>) as the base for the CPU. The work
+I have been doing since that post has been around building a single-cycle,
+constant time implementation, which is what led to me writing up this post.
+While <code>moss</code> will eventually have a multicycle pipelined processor, starting
+with a single-cycle implementation allows us to iteratively optimize and
+document doing so along the way. Currently, only a <a href="https://github.com/mosscomp/moss/blob/main/rtl/regfile.v">very simple register
+file</a> has been and
+merged, but more components will be landing soon!</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
