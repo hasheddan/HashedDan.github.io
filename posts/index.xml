@@ -6,7 +6,16 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Wed, 09 Aug 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 21 Aug 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>A Brief Retrospective on SPARC Register Windows</title>
+      <link>https://danielmangum.com/posts/retrospective-sparc-register-windows/</link>
+      <pubDate>Mon, 21 Aug 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/retrospective-sparc-register-windows/</guid>
+      <description>As I work on moss and research modern processor design patterns and techniques, I am also looking for patterns and techniques from the past that, for one reason or another, have not persisted into our modern machines. While on a run this week, I was listening to an old Oxide and Friends episode where Bryan, Adam, and crew were reminiscing on the SPARC instruction set architecture (ISA). SPARC is a reduced instruction set computer (RISC) architecture originally developed by Sun Microsystems, with the first machine, the SPARCstation1 (a.</description>
+    </item>
+    
     <item>
       <title>How To Dissect a Critical HackerNews Comment</title>
       <link>https://danielmangum.com/posts/how-to-dissect-critical-hackernews/</link>

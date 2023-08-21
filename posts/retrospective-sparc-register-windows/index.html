@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  A Brief Retrospective on SPARC Register Windows · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="As I work on moss and research modern processor design patterns and techniques, I am also looking for patterns and techniques from the past that, for one reason or another, have not persisted into our modern machines. While on a run this week, I was listening to an old Oxide and Friends episode where Bryan, Adam, and crew were reminiscing on the SPARC instruction set architecture (ISA). SPARC is a reduced instruction set computer (RISC) architecture originally developed by Sun Microsystems, with the first machine, the SPARCstation1 (a.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="A Brief Retrospective on SPARC Register Windows"/>
+<meta name="twitter:description" content="As I work on moss and research modern processor design patterns and techniques, I am also looking for patterns and techniques from the past that, for one reason or another, have not persisted into our modern machines. While on a run this week, I was listening to an old Oxide and Friends episode where Bryan, Adam, and crew were reminiscing on the SPARC instruction set architecture (ISA). SPARC is a reduced instruction set computer (RISC) architecture originally developed by Sun Microsystems, with the first machine, the SPARCstation1 (a."/>
+
+<meta property="og:title" content="A Brief Retrospective on SPARC Register Windows" />
+<meta property="og:description" content="As I work on moss and research modern processor design patterns and techniques, I am also looking for patterns and techniques from the past that, for one reason or another, have not persisted into our modern machines. While on a run this week, I was listening to an old Oxide and Friends episode where Bryan, Adam, and crew were reminiscing on the SPARC instruction set architecture (ISA). SPARC is a reduced instruction set computer (RISC) architecture originally developed by Sun Microsystems, with the first machine, the SPARCstation1 (a." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/retrospective-sparc-register-windows/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-08-21T00:10:34-06:00" />
+<meta property="article:modified_time" content="2023-08-21T00:10:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/retrospective-sparc-register-windows/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/retrospective-sparc-register-windows/">
+              A Brief Retrospective on SPARC Register Windows
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2023-08-21T00:10:34-06:00">
+                August 21, 2023
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              17-minute read
+            </span>
+          </div>
+          
+          <div class="categories">
+  <i class="fa fa-folder" aria-hidden="true"></i>
+    <a href="https://danielmangum.com/categories/moss/">moss</a></div>
+
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        
+
+
+<div class="center-img">
+  <img
+    src="../../static/moss_sparc_reg_win_0.png"
+    alt="moss-sparc-reg-win-0"
+  />
+</div>
+<p>As I work on <a href="https://github.com/mosscomp/moss"><code>moss</code></a> and research modern
+processor design patterns and techniques, I am also looking for patterns and
+techniques from the past that, for one reason or another, have not persisted
+into our modern machines. While on a run this week, I was listening to an old
+<a href="https://oxide.computer/podcasts/oxide-and-friends/838550">Oxide and Friends
+episode</a> where Bryan,
+Adam, and crew were reminiscing on the
+<a href="https://en.wikipedia.org/wiki/SPARC">SPARC</a> instruction set architecture (ISA).
+SPARC is a reduced instruction set computer (RISC) architecture originally
+developed by <a href="https://en.wikipedia.org/wiki/Sun_Microsystems">Sun Microsystems</a>,
+with the first machine, the
+<a href="https://en.wikipedia.org/wiki/SPARCstation_1">SPARCstation1</a> (a.k.a. Sun 4/60,
+a.k.a Campus), being delivered in 1987. It was heavily influenced by the early
+RISC designs from <a href="https://en.wikipedia.org/wiki/David_Patterson_(computer_scientist)">David
+Patterson</a>
+and team at Berkeley in the 1970s and 1980s, which is the same lineage from
+which <a href="https://riscv.org/">RISC-V</a> has evolved. Given the
+<a href="https://danielmangum.com/posts/why-create-new-isa/">decision</a> to base <code>moss</code> on
+the RISC-V <code>RV64I</code> ISA, I was interested to learn more about the history and
+finer details of SPARC.</p>
+<p>The episode discusses a number of interesting attributes of the architecture, as
+well as <a href="https://www.filibeto.org/sun/lib/hardware/enterprise_4500/BP_Ecache_10-16-01.pdf">some issues in specific
+implementations</a>,
+but one in particular stuck out to me: <a href="https://en.wikipedia.org/wiki/Register_window">register
+windows</a>. As it turns out,
+register windows were not an innovation of SPARC, but rather a feature inherited
+from those early Berkeley RISC designs. In fact, the very first design, <a href="https://dl.acm.org/doi/pdf/10.1145/285930.285981">RISC
+I</a>, describes register windows
+as a prominent component of making the simplified processor design feasible for
+legitimate computation.</p>
+<blockquote>
+<p>&ldquo;It would appear that such constraints would result in a machine with
+substantially poorer code density or poorer performance or both. In spite of
+these constraints, the resulting architecture competes favorably with other
+state-of-the-art machines such as VAX 11/780. <strong>This is largely because of an
+innovative new scheme of register organization we call overlapped register
+windows.</strong>&rdquo;</p>
+</blockquote>
+<p><em>- David A. Patterson and Carlo H. Sequin. 1998. RISC I: a reduced instruction
+set VLSI computer. (Page 217)</em></p>
+<h2 id="conventions-for-register-use">
+  Conventions for Register Use
+  <a class="heading-link" href="#conventions-for-register-use">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>I have previously written about <a href="https://danielmangum.com/posts/risc-v-bytes-caller-callee-registers/">how RISC-V uses
+registers</a>,
+as well as <a href="https://danielmangum.com/posts/risc-v-bytes-passing-on-the-stack/">what happens when we run out of
+registers</a>.
+Additionally, we <a href="https://danielmangum.com/posts/single-cycle-rv64-register-file/">recently
+explored</a> the
+Verilog implementation of the <code>moss</code> register file. As a brief recap, registers
+are the fastest memory available to a processor, and thus the most desirable
+location to store data. However, they are also typically the smallest memory,
+with RISC-V supporting 32 general purpose registers (GPRs) in most
+architectures; <code>RV32E</code> being the exception with 16 GPRs.</p>
+<p>As detailed in the aforementioned posts, one important use of registers is
+passing data from one procedure to another. To do so, there needs to be an
+agreed upon convention for which registers the callee procedure (i.e. the one
+being called) may manipulate and not restore, and which must be restored prior
+to returning. Data in registers in the former category need to be persisted to a
+secondary location, such as L1-L3 cache or RAM, so that they can be recovered
+after control returns from the callee procedure. Registers in this group are
+referred to as <strong>caller-saved</strong> while those that must be restored are referred
+to as <strong>callee-saved</strong> Additionally, both the caller and callee procedures need
+to know what registers are used for passing arguments, and which are used for
+returning them. The <a href="https://danielmangum.com/posts/risc-v-bytes-caller-callee-registers/#defining-terms">table in this
+post</a>
+outlines which of the 32 GPRs in RISC-V are preserved across calls and which are
+not.</p>
+<h2 id="a-history-of-register-windows">
+  A History of Register Windows
+  <a class="heading-link" href="#a-history-of-register-windows">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>One of the key insights in the development of the RISC architecture was the fact
+that the performance of a processor could be improved by supporting a small set
+of instructions that could be executed quickly and executing more of them. We
+have <a href="https://danielmangum.com/posts/single-cycle-multicycle-processor-performance/">previously
+discussed</a>
+the CPU performance equation, which includes the number of instructions required
+to define a program in the numerator (<strong>Instruction Count</strong>), meaning that, as
+one would expect, driving up the instruction count means worse performance.
+However, the RISC architecture is able to offset this increase with a larger
+decrease in cycles per instruction (<strong>CPI</strong>), which is also a factor in the
+numerator, thus driving the overall CPU time down.</p>
+<p>Naturally, Patterson &amp; Sequin were interested in identifying which operations in
+high-level languages (they evaluated C and Pascal) resulted in the largest
+number of RISC instructions required. If common operations in high-level
+languages reached a certain threshold in number of instructions required, the
+offset in decreased CPI may not have been enough to improve overall performance.
+Through their analysis, they identified the procedure call as the most
+expensive.</p>
+<blockquote>
+<p>&ldquo;Using procedures involves two groups of time-consuming operations: saving or
+restoring registers on each CALL or return, and passing parameters and results
+to and from the procedure. Because our measurements on high-level language
+programs indicate that local scalars are the most frequent operands, we wanted
+to support the allocation of locals in registers.&rdquo;</p>
+</blockquote>
+<p><em>- David A. Patterson and Carlo H. Sequin. 1998. RISC I: a reduced instruction
+set VLSI computer. (Page 218)</em></p>
+<p>With this being the case, they asked the logical question: how could we
+eliminate some of this overhead? Interestingly, they were not the first to ask
+this question. Their paper sites two contemporaries when introducing register
+windows. The first is a lecture from <a href="https://www.linkedin.com/in/forest-baskett-a5813413/">Forest
+Baskett</a> in 1978, which
+appears to have been lost to the sands of time. However, Baskett has had quite
+the illustrious career, founding the Western Research Laboratory at <a href="https://en.wikipedia.org/wiki/Digital_Equipment_Corporation">Digital
+Equipment Corporation
+(DEC)</a> and serving
+as CTO at <a href="https://en.wikipedia.org/wiki/Silicon_Graphics">Silicon Graphics, Inc.
+(SGI)</a>, two companies that have
+been well chronicled in computing lore.</p>
+<p>I feared the same fate for the second citation, but was able to find <a href="https://www.linkedin.com/in/richard-sites-50a31a7b/details/experience/">Richard L.
+Sites</a>’
+paper <a href="https://caltechconf.library.caltech.edu/200/1/RichardLSites.pdf">How to Use 1,000
+Registers</a>. Not
+to be outdone, Sites also had quite the career as a professor at UC San Diego
+and engineer at DEC, Adobe, and Google. In his paper, he makes an astute
+observation.</p>
+<blockquote>
+<p>&ldquo;As short-term register memories get larger, subroutine calls will get slower,
+unless we find better solutions to the stale data and alias problems.&rdquo;</p>
+</blockquote>
+<p><em>- Richard L. Sites. 1979. How to Use 1,000 Registers. (Page 529)</em></p>
+<p>Put simply, if there are more registers accessible to and used by a given
+procedure, there is more work to do when saving and restoring them on a given
+procedure call. A solution is proposed in Section 5, <em>Techniques for Effective
+Use of Large Short-Term Memories</em>.</p>
+<blockquote>
+<p>&ldquo;Assuming that almost all registers are in use at the point of call, and
+almost all will be used by the subroutine (so that we cannot avoid come sort
+of save/restore), then one way to speed up the call linkage is to have
+duplicate register sets. Say there are four sets, 0-3, and that the calling
+subroutine is using set 1. Then the called routine just starts using set 2,
+and no data movement of set 1 to main memory is needed. This makes the
+subroutine call quite fast, and it also makes the linkage overhead no longer
+proportional to the number of resisters. When the subroutine returns, the
+machine just switches back from set 2 to set 1.&rdquo;</p>
+</blockquote>
+<p><em>- Richard L. Sites. 1979. How to Use 1,000 Registers. (Page 530)</em></p>
+<p>There are some issues that need to be addressed with the proposed functionality,
+which Sites outlines in the paragraphs that follow. For example, what happens
+when the number of nested subroutines exceeds the number of register sets? Sites
+proposed a system that allowed for registers from parent procedures to be
+&ldquo;dribbled back&rdquo; into main memory on unused memory access cycles in the
+subroutines.</p>
+<p>This cache of register sets, as Sites referred to them, were the precursor to
+Patterson &amp; Sequin’s register windows, which build on this work while
+introducing a few variations. One such variation is born out of the previously
+described requirement for procedures to pass data between one another. Ideally,
+that data would be passed in the fastest memory: registers. However, if each
+procedure sees a different window, that is no longer feasible. To address the
+issue, Patterson &amp; Sequin proposed that register windows <em>overlap</em>, meaning that
+the high registers of the caller become the low registers of the callee. This
+allows for the caller to pass parameters to the callee, and for the callee to
+pass return values back to the caller.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/moss_sparc_reg_win_1.png"
+    alt="moss-sparc-reg-win-1"
+  />
+</div>
+<p>In addition to the overlapping windows, a set of 10 global registers was set
+aside and made accessible by all routines, as can bee seen in the diagram above.
+Another variation was that rather than &ldquo;dribbling back&rdquo; registers to main
+memory, Patterson &amp; Sequin proposed <strong>underflow</strong> and <strong>overflow</strong> semantics
+that would cause traps to occur when the number of nested procedures exceeded
+the number of register windows. A software-defined trap handler could then be
+used to save and restore existing registers on a dedicated stack.</p>
+<p>The last variation came in the form of how pointers were handled. Once again
+trying to avoid having to place data unnecessarily into main memory, Patterson &amp;
+Sequin reserved a portion of the memory address space to registers, such that
+one procedure could access data in registers that were outside of its window.</p>
+<h2 id="sparc-register-windows">
+  SPARC Register Windows
+  <a class="heading-link" href="#sparc-register-windows">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>Register windows are mentioned as the first attribute of the SPARC ISA in the
+<a href="https://sparc.org/technical-documents/#V8">v8 architecture manual</a>. In fact,
+the authors pay homage to the RISC I &amp; II designs explicitly.</p>
+<blockquote>
+<p>&ldquo;SPARC, formulated at Sun Microsystems in 1985, is based on the RISC I &amp; II
+designs engineered at the University of California at Berkeley from 1980
+through 1982. the SPARC “register window” architecture, pioneered in UC
+Berkeley designs, allows for straightforward, high-performance compilers and a
+significant reduction in memory load/store instructions over other RISCs,
+particularly for large application programs.&rdquo;</p>
+</blockquote>
+<p><em>- The SPARC Architecture Manual, Version 8. 1990. (Page 4)</em></p>
+<p>Even the diagram used in the registers section of the manual (Section 4) looks
+quite similar to the one from the RISC I design.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/moss_sparc_reg_win_2.png"
+    alt="moss-sparc-reg-win-2"
+  />
+</div>
+<p>However, the good folks at Sun did put their own spin on register windows,
+opting to expose more knobs to programmers that allowed for fine-grained control
+over register window management.</p>
+<blockquote>
+<p>&ldquo;One difference between SPARC and the Berkeley RISC I &amp; II is that SPARC
+provides greater flexibility to a compiler in its assignment of registers to
+program variables. SPARC is more flexible because register window management
+is not tied to procedure call and return (CALL and JMPL) instructions, as it
+is on the Berkeley machines. Instead, separate instructions (SAVE and RESTORE)
+provide register window management.&rdquo;</p>
+</blockquote>
+<p><em>- The SPARC Architecture Manual, Version 8. 1990. (Page 4)</em></p>
+<p>This variation results in the ability to transfer control from one routine to
+another <em>without</em> changing the register window. This enables a number of
+windowing schemes, which are explored in greater detail in the appendix on
+software considerations (Appendix D, Page 203).</p>
+<h2 id="exploring-register-windows">
+  Exploring Register Windows
+  <a class="heading-link" href="#exploring-register-windows">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>To make the use of register windows more concrete, we can craft a minimal
+example. The following program does not perform any computation of value, but
+stepping through it illustrates how a given procedure sees its register window.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#007f7f">.section</span> .text
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>main:
+</span></span><span style="display:flex;"><span>	set <span style="color:#ff0;font-weight:bold">10</span>, %o1
+</span></span><span style="display:flex;"><span>	call sub1
+</span></span><span style="display:flex;"><span>	nop
+</span></span><span style="display:flex;"><span>	nop
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sub1:
+</span></span><span style="display:flex;"><span>	save %sp, -<span style="color:#ff0;font-weight:bold">112</span>, %sp
+</span></span><span style="display:flex;"><span>	set <span style="color:#ff0;font-weight:bold">20</span>, %o1
+</span></span><span style="display:flex;"><span>	call sub2
+</span></span><span style="display:flex;"><span>	nop
+</span></span><span style="display:flex;"><span>	ret
+</span></span><span style="display:flex;"><span>	restore
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sub2:
+</span></span><span style="display:flex;"><span>	set <span style="color:#ff0;font-weight:bold">30</span>, %o1
+</span></span><span style="display:flex;"><span>	retl
+</span></span><span style="display:flex;"><span>	nop
+</span></span></code></pre></div><p>Use the following commands to assemble and link the executable.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>sparc-elf-as main.S
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>sparc-elf-ld a.out -o main
+</span></span></code></pre></div><p>We can utilize the QEMU SPARC 32-bit userspace emulator to run the program on a
+non-SPARC host. Specifying <code>-g 1234</code> will cause QEMU to start its GDB server,
+which will allow us to step through the program.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>qemu-sparc-static -g 1234 test
+</span></span></code></pre></div><p>With QEMU running, start GDB and connect it to the QEMU remote.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>sparc-elf-gdb main -ex &#34;target remote :1234&#34;
+</span></span></code></pre></div><p>Three registers will be of interest to us: the program counter (<code>pc</code>), output
+register 1 (<code>o1</code>), and input register 1 (<code>i1</code>). We can make GDB print these on
+every step with the following commands.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>display /i $pc
+</span></span><span style="display:flex;"><span>display $o1
+</span></span><span style="display:flex;"><span>display $i1
+</span></span></code></pre></div><p>We can view the state of all registers prior to starting with <code>info registers</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>(gdb) info registers
+</span></span><span style="display:flex;"><span>g0             0x0                 0
+</span></span><span style="display:flex;"><span>g1             0x0                 0
+</span></span><span style="display:flex;"><span>g2             0x0                 0
+</span></span><span style="display:flex;"><span>g3             0x0                 0
+</span></span><span style="display:flex;"><span>g4             0x0                 0
+</span></span><span style="display:flex;"><span>g5             0x0                 0
+</span></span><span style="display:flex;"><span>g6             0x0                 0
+</span></span><span style="display:flex;"><span>g7             0x0                 0
+</span></span><span style="display:flex;"><span>o0             0x0                 0
+</span></span><span style="display:flex;"><span>o1             0x0                 0
+</span></span><span style="display:flex;"><span>o2             0x0                 0
+</span></span><span style="display:flex;"><span>o3             0x0                 0
+</span></span><span style="display:flex;"><span>o4             0x0                 0
+</span></span><span style="display:flex;"><span>o5             0x0                 0
+</span></span><span style="display:flex;"><span>sp             0x407fff30          0x407fff30
+</span></span><span style="display:flex;"><span>o7             0x0                 0
+</span></span><span style="display:flex;"><span>l0             0x0                 0
+</span></span><span style="display:flex;"><span>l1             0x0                 0
+</span></span><span style="display:flex;"><span>l2             0x0                 0
+</span></span><span style="display:flex;"><span>l3             0x0                 0
+</span></span><span style="display:flex;"><span>l4             0x0                 0
+</span></span><span style="display:flex;"><span>l5             0x0                 0
+</span></span><span style="display:flex;"><span>l6             0x0                 0
+</span></span><span style="display:flex;"><span>l7             0x0                 0
+</span></span><span style="display:flex;"><span>i0             0x0                 0
+</span></span><span style="display:flex;"><span>i1             0x0                 0
+</span></span><span style="display:flex;"><span>i2             0x0                 0
+</span></span><span style="display:flex;"><span>i3             0x0                 0
+</span></span><span style="display:flex;"><span>i4             0x0                 0
+</span></span><span style="display:flex;"><span>i5             0x0                 0
+</span></span><span style="display:flex;"><span>fp             0x0                 0x0
+</span></span><span style="display:flex;"><span>i7             0x0                 0
+</span></span><span style="display:flex;"><span>y              0x0                 0
+</span></span><span style="display:flex;"><span>psr            0x4000000           [ ]
+</span></span><span style="display:flex;"><span>wim            0x1                 1
+</span></span><span style="display:flex;"><span>tbr            0x0                 0
+</span></span><span style="display:flex;"><span>pc             0x10054             0x10054 &lt;main&gt;
+</span></span><span style="display:flex;"><span>npc            0x10058             0x10058 &lt;main+4&gt;
+</span></span><span style="display:flex;"><span>fsr            0x0                 [ ]
+</span></span><span style="display:flex;"><span>csr            0x0                 0
+</span></span></code></pre></div><p>Let’s step through the first few instructions.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>1: x/i $pc
+</span></span><span style="display:flex;"><span>=&gt; 0x10054 &lt;main&gt;:	mov  0xa, %o1
+</span></span><span style="display:flex;"><span>2: $o1 = 0
+</span></span><span style="display:flex;"><span>3: $i1 = 0
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) si
+</span></span><span style="display:flex;"><span>0x00010058 in main ()
+</span></span><span style="display:flex;"><span>1: x/i $pc
+</span></span><span style="display:flex;"><span>=&gt; 0x10058 &lt;main+4&gt;:	call  0x10064 &lt;sub1&gt;
+</span></span><span style="display:flex;"><span>   0x1005c &lt;main+8&gt;:	nop 
+</span></span><span style="display:flex;"><span>2: $o1 = 10
+</span></span><span style="display:flex;"><span>3: $i1 = 0
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) si
+</span></span><span style="display:flex;"><span>0x0001005c in main ()
+</span></span><span style="display:flex;"><span>1: x/i $pc
+</span></span><span style="display:flex;"><span>=&gt; 0x1005c &lt;main+8&gt;:	nop 
+</span></span><span style="display:flex;"><span>2: $o1 = 10
+</span></span><span style="display:flex;"><span>3: $i1 = 0
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) si
+</span></span><span style="display:flex;"><span>0x00010064 in sub1 ()
+</span></span><span style="display:flex;"><span>1: x/i $pc
+</span></span><span style="display:flex;"><span>=&gt; 0x10064 &lt;sub1&gt;:	save  %sp, -112, %sp
+</span></span><span style="display:flex;"><span>2: $o1 = 10
+</span></span><span style="display:flex;"><span>3: $i1 = 0
+</span></span></code></pre></div><blockquote>
+<p>You may notice that the <code>nop</code> instruction in <code>main</code> executes after the call to
+<code>sub1</code>. This is due to the fact that SPARC uses <strong>delayed control transfer</strong>.
+We won’t dive into the rationale in this post, but it is also an architectural
+pattern that isn’t present, or perhaps isn’t as obviously present, in modern
+machines. We’ll explore more when I am working on pipelining in <code>moss</code>.</p>
+</blockquote>
+<p>All we have done thus far is load the value of <code>10</code> into the first output
+register (<code>o1</code>), then jump to the first subroutine (<code>sub1</code>). Notably, jumping to
+<code>sub1</code> did not change the value of <code>o1</code> as it is still seeing the same register
+window. However, executing <code>save</code> illustrates a shift to the next window.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>(gdb) si
+</span></span><span style="display:flex;"><span>0x00010068 in sub1 ()
+</span></span><span style="display:flex;"><span>1: x/i $pc
+</span></span><span style="display:flex;"><span>=&gt; 0x10068 &lt;sub1+4&gt;:	mov  0x14, %o1
+</span></span><span style="display:flex;"><span>2: $o1 = 0
+</span></span><span style="display:flex;"><span>3: $i1 = 10
+</span></span></code></pre></div><p>As detailed in the SPARC architecture manual, the set of output registers of the
+caller procedure (<code>main</code>) has become the set of input registers for the callee
+(<code>sub1</code>) — <code>o1</code> of <code>main</code> is <code>i1</code> of <code>sub1</code>. The subsequent call to <code>sub2</code>
+illustrates that shifting register windows is not required, as it operates on
+the same <code>o1</code> seen by <code>sub1</code>. We also use the <code>retl</code> (&ldquo;return from leaf
+procedure&rdquo;) in <code>sub2</code>, which updates the <code>pc</code> to the address <code>o7+8</code>, rather than
+<code>ret</code> (&ldquo;return from procedure&rdquo;), which updates the <code>pc</code> to the address <code>i7+8</code>,
+because we did not shift register windows. If we had shifted register windows,
+as we’ll see shortly when returning from <code>sub1</code>, we would use <code>ret</code> because the
+return address placed in the output register (<code>o7</code>) of the previous procedure
+would now reside in the input register (<code>i7</code>) of the current procedure.</p>
+<blockquote>
+<p>Note that we offset the return address by <code>8</code> in order to account for the
+delay slot instruction that follows the <code>call</code> location but was executed prior
+to transfer of control.</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>(gdb) si
+</span></span><span style="display:flex;"><span>0x0001006c in sub1 ()
+</span></span><span style="display:flex;"><span>1: x/i $pc
+</span></span><span style="display:flex;"><span>=&gt; 0x1006c &lt;sub1+8&gt;:	call  0x1007c &lt;sub2&gt;
+</span></span><span style="display:flex;"><span>   0x10070 &lt;sub1+12&gt;:	nop 
+</span></span><span style="display:flex;"><span>2: $o1 = 20
+</span></span><span style="display:flex;"><span>3: $i1 = 10
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) si
+</span></span><span style="display:flex;"><span>0x00010070 in sub1 ()
+</span></span><span style="display:flex;"><span>1: x/i $pc
+</span></span><span style="display:flex;"><span>=&gt; 0x10070 &lt;sub1+12&gt;:	nop 
+</span></span><span style="display:flex;"><span>2: $o1 = 20
+</span></span><span style="display:flex;"><span>3: $i1 = 10
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) si
+</span></span><span style="display:flex;"><span>0x0001007c in sub2 ()
+</span></span><span style="display:flex;"><span>1: x/i $pc
+</span></span><span style="display:flex;"><span>=&gt; 0x1007c &lt;sub2&gt;:	mov  0x1e, %o1
+</span></span><span style="display:flex;"><span>2: $o1 = 20
+</span></span><span style="display:flex;"><span>3: $i1 = 10
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) si
+</span></span><span style="display:flex;"><span>0x00010080 in sub2 ()
+</span></span><span style="display:flex;"><span>1: x/i $pc
+</span></span><span style="display:flex;"><span>=&gt; 0x10080 &lt;sub2+4&gt;:	retl 
+</span></span><span style="display:flex;"><span>   0x10084 &lt;sub2+8&gt;:	nop 
+</span></span><span style="display:flex;"><span>2: $o1 = 30
+</span></span><span style="display:flex;"><span>3: $i1 = 10
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) si
+</span></span><span style="display:flex;"><span>0x00010084 in sub2 ()
+</span></span><span style="display:flex;"><span>1: x/i $pc
+</span></span><span style="display:flex;"><span>=&gt; 0x10084 &lt;sub2+8&gt;:	nop 
+</span></span><span style="display:flex;"><span>2: $o1 = 30
+</span></span><span style="display:flex;"><span>3: $i1 = 10
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) si
+</span></span><span style="display:flex;"><span>0x00010074 in sub1 ()
+</span></span><span style="display:flex;"><span>1: x/i $pc
+</span></span><span style="display:flex;"><span>=&gt; 0x10074 &lt;sub1+16&gt;:	ret 
+</span></span><span style="display:flex;"><span>   0x10078 &lt;sub1+20&gt;:	restore 
+</span></span><span style="display:flex;"><span>2: $o1 = 30
+</span></span><span style="display:flex;"><span>3: $i1 = 10
+</span></span></code></pre></div><p>However, when we return back to <code>sub1</code>, we need to restore the previous register
+window before transferring control back to <code>main</code>. This is accomplished with the
+<code>restore</code> instruction.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>(gdb) si
+</span></span><span style="display:flex;"><span>0x00010078 in sub1 ()
+</span></span><span style="display:flex;"><span>1: x/i $pc
+</span></span><span style="display:flex;"><span>=&gt; 0x10078 &lt;sub1+20&gt;:	restore 
+</span></span><span style="display:flex;"><span>2: $o1 = 30
+</span></span><span style="display:flex;"><span>3: $i1 = 10
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>(gdb) si
+</span></span><span style="display:flex;"><span>0x00010060 in main ()
+</span></span><span style="display:flex;"><span>1: x/i $pc
+</span></span><span style="display:flex;"><span>=&gt; 0x10060 &lt;main+12&gt;:	nop 
+</span></span><span style="display:flex;"><span>2: $o1 = 10
+</span></span><span style="display:flex;"><span>3: $i1 = 0
+</span></span></code></pre></div><p>The value in <code>o1</code> that we initially set in <code>main</code> (<code>10</code>) has been restored. This
+program certainly does not show the full complexity of register windows, but it
+should provide you with a starting point to dig deeper.</p>
+<h2 id="why-we-dont-use-register-windows">
+  Why We Don’t Use Register Windows
+  <a class="heading-link" href="#why-we-dont-use-register-windows">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>Register windows are curiously absent from most ISAs that are widely used today
+(i.e. x86, Arm, etc.). I discovered a number sources in which critiques of
+register windows are provided. A few examples are referenced below.</p>
+<blockquote>
+<p>“It is just too hard to deal with the interrupts, and the spilling, and
+predicting performance.”</p>
+</blockquote>
+<p><em>- <a href="https://www.linkedin.com/in/tom-lyon-b1642265/">Tom Lyon</a> on the
+<a href="https://youtu.be/79NNXn5Kr90?t=531">aforementioned Oxide and Friends episode</a>.</em></p>
+<blockquote>
+<p>“The register windows overlap partially, thus the out registers become renamed
+by SAVE to become the in registers of the called procedure. Thus, the memory
+traffic is reduced when going up and down the procedure call. Since this is a
+frequent operation, performance is improved. (That was the idea, anyway. The
+drawback is that upon interactions with the system the registers need to be
+flushed to the stack, necessitating a long sequence of writes to memory of
+data that is often mostly garbage. Register windows was a bad idea that was
+caused by simulation studies that considered only programs in isolation, as
+opposed to multitasking workloads, and by considering compilers with poor
+optimization. It also caused considerable problems in implementing high-end
+Sparc processors such as the SuperSparc, although more recent implementations
+have dealt effectively with the obstacles. Register windows is now part of the
+compatibility legacy and not easily removed from the architecture.)”</p>
+</blockquote>
+<p><em>- <a href="https://cseweb.ucsd.edu/~gbournou/">Garo Bournoutian</a>, University of
+California, San Diego. <a href="https://cseweb.ucsd.edu/~gbournou/CSE131/sparcstack.html">Understanding stacks and registers in the Sparc
+architecture(s)</a>.</em></p>
+<blockquote>
+<p>“Although this idea seems great at first, there are a few disadvantages to
+windowing. First is that in large programs, where there is much recursion, the
+limited amount of physical registers fill up and you are back to the
+traditional push/pop stack usage, along with additional overhead of managing
+the windows and handling window overflow exceptions. Since it is hard to
+predict when the registers will overflow, performance analysis can be
+difficult. Also, hardware engineering becomes more difficult to implement the
+large amount of physical registers and multiplexers.”</p>
+</blockquote>
+<p><em>- Saunders Roesser, James Madison University. <a href="https://users.cs.jmu.edu/abzugcx/Public/Computer-Architecture/Term-Projects/">Interesting Points of the SPARC
+Processor</a>.</em></p>
+<p>To summarize some of the consistent themes from these sources, there seems to be
+three primary issues with the design of register windows.</p>
+<ol>
+<li><strong>Implementing register windows increases the complexity of the processor
+design.</strong> This attribute on its own is not reason to throw out the
+functionality, and could also be said for implementing any additional logic
+in a processor. However, it serves to illustrate that all processor
+functionality comes at a cost and must be justified by tangible performance
+improvements. For example, in the previously mentioned description of
+alternative register windowing schemes in the SPARC architecture manual, one
+pattern mentioned was not using register windows at all. If design complexity
+was free then perhaps an argument could be made that supporting register
+windows makes sense because a user can always opt not to utilize them. The
+issue with that outlook is that the complexity is not free, and mixed
+programming models can lead to incompatibility and poor user experience.</li>
+<li><strong>There is not enough attention paid to the cost of register windows when
+interacting with the operating system.</strong> When just moving between procedures
+in a single program, as our minimal example demonstrated, a reasonable case
+can be made for the improvements offered by the increased number of registers
+offered by windowing. However, when transferring control from a program to
+the system, we now have many more registers that must be written to memory so
+that they can later be restored. The more often we switch between programs,
+the more costly this becomes.</li>
+<li><strong>Reasoning about the performance of a program becomes more difficult.</strong>
+Because the number of registers is still limited, a program may overflow or
+underflow the current register window, resulting in a trap to the operating
+system. This not only requires the system to implement functionality to
+properly handle these cases, but also imposes an unpredictable performance
+penalty on the program.</li>
+</ol>
+<p>Time has proven that register windows, while an interesting idea, do not provide
+the right set of performance and complexity tradeoffs. However, there is a key
+takeaway that can be gleaned from both the justification and critique of the
+functionality: <strong>when designing processors, it is vital to consider the holistic
+system</strong>. Programs do not exist in a vacuum, and changing one aspect of the
+computation model frequently results in unintended consequences in other areas.
+That being said, I am hopeful that the growing accessibility of processor design
+results in even more experimentation that we can learn from and improve upon. I
+am deeply grateful that we have the opportunity to look back on the tremendous
+work from folks at Berkeley, Sun, and elsewhere, and let it inform how we chart
+a path forward.</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
