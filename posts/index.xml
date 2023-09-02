@@ -6,7 +6,16 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 21 Aug 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 02 Sep 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Microprocessors Are Tiny, But They Can’t Fit in Your Head</title>
+      <link>https://danielmangum.com/posts/microprocessors-tiny-cant-fit-in-head/</link>
+      <pubDate>Sat, 02 Sep 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/microprocessors-tiny-cant-fit-in-head/</guid>
+      <description>I have not been able to make as much progress on moss over the last 14 days or so as I would like, in large part because of limited time due to getting some exciting work across the finish line at $dayjob. However, whenever I find myself limited in the amount of “hands on keyboard” time I have to spend on a project, I try to invest more of my idle brain time (IBT, if you will) thinking about the next stages of development, as well as higher level long-term goals.</description>
+    </item>
+    
     <item>
       <title>A Brief Retrospective on SPARC Register Windows</title>
       <link>https://danielmangum.com/posts/retrospective-sparc-register-windows/</link>
