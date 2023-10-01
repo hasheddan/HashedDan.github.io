@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  When Does Vivado Infer BRAM? · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="If you are interested in what went into writing this blog post, you can view a replay of the livestream here.
+As I&rsquo;ve been working on the logic design for moss, I have been regularly investigating how Vivado translates the Verilog RTL (Register Transfer Level) source into Basic Elements of Logic (BELs), a process known as synthesis. BELs represent the physical components on an FPGA that can be used to implement a design.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="When Does Vivado Infer BRAM?"/>
+<meta name="twitter:description" content="If you are interested in what went into writing this blog post, you can view a replay of the livestream here.
+As I&rsquo;ve been working on the logic design for moss, I have been regularly investigating how Vivado translates the Verilog RTL (Register Transfer Level) source into Basic Elements of Logic (BELs), a process known as synthesis. BELs represent the physical components on an FPGA that can be used to implement a design."/>
+
+<meta property="og:title" content="When Does Vivado Infer BRAM?" />
+<meta property="og:description" content="If you are interested in what went into writing this blog post, you can view a replay of the livestream here.
+As I&rsquo;ve been working on the logic design for moss, I have been regularly investigating how Vivado translates the Verilog RTL (Register Transfer Level) source into Basic Elements of Logic (BELs), a process known as synthesis. BELs represent the physical components on an FPGA that can be used to implement a design." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/when-vivado-infer-bram/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-10-01T00:10:34-06:00" />
+<meta property="article:modified_time" content="2023-10-01T00:10:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/when-vivado-infer-bram/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/when-vivado-infer-bram/">
+              When Does Vivado Infer BRAM?
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2023-10-01T00:10:34-06:00">
+                October 1, 2023
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              8-minute read
+            </span>
+          </div>
+          
+          <div class="categories">
+  <i class="fa fa-folder" aria-hidden="true"></i>
+    <a href="https://danielmangum.com/categories/moss/">moss</a></div>
+
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <blockquote>
+<p>If you are interested in what went into writing this blog post, you can view a
+replay of the livestream
+<a href="https://www.youtube.com/live/yGQahCBRhwk?t=843">here</a>.</p>
+</blockquote>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/moss_bram_cover.png"
+    alt="moss-bram-cover"
+  />
+</div>
+<p>As I&rsquo;ve been working on the logic design for
+<a href="https://github.com/mosscomp/moss"><code>moss</code></a>, I have been regularly investigating
+how <a href="https://www.xilinx.com/products/design-tools/vivado.html">Vivado</a>
+translates the Verilog <em>RTL (Register Transfer Level)</em> source into <em>Basic
+Elements of Logic (BELs)</em>, a process known as <em>synthesis</em>. BELs represent the
+physical components on an FPGA that can be used to implement a design. One of
+the larger elements that you will find on most FPGAs is some type of <em>Block RAM
+(BRAM)</em>. BRAM can be useful when there is a large memory with attributes that
+match the physical component, as well as instances where other resources are
+being used for implementation of the rest of the design.</p>
+<p>I was curious about when Vivado would infer BRAM and when it would not, so I put
+together a minimal design meant to exercise the synthesis process. The design
+consists of three modules.</p>
+<p><code>top</code> is the &ldquo;top&rdquo; module, which serves to take inputs on package pins for the
+FPGA and connect them to child modules. Every design has a top module that
+represents its entrypoint.</p>
+<p><code>top.v</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">module</span> top(
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> clk,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> [<span style="color:#ff0;font-weight:bold">1</span>:<span style="color:#ff0;font-weight:bold">0</span>] sw,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">output</span> [<span style="color:#ff0;font-weight:bold">1</span>:<span style="color:#ff0;font-weight:bold">0</span>] led
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">wire</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] w_data;
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">wire</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] r_data;
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">wire</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] w_addr;
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">wire</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] r_addr;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    counter counter(.clk(clk), .w_data(w_data), .w_addr(w_addr), .r_addr(r_addr));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    maybe_bram maybe_bram(.clk(clk), .i_addr(w_addr), .i_data(w_data), .o_addr(r_addr), .write(sw[<span style="color:#ff0;font-weight:bold">0</span>]), .read(sw[<span style="color:#ff0;font-weight:bold">1</span>]), .o_read(r_data));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#007f7f">// Do something with the data read from bram so that it does not get
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// eliminated in synthesis.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    <span style="color:#fff;font-weight:bold">assign</span> led[<span style="color:#ff0;font-weight:bold">0</span>] = r_data &gt; <span style="color:#ff0;font-weight:bold">100</span> ? <span style="color:#ff0;font-weight:bold">1</span> : <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">endmodule</span>
+</span></span></code></pre></div><p>The <code>counter</code> module is only serving to manipulate the values of the signals
+that we will be using in our RAM module. It increments each of the passed
+signals on a positive clock edge (<code>posedge</code>) until they reach <code>255</code>, at which
+point they are reset to <code>0</code>.</p>
+<p><code>counter.v</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">module</span> counter(
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> clk,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">output</span> <span style="color:#fff;font-weight:bold">reg</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] w_data,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">output</span> <span style="color:#fff;font-weight:bold">reg</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] w_addr,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">output</span> <span style="color:#fff;font-weight:bold">reg</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] r_addr
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">always</span> @(<span style="color:#fff;font-weight:bold">posedge</span> clk) <span style="color:#fff;font-weight:bold">begin</span>
+</span></span><span style="display:flex;"><span>	    w_data &lt;= w_data == <span style="color:#ff0;font-weight:bold">255</span> ? <span style="color:#ff0;font-weight:bold">0</span> : w_data + <span style="color:#ff0;font-weight:bold">1</span>;
+</span></span><span style="display:flex;"><span>	    w_addr &lt;= w_addr == <span style="color:#ff0;font-weight:bold">255</span> ? <span style="color:#ff0;font-weight:bold">0</span> : w_addr + <span style="color:#ff0;font-weight:bold">1</span>;
+</span></span><span style="display:flex;"><span>	    r_addr &lt;= r_addr == <span style="color:#ff0;font-weight:bold">255</span> ? <span style="color:#ff0;font-weight:bold">0</span> : r_addr + <span style="color:#ff0;font-weight:bold">1</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">endmodule</span>
+</span></span></code></pre></div><blockquote>
+<p>Vivado also specifies attributes that can be placed in RTL to indicate that a
+signal should not be removed during optimization.
+<a href="https://docs.xilinx.com/r/en-US/ug901-vivado-synthesis/DONT_TOUCH"><code>DONT_TOUCH</code></a>,
+<a href="https://docs.xilinx.com/r/en-US/ug901-vivado-synthesis/KEEP"><code>KEEP</code></a>, and
+<a href="https://docs.xilinx.com/r/en-US/ug901-vivado-synthesis/KEEP_HIERARCHY"><code>KEEP_HIERARCHY</code></a>
+provide variations of this functionality.</p>
+</blockquote>
+<p>The final module, <code>maybe_bram</code>, consists of a 256-register array with 8-bit
+values and can be read from and written to.</p>
+<p><code>maybe_bram.v</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">module</span> maybe_bram(
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> clk,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] i_addr,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] i_data,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] o_addr,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> write,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> read,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">output</span> <span style="color:#fff;font-weight:bold">reg</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] o_read
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">reg</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] ram [<span style="color:#ff0;font-weight:bold">255</span>:<span style="color:#ff0;font-weight:bold">0</span>];
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">always</span> @(<span style="color:#fff;font-weight:bold">posedge</span> clk) <span style="color:#fff;font-weight:bold">begin</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#fff;font-weight:bold">if</span> (write == <span style="color:#ff0;font-weight:bold">1</span><span style="color:#ff0;font-weight:bold">&#39;b1</span>) <span style="color:#fff;font-weight:bold">begin</span>
+</span></span><span style="display:flex;"><span>	      ram[i_addr] &lt;= i_data;
+</span></span><span style="display:flex;"><span>       <span style="color:#fff;font-weight:bold">end</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#fff;font-weight:bold">if</span> (read == <span style="color:#ff0;font-weight:bold">1</span><span style="color:#ff0;font-weight:bold">&#39;b1</span>) <span style="color:#fff;font-weight:bold">begin</span>
+</span></span><span style="display:flex;"><span>          o_read &lt;= ram[o_addr];
+</span></span><span style="display:flex;"><span>       <span style="color:#fff;font-weight:bold">end</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">endmodule</span>
+</span></span></code></pre></div><p>After synthesizing for the <a href="https://www.xilinx.com/products/silicon-devices/fpga/artix-7.html">Artix
+7</a> FPGA on my
+<a href="https://digilent.com/reference/programmable-logic/arty-a7/start">Arty A7 development
+board</a>, we can
+see that the <code>maybe_bram</code> module consists of a
+<a href="https://docs.xilinx.com/r/en-US/ug953-vivado-7series-libraries/RAMB18E1"><code>RAMB18E1</code></a>
+primitive, as well as a
+<a href="https://docs.xilinx.com/r/en-US/ug953-vivado-7series-libraries/LUT6"><code>LUT6</code></a>
+and a
+<a href="https://docs.xilinx.com/r/en-US/ug953-vivado-7series-libraries/LUT3"><code>LUT3</code></a>.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/moss_bram_0.png"
+    alt="moss-bram-0"
+  />
+</div>
+<p>After implementation, which consists of taking the synthesized netlist and
+mapping the primitives to physical elements on the FPGA, we can see the specific
+BRAM, LUTs, and other elements used on the device.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/moss_bram_1.png"
+    alt="moss-bram-1"
+  />
+</div>
+<blockquote>
+<p>Implementation is commonly referred to as &ldquo;place and route&rdquo;.</p>
+</blockquote>
+<p>We are primarily interested in the <code>RAMB18E1</code> element, which is an 18K-bit
+Configurable Synchronous Block RAM. The Xilinx documentation describes this
+element as a good choice for FIFO queues, automatic error correction RAM, or
+general purpose memory. The <code>B18</code> refers to the 18K-bit size, while it appears
+the <code>E1</code> suffix refers to the &ldquo;edition&rdquo; of the primitive, though I was unable to
+confirm that from any official sources.</p>
+<blockquote>
+<p>The <code>E</code> suffix is appended to a variety of Xilinx primitives and does not
+appear to refer directly to any specific functionality. However, newer
+products seem to have similar primitives with a larger <code>x</code> value in <code>Ex</code>. For
+example, the
+<a href="https://www.xilinx.com/products/silicon-devices/acap/versal.html">Versal</a>
+equivalent to the <code>RAMB18E1</code> is the
+<a href="https://docs.xilinx.com/r/en-US/ug1353-versal-architecture-ai-libraries/RAMB18E5"><code>RAMB18E5</code></a>,
+which is still 18K-bit, but offers a variety of other features, such as <a href="https://docs.xilinx.com/r/en-US/am007-versal-memory/Cascadable-Block-RAM">Block
+RAM
+Cascading</a>.
+If you are aware of a more exact definition of the <code>E</code> suffix feel free to
+reach out!</p>
+</blockquote>
+<p><a href="https://github.com/WillGreen">Will Green</a> has put together a great guide on
+<a href="https://projectf.io/posts/fpga-memory-types/">FPGA memory types</a> over at
+<a href="https://projectf.io/posts/fpga-memory-types/">Project F</a> if you&rsquo;re interested
+in all the variations that different vendors provide. Typically, BRAM and
+<em>Distributed RAM</em> are compared as options for implementing memories for logic
+designs on an FPGA.</p>
+<p>Distributed RAM makes use of <em>Look-Up Table (LUT)</em> BELs, which are the primary
+primitives used to implement custom logic in an FPGA. LUTs typically consist of
+<a href="https://en.wikipedia.org/wiki/Static_random-access_memory"><em>static random access memory
+(SRAM)</em></a> and
+<a href="https://en.wikipedia.org/wiki/Multiplexer">multiplexers</a>, resulting in an
+element that can be configured as any logic function with the specified number
+of inputs (e.g. 6 inputs on a <code>LUT6</code> BEL). BRAM, on the other hand, only acts as
+a memory on its own, making it less flexible than LUTs. For this reason,
+synthesis tools will frequently opt to use BRAM elements for logic that
+implements a memory in order to preserve LUTs for custom logic when possible.
+However, there are cases in which the latter is more appropriate than the
+former. The Xilinx documentation provides <a href="https://docs.xilinx.com/r/en-US/ug901-vivado-synthesis/Choosing-Between-Distributed-RAM-and-Dedicated-Block-RAM">guidance for when to use BRAM or
+Distributed
+RAM</a>,
+which focuses on read and write behavior.</p>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Distributed RAM</th>
+<th>Block RAM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Write</td>
+<td>Synchronous</td>
+<td>Synchronous</td>
+</tr>
+<tr>
+<td>Read</td>
+<td>Asynchronous</td>
+<td>Synchronous</td>
+</tr>
+</tbody>
+</table>
+<p>From this information, we can see that there are a number of attributes of our
+design that would make it a strong candidate to use BRAM.</p>
+<h4 id="reading-and-writing-on-the-maybe_bram-module-are-clocked">
+  Reading and writing on the <code>maybe_bram</code> module are clocked.
+  <a class="heading-link" href="#reading-and-writing-on-the-maybe_bram-module-are-clocked">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h4>
+<p>As shown in the table above, BRAM reads and writes are both synchronous, while
+only distributed RAM writes are synchronous. In our <code>maybe_bram</code> module, both
+reads and writes occur on the positive edge of the clock (<code>clk</code>), meaning they
+are both synchronous. We can test this by converting the read operations to
+asynchronous and re-running synthesis and implementation.</p>
+<p><code>maybe_bram.v</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">module</span> maybe_bram(
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> clk,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] i_addr,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] i_data,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] o_addr,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> write,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> read,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">output</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] o_read
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">reg</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] ram [<span style="color:#ff0;font-weight:bold">255</span>:<span style="color:#ff0;font-weight:bold">0</span>];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">assign</span> o_read = ram[o_addr]; <span style="color:#007f7f">// asynchronous
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">always</span> @(<span style="color:#fff;font-weight:bold">posedge</span> clk) <span style="color:#fff;font-weight:bold">begin</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#fff;font-weight:bold">if</span> (write == <span style="color:#ff0;font-weight:bold">1</span><span style="color:#ff0;font-weight:bold">&#39;b1</span>) <span style="color:#fff;font-weight:bold">begin</span>
+</span></span><span style="display:flex;"><span>	      ram[i_addr] &lt;= i_data;
+</span></span><span style="display:flex;"><span>       <span style="color:#fff;font-weight:bold">end</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">endmodule</span>
+</span></span></code></pre></div><p>Though only a portion of the schematic is shown in the image below, we can see
+that <code>maybe_bram</code> module is now being implemented using multiple <code>RAM64M</code>
+elements, which are actually made up of multiple <code>LUT6</code> BELs.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/moss_bram_2.png"
+    alt="moss-bram-2"
+  />
+</div>
+<p>The absence of BRAM usage can also be seen on the device.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/moss_bram_3.png"
+    alt="moss-bram-3"
+  />
+</div>
+<h4 id="our-register-array-is-_relatively_-large">
+  Our register array is <em>relatively</em> large.
+  <a class="heading-link" href="#our-register-array-is-_relatively_-large">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h4>
+<p>Another reason why BRAM may be selected, or not selected, is due to the size of
+the memory. While there are certainly <em>much</em> larger memories that may be
+instantiated in a design, ours is at least large enough that it could not be
+implemented with a single LUT element. However, if we shrink the size of the
+array down to a depth of two (i.e. <code>[1:0]</code>), the initial synchronous read /
+synchronous write design will infer distributed RAM using <code>RAM32M</code> and
+<code>RAM32X1D</code> elements, which are made up of LUTs.</p>
+<p><code>maybe_bram.v</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">module</span> maybe_bram(
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> clk,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] i_addr,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] i_data,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] o_addr,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> write,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> read,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">output</span> <span style="color:#fff;font-weight:bold">reg</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] o_read
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">reg</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] ram [<span style="color:#ff0;font-weight:bold">1</span>:<span style="color:#ff0;font-weight:bold">0</span>]; <span style="color:#007f7f">// depth = 2
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">always</span> @(<span style="color:#fff;font-weight:bold">posedge</span> clk) <span style="color:#fff;font-weight:bold">begin</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#fff;font-weight:bold">if</span> (write == <span style="color:#ff0;font-weight:bold">1</span><span style="color:#ff0;font-weight:bold">&#39;b1</span>) <span style="color:#fff;font-weight:bold">begin</span>
+</span></span><span style="display:flex;"><span>	      ram[i_addr] &lt;= i_data;
+</span></span><span style="display:flex;"><span>       <span style="color:#fff;font-weight:bold">end</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#fff;font-weight:bold">if</span> (read == <span style="color:#ff0;font-weight:bold">1</span><span style="color:#ff0;font-weight:bold">&#39;b1</span>) <span style="color:#fff;font-weight:bold">begin</span>
+</span></span><span style="display:flex;"><span>          o_read &lt;= ram[o_addr];
+</span></span><span style="display:flex;"><span>       <span style="color:#fff;font-weight:bold">end</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">endmodule</span>
+</span></span></code></pre></div>
+
+
+<div class="center-img">
+  <img
+    src="../../static/moss_bram_4.png"
+    alt="moss-bram-4"
+  />
+</div>
+<p>The implementation is also, expectedly, noticeably smaller than the asynchronous
+read / synchronous write example.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/moss_bram_5.png"
+    alt="moss-bram-5"
+  />
+</div>
+<p>It is likely that inference behavior could vary based on the usage of elements
+by other modules in a larger design. Unlike the asynchronous read / synchronous
+write example, this smaller memory <em>could</em> still be implemented with BRAM. In a
+future post, I&rsquo;d like to explore how Vivado responds in more constrained
+scenarios.</p>
+<h4 id="we-didnt-explicitly-specify-a-ram-style">
+  We didn&rsquo;t explicitly specify a RAM style.
+  <a class="heading-link" href="#we-didnt-explicitly-specify-a-ram-style">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h4>
+<p>We briefly mentioned some of the attributes supported by Vivado earlier, but one
+that we didn&rsquo;t touch on is
+<a href="https://docs.xilinx.com/r/en-US/ug901-vivado-synthesis/RAM_STYLE?tocId=nMHnr7ZYLVkW6HERNoA9WA"><code>RAM_STYLE</code></a>.
+This allows us to guide synthesis in what type of RAM to infer, and if we apply
+the <code>distributed</code> value to our synchronous read / synchronous write example, it
+will use distributed RAM instead of the BRAM it selected without an attribute.</p>
+<p><code>maybe_bram.v</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-verilog" data-lang="verilog"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">module</span> maybe_bram(
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> clk,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] i_addr,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] i_data,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] o_addr,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> write,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">input</span> read,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">output</span> <span style="color:#fff;font-weight:bold">reg</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] o_read
+</span></span><span style="display:flex;"><span>    );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    (* ram_style = <span style="color:#0ff;font-weight:bold">&#34;distributed&#34;</span> *) <span style="color:#fff;font-weight:bold">reg</span> [<span style="color:#ff0;font-weight:bold">7</span>:<span style="color:#ff0;font-weight:bold">0</span>] ram [<span style="color:#ff0;font-weight:bold">255</span>:<span style="color:#ff0;font-weight:bold">0</span>];
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">always</span> @(<span style="color:#fff;font-weight:bold">posedge</span> clk) <span style="color:#fff;font-weight:bold">begin</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#fff;font-weight:bold">if</span> (write == <span style="color:#ff0;font-weight:bold">1</span><span style="color:#ff0;font-weight:bold">&#39;b1</span>) <span style="color:#fff;font-weight:bold">begin</span>
+</span></span><span style="display:flex;"><span>	      ram[i_addr] &lt;= i_data;
+</span></span><span style="display:flex;"><span>       <span style="color:#fff;font-weight:bold">end</span>
+</span></span><span style="display:flex;"><span>       <span style="color:#fff;font-weight:bold">if</span> (read == <span style="color:#ff0;font-weight:bold">1</span><span style="color:#ff0;font-weight:bold">&#39;b1</span>) <span style="color:#fff;font-weight:bold">begin</span>
+</span></span><span style="display:flex;"><span>          o_read &lt;= ram[o_addr];
+</span></span><span style="display:flex;"><span>       <span style="color:#fff;font-weight:bold">end</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">endmodule</span>
+</span></span></code></pre></div><p>The schematic view looks <em>mostly</em> similar to the asynchronous read /
+synchronous write example.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/moss_bram_6.png"
+    alt="moss-bram-6"
+  />
+</div>
+<p>And the same is true for the device.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/moss_bram_7.png"
+    alt="moss-bram-7"
+  />
+</div>
+<h2 id="closing-thoughts">
+  Closing Thoughts
+  <a class="heading-link" href="#closing-thoughts">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>One of the things I consistently hear from folks working on chip design or FPGAs
+is to study how the HDL you write is being translated into actual circuits.
+While I am still in the earlier stages of <a href="https://danielmangum.com/posts/a-three-year-bet-on-chip-design/">my journey to develop expertise in
+chip design</a>, I
+want to make sure that my learnings (and mistakes) in this area are being
+captured for others who come after me. If you&rsquo;re interested in keeping up with
+this content, subscribe to the <a href="https://danielmangum.com/index.xml">RSS feed</a>
+for this blog, and tune in for my ~weekly
+<a href="https://www.youtube.com/@hasheddan/streams">livestreams</a>.</p>
+<p>As always, if you have feedback, questions, or just want to chat, feel free to
+reach out to <code>@hasheddan</code> on any of the platforms listed on the <a href="https://danielmangum.com/">home
+page</a>.</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>

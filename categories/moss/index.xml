@@ -6,7 +6,17 @@
     <description>Recent content in moss on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sat, 02 Sep 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/categories/moss/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 01 Oct 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/categories/moss/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>When Does Vivado Infer BRAM?</title>
+      <link>https://danielmangum.com/posts/when-vivado-infer-bram/</link>
+      <pubDate>Sun, 01 Oct 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/when-vivado-infer-bram/</guid>
+      <description>If you are interested in what went into writing this blog post, you can view a replay of the livestream here.
+As I&amp;rsquo;ve been working on the logic design for moss, I have been regularly investigating how Vivado translates the Verilog RTL (Register Transfer Level) source into Basic Elements of Logic (BELs), a process known as synthesis. BELs represent the physical components on an FPGA that can be used to implement a design.</description>
+    </item>
+    
     <item>
       <title>Microprocessors Are Tiny, But They Can’t Fit in Your Head</title>
       <link>https://danielmangum.com/posts/microprocessors-tiny-cant-fit-in-head/</link>
