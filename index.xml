@@ -8,11 +8,11 @@
     <language>en</language>
     <lastBuildDate>Fri, 06 Oct 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>The Virtues of Livestreaming Long-Term Projects</title>
-      <link>https://danielmangum.com/posts/virtues-livestreaming-long-term/</link>
+      <title>The Value of Livestreaming Long-Term Projects</title>
+      <link>https://danielmangum.com/posts/value-livestreaming-long-term/</link>
       <pubDate>Fri, 06 Oct 2023 00:10:34 -0600</pubDate>
       
-      <guid>https://danielmangum.com/posts/virtues-livestreaming-long-term/</guid>
+      <guid>https://danielmangum.com/posts/value-livestreaming-long-term/</guid>
       <description>This is less of a blog post, and more of a collection of Friday thoughts that occurred to me on my morning run. Last night I was livestreaming some work on a new moss blog post in which I describe the use of Look-Up Tables (LUTs) as storage elements on an FPGA (this will be published in a few days). However, I ended up spending the majority of the time scouring the internet for documentation on the relationship between 5-input LUTs (LUT5) and 6-input LUTs (LUT6) on Xilinx 7 Series FPGAs.</description>
     </item>
     
