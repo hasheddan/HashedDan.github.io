@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  How LUTs Are Used as Storage Elements on an FPGA · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="If you are interested in what went into writing this blog post, you can view a replay of the livestream here.
+In a recent post we explored when Vivado inferred Block RAM (BRAM) for memories in FPGA designs, and when it used distributed RAM instead. While it is somewhat obvious why BRAM can be used for memory in an FPGA (i.e. it is literally a discrete memory element), distributed RAM is a bit more complicated.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="How LUTs Are Used as Storage Elements on an FPGA"/>
+<meta name="twitter:description" content="If you are interested in what went into writing this blog post, you can view a replay of the livestream here.
+In a recent post we explored when Vivado inferred Block RAM (BRAM) for memories in FPGA designs, and when it used distributed RAM instead. While it is somewhat obvious why BRAM can be used for memory in an FPGA (i.e. it is literally a discrete memory element), distributed RAM is a bit more complicated."/>
+
+<meta property="og:title" content="How LUTs Are Used as Storage Elements on an FPGA" />
+<meta property="og:description" content="If you are interested in what went into writing this blog post, you can view a replay of the livestream here.
+In a recent post we explored when Vivado inferred Block RAM (BRAM) for memories in FPGA designs, and when it used distributed RAM instead. While it is somewhat obvious why BRAM can be used for memory in an FPGA (i.e. it is literally a discrete memory element), distributed RAM is a bit more complicated." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/how-luts-used-storage-fpga/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-10-14T00:10:34-06:00" />
+<meta property="article:modified_time" content="2023-10-14T00:10:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/how-luts-used-storage-fpga/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/how-luts-used-storage-fpga/">
+              How LUTs Are Used as Storage Elements on an FPGA
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2023-10-14T00:10:34-06:00">
+                October 14, 2023
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              6-minute read
+            </span>
+          </div>
+          
+          <div class="categories">
+  <i class="fa fa-folder" aria-hidden="true"></i>
+    <a href="https://danielmangum.com/categories/moss/">moss</a></div>
+
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <blockquote>
+<p>If you are interested in what went into writing this blog post, you can view a
+replay of the livestream
+<a href="TODO">here</a>.</p>
+</blockquote>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/moss_lut_storage_cover.png"
+    alt="moss-lut-storage-cover"
+  />
+</div>
+<p>In <a href="https://danielmangum.com/posts/when-vivado-infer-bram/">a recent post</a> we
+explored when <a href="https://www.xilinx.com/products/design-tools/vivado.html">Vivado</a>
+inferred Block RAM (BRAM) for memories in FPGA designs, and when it used
+distributed RAM instead. While it is somewhat obvious why BRAM can be used for
+memory in an FPGA (i.e. it is literally a discrete memory element), distributed
+RAM is a bit more complicated.</p>
+<p>Look-Up Tables (LUTs) are a key element of FPGAs that allow it to behave as
+&ldquo;reconfigurable hardware&rdquo;. Depending on the the size (number of inputs and
+outputs) of a LUT, some set of logic functions can be programmed as part of a
+design. Understanding how this is possible requires exploring the architecture
+of LUT elements. We have been using <a href="https://www.xilinx.com/products/silicon-devices/fpga/artix-7.html">Xilinx 7 Series
+FPGAs</a> while
+developing <a href="https://github.com/mosscomp/moss"><code>moss</code></a>, so we&rsquo;ll focus on them
+today. The Xilinx design elements documentation decsribes LUTs as follows.</p>
+<blockquote>
+<p>LUTs are the basic logic building blocks and are used to implement most logic
+functions of the design.</p>
+</blockquote>
+<p><a href="https://docs.xilinx.com/r/en-US/ug953-vivado-7series-libraries/Design-Elements"><em>Xilinx Design Elements Documentation</em></a></p>
+<p>Internally, LUTs are typically implemented with <a href="https://en.wikipedia.org/wiki/Static_random-access_memory">static random access memory
+(SRAM)</a> and
+<a href="https://en.wikipedia.org/wiki/Multiplexer">multiplexers</a>. The SRAM bits are
+written on FPGA configuration to dictate the outputs when various inputs are
+supplied. SRAM is the same technology used to implement CPU registers and
+caches, and is typically faster than <a href="https://en.wikipedia.org/wiki/Dynamic_random-access_memory">dynamic random access memory
+(DRAM)</a>, which has
+to be periodically refreshed to retain its contents. <a href="https://www.allaboutcircuits.com">All About
+Circuits</a> has a <a href="https://www.allaboutcircuits.com/technical-articles/purpose-and-internal-functionality-of-fpga-look-up-tables/">great
+post</a>
+on internal architecture of LUTs if you are interested in learning more.</p>
+<blockquote>
+<p>Note: Dynamic Random Access Memory (DRAM) is not to be confused with
+distributed RAM. The latter is the term used for LUT-based memory in an FPGA,
+which, somewhat confusingly is being implemented with SRAM. This is why block
+RAM is sometimes referred to as BRAM, but distributed RAM is not referred to
+as DRAM.</p>
+</blockquote>
+<p>LUTs can vary in their number of inputs. For example, the diagram below
+illustrates a 2-input LUT (<code>LUT2</code>).</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/moss_lut_storage_0.png"
+    alt="moss-lut-storage-0"
+  />
+</div>
+<blockquote>
+<p>Abstract depiction of a 2-input LUT.</p>
+</blockquote>
+<p>The <code>INIT[X]</code> values refer to those programmed via the FPGA bitstream, while the
+<code>I0</code> and <code>I1</code> signals represent wires that are dynamically driven high or low.
+Those input signals can be thought of as the &ldquo;selectors&rdquo; for the multiplexer,
+with each permutation selecting a different initial value. Therefore, if we have
+4 initial values, we will need 2 input signals to be able to select each of them
+(i.e <code># initial values = 2^(# input signals)</code>).</p>
+<p>The ability to set each of the <code>INIT[X]</code> values to <code>1</code> or <code>0</code> means that we can
+implement any <a href="https://en.wikipedia.org/wiki/Truth_table">truth table</a>. In other
+words, we can implement arbitrary logic. The truth table for the <code>LUT2</code> example
+above looks as follows.</p>
+<table>
+<thead>
+<tr>
+<th>I0</th>
+<th>I1</th>
+<th>O</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td><code>0</code></td>
+<td><code>INIT[0]</code></td>
+</tr>
+<tr>
+<td><code>0</code></td>
+<td><code>1</code></td>
+<td><code>INIT[1]</code></td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>0</code></td>
+<td><code>INIT[2]</code></td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>1</code></td>
+<td><code>INIT[3]</code></td>
+</tr>
+</tbody>
+</table>
+<p>Looking back at our example from last post where distributed RAM was used to
+implement our design, we can see
+<a href="https://docs.xilinx.com/r/en-US/ug953-vivado-7series-libraries/RAM32M"><code>RAM32M</code></a>
+and
+<a href="https://docs.xilinx.com/r/en-US/ug953-vivado-7series-libraries/RAM32X1D"><code>RAM32X1D</code></a>
+elements.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/moss_lut_storage_1.png"
+    alt="moss-lut-storage-1"
+  />
+</div>
+<blockquote>
+<p>Schematic view of the <code>maybe_bram</code> Verilog module.</p>
+</blockquote>
+<p>The <code>RAM32M</code> element is described as follows in the Xilinx docs:</p>
+<blockquote>
+<p>This design element is a 32-bit deep by 8-bit wide, multi-port, random access
+memory with synchronous write and asynchronous independent, 2-bit, wide-read
+capability. This RAM is implemented using the LUT resources of the device
+known as SelectRAM™+, and does not consume any of the Block RAM resources of
+the device.</p>
+</blockquote>
+<p><a href="https://docs.xilinx.com/r/en-US/ug953-vivado-7series-libraries/RAM32M"><em><code>RAM32M</code> Element Documentation</em></a></p>
+<p>Expanding the element reveals the underlying LUT primitives.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/moss_lut_storage_2.png"
+    alt="moss-lut-storage-2"
+  />
+</div>
+<blockquote>
+<p>Expanded schematic view of a <code>RAM32M</code> element.</p>
+</blockquote>
+<p>However, rather than being labeled as LUT elements, they are named <code>RAMD32</code>. On
+Xilinx 7 Series FPGAs, LUTs reside in either a <code>SLICEL</code> or <code>SLICEM</code>, with the
+<code>L</code> suffix denoting &ldquo;logic&rdquo; and the <code>M</code> denoting &ldquo;memory&rdquo;. Each slice has 4
+6-input LUT elements (i.e. <code>LUT6</code>). In <code>SLICEM</code> slices, the LUTs can be
+configured as distributed memory. <code>RAM32M</code> elements use all 4 LUTs on a <code>SLICEM</code>
+slice.</p>
+<blockquote>
+<p>By our earlier calculation, a <code>LUT6</code> element has <code>2^6 = 64</code> initial values.</p>
+</blockquote>
+<p>As can be seen in the schematic, the LUTs support 5 read address ports (<code>RADR</code>)
+and 5 write address (<code>WADR</code>). Though <code>SLICEM</code> slices contain 6-input LUTs, <a href="https://docs.xilinx.com/r/en-US/ug953-vivado-7series-libraries/LUT6_2">a
+<code>LUT6</code> is just two <code>LUT5</code> elements wired
+together</a>,
+so a single <code>RAMD32</code> refers to a <code>LUT5</code> configured as distributed RAM. We see 8
+<code>LUT5</code> elements making up a <code>RAM32M</code> distributed memory (4 <code>LUT6</code> elements, each
+comprised of 2 <code>LUT5</code> elements).</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/moss_lut_storage_3.png"
+    alt="moss-lut-storage-3"
+  />
+</div>
+<blockquote>
+<p>Schematic view of a <code>LUT5</code> acting as a distributed memory component (<code>RAMD32</code>).</p>
+</blockquote>
+<p>If we look at the same elements on the device, we can see the <code>LUT5</code> within the
+<code>LUT6</code>.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/moss_lut_storage_4.png"
+    alt="moss-lut-storage-4"
+  />
+</div>
+<blockquote>
+<p>Device view of the same <code>RAMD32</code> / <code>LUT5</code> element shown in the schematic
+above.</p>
+</blockquote>
+<blockquote>
+<p>Note: I am assuming the reason only one <code>LUT5</code> is shown within the <code>LUT6</code> is
+because the device footprint is static in Vivado (i.e. implemented designs are
+just shown by highlighting the elements in use), and &ldquo;wrapping&rdquo; the <code>LUT5</code> in
+the <code>LUT6</code> somewhat illustrates that a <code>LUT5</code> could be used individually or as
+part of a <code>LUT6</code>. Feel free to reach out if you have an alternative
+explanation!</p>
+</blockquote>
+<p>Zooming out further, we can see the 4 <code>LUT6</code> elements in both <code>SLICEM</code> and
+<code>SLICEL</code> slices.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/moss_lut_storage_5.png"
+    alt="moss-lut-storage-5"
+  />
+</div>
+<blockquote>
+<p>Device view of one <code>SLICEM</code> (left) and one <code>SLICEL</code> (right), each with 4
+<code>LUT6</code> elements, but only the <code>SLICEM</code> LUTs showing write address ports.</p>
+</blockquote>
+<p>However, the <code>SLICEM</code> LUTs, as previously mentioned, also support writing, which
+is why we see the additional <code>WADR</code> address lines, as well as a write enable
+(<code>WE</code>) and write clock (<code>WCLK</code>) signal. The comparison between BRAM and
+distributed RAM in our earlier post identified that, with BRAM, read and writes
+are both synchronous, whereas with distributed RAM writes are synchronous, but
+reads are asynchronous. In order to implement the synchronous writes, a clock
+signal (<code>WCLK</code>) is required.</p>
+<blockquote>
+<p>Note: synchronous reads can be implemented with distributed RAM, as evidenced
+by <a href="https://danielmangum.com/posts/when-vivado-infer-bram/#we-didnt-explicitly-specify-a-ram-style">our example where we forced distributed RAM
+usage</a>.
+Doing so requires connecting the output to a flip-flop in the same slice.</p>
+</blockquote>
+<p>Though it may be obvious at this point, the reason <em>why</em> these LUTs can be used
+as distributed RAM is because <strong>we already need to be able to write values to
+LUT SRAM to configure the FPGA</strong>. When they are used as distributed RAM, we use
+that same functionality to write values <em>after</em> configuration. The
+aforementioned &ldquo;initial values&rdquo; (i.e. <code>INIT[X]</code>) are not only available for
+reading, but also for writing.</p>
+<h2 id="closing-thoughts">
+  Closing Thoughts
+  <a class="heading-link" href="#closing-thoughts">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>Small realizations about the physical characteristics of a device can help us
+develop a better intuition about why designs are being implemented in a certain
+manner, as well as the tradeoffs of using different types of components. These
+are the tedious details that I hope to continue to capture via
+<a href="https://www.youtube.com/@hasheddan/streams">livestreams</a> and posts in <a href="https://danielmangum.com/categories/moss/">this
+series</a> (<a href="https://danielmangum.com/categories/moss/index.xml">RSS
+feed</a>), while <a href="https://danielmangum.com/posts/a-three-year-bet-on-chip-design/">developing
+expertise in chip
+design</a> and
+building <a href="https://mosscomp.com/">the <code>moss</code> project</a>.</p>
+<p>As always, if you have feedback, questions, or just want to chat, feel free to
+reach out to <code>@hasheddan</code> on any of the platforms listed on the <a href="https://danielmangum.com/">home
+page</a>.</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>

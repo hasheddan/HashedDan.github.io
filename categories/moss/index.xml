@@ -6,7 +6,17 @@
     <description>Recent content in moss on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Fri, 06 Oct 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/categories/moss/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 14 Oct 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/categories/moss/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>How LUTs Are Used as Storage Elements on an FPGA</title>
+      <link>https://danielmangum.com/posts/how-luts-used-storage-fpga/</link>
+      <pubDate>Sat, 14 Oct 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/how-luts-used-storage-fpga/</guid>
+      <description>If you are interested in what went into writing this blog post, you can view a replay of the livestream here.
+In a recent post we explored when Vivado inferred Block RAM (BRAM) for memories in FPGA designs, and when it used distributed RAM instead. While it is somewhat obvious why BRAM can be used for memory in an FPGA (i.e. it is literally a discrete memory element), distributed RAM is a bit more complicated.</description>
+    </item>
+    
     <item>
       <title>The Value of Livestreaming Long-Term Projects</title>
       <link>https://danielmangum.com/posts/value-livestreaming-long-term/</link>
