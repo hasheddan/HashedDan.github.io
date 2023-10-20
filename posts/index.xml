@@ -6,7 +6,16 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sat, 14 Oct 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 20 Oct 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>A Particularly Gnarly Case of Go’s Non-Nil Interfaces</title>
+      <link>https://danielmangum.com/posts/go-gnarly-non-nil-interfaces/</link>
+      <pubDate>Fri, 20 Oct 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/go-gnarly-non-nil-interfaces/</guid>
+      <description>Most seasoned Go programmers are familiar with the memory representation of an interface. In fact, A Tour of Go, the canonical starting point for new Go programmers, makes sure to describe how interface values contain a value and a type (for a more specific description, see Russ Cox’s blog post on how interfaces are implemented), and even goes so far as to distinguish between interface values with nil underlying values and nil interface values.</description>
+    </item>
+    
     <item>
       <title>How LUTs Are Used as Storage Elements on an FPGA</title>
       <link>https://danielmangum.com/posts/how-luts-used-storage-fpga/</link>

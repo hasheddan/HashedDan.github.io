@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  A Particularly Gnarly Case of Go’s Non-Nil Interfaces · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="Most seasoned Go programmers are familiar with the memory representation of an interface. In fact, A Tour of Go, the canonical starting point for new Go programmers, makes sure to describe how interface values contain a value and a type (for a more specific description, see Russ Cox’s blog post on how interfaces are implemented), and even goes so far as to distinguish between interface values with nil underlying values and nil interface values.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="A Particularly Gnarly Case of Go’s Non-Nil Interfaces"/>
+<meta name="twitter:description" content="Most seasoned Go programmers are familiar with the memory representation of an interface. In fact, A Tour of Go, the canonical starting point for new Go programmers, makes sure to describe how interface values contain a value and a type (for a more specific description, see Russ Cox’s blog post on how interfaces are implemented), and even goes so far as to distinguish between interface values with nil underlying values and nil interface values."/>
+
+<meta property="og:title" content="A Particularly Gnarly Case of Go’s Non-Nil Interfaces" />
+<meta property="og:description" content="Most seasoned Go programmers are familiar with the memory representation of an interface. In fact, A Tour of Go, the canonical starting point for new Go programmers, makes sure to describe how interface values contain a value and a type (for a more specific description, see Russ Cox’s blog post on how interfaces are implemented), and even goes so far as to distinguish between interface values with nil underlying values and nil interface values." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/go-gnarly-non-nil-interfaces/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-10-20T00:10:34-06:00" />
+<meta property="article:modified_time" content="2023-10-20T00:10:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/go-gnarly-non-nil-interfaces/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/go-gnarly-non-nil-interfaces/">
+              A Particularly Gnarly Case of Go’s Non-Nil Interfaces
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2023-10-20T00:10:34-06:00">
+                October 20, 2023
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              4-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>Most seasoned Go programmers are familiar with the memory representation of an
+<code>interface</code>. In fact, <a href="https://go.dev/tour">A Tour of Go</a>, the canonical
+starting point for new Go programmers, makes sure to describe how <code>interface</code>
+values <a href="https://go.dev/tour/methods/11">contain a value and a type</a> (for a more
+specific description, see Russ Cox’s blog post on <a href="https://research.swtch.com/interfaces">how interfaces are
+implemented</a>), and even goes so far as to
+distinguish between <a href="https://go.dev/tour/methods/12"><code>interface</code> values with <code>nil</code> underlying
+values</a> and <a href="https://go.dev/tour/methods/13"><code>nil</code> <code>interface</code>
+values</a>. This is explained in the context of
+calling methods on a <code>nil</code> value, a pattern that Go permits. In theory, a
+defensive programmer could check if a pointer receiver was <code>nil</code> in every method
+that accessed a member of the receiver.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">type</span> Thing <span style="color:#fff;font-weight:bold">struct</span> {
+</span></span><span style="display:flex;"><span>	Member <span style="color:#fff;font-weight:bold">string</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> (t *Thing) GetMember() <span style="color:#fff;font-weight:bold">string</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> t == <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> <span style="color:#0ff;font-weight:bold">&#34;nil&#34;</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> t.Member
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>In practice, it is somewhat rare to do so, in part because if the caller
+instantiates the type, they already know if it is <code>nil</code> or not, and if the
+author of the type defines a constructor (e.g. <code>NewThing()</code>) they can return an
+<code>error</code> alongside a <code>nil</code> <code>*Thing</code> if construction fails.</p>
+<p>However, the fact that interfaces containing <code>nil</code> values are themselves not
+<code>nil</code> can lead to somewhat odd behavior. In the following example, the
+assignment of <code>t</code> to <code>i</code> is setting the underlying type of <code>i</code> to <code>*Thing</code> and
+the underlying value of <code>i</code> to <code>nil</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> main() {
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">var</span> t *Thing
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">var</span> i any
+</span></span><span style="display:flex;"><span>	fmt.Println(t == <span style="color:#fff;font-weight:bold">nil</span>)
+</span></span><span style="display:flex;"><span>	fmt.Println(i == <span style="color:#fff;font-weight:bold">nil</span>)
+</span></span><span style="display:flex;"><span>	i = t
+</span></span><span style="display:flex;"><span>	fmt.Println(t == <span style="color:#fff;font-weight:bold">nil</span>)
+</span></span><span style="display:flex;"><span>	fmt.Println(i == <span style="color:#fff;font-weight:bold">nil</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Therefore, prior to assignment the value of <code>i</code> is <code>nil</code>, while after assignment
+of a <code>nil</code> value it is not.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">true</span> <span style="color:#007f7f">// t pre-assignment
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">true</span> <span style="color:#007f7f">// i pre-assignment
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">true</span> <span style="color:#007f7f">// t post-assignment
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">false</span> <span style="color:#007f7f">// i post-assignment
+</span></span></span></code></pre></div><p>This scenario is somewhat contrived, and a reasonable case could be made that
+this type of explicit assignment makes it clear that we are initializing the
+underlying type of the <code>interface</code>. Upon seeing this, one could be tempted to
+declare that &ldquo;assigning to an <code>interface</code> initializes it&rdquo;. Unfortunately, that
+would be incorrect. Consider the following slight adjustment to our example.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> main() {
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">var</span> t any
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">var</span> i any
+</span></span><span style="display:flex;"><span>	fmt.Println(t == <span style="color:#fff;font-weight:bold">nil</span>)
+</span></span><span style="display:flex;"><span>	fmt.Println(i == <span style="color:#fff;font-weight:bold">nil</span>)
+</span></span><span style="display:flex;"><span>	i = t
+</span></span><span style="display:flex;"><span>	fmt.Println(t == <span style="color:#fff;font-weight:bold">nil</span>)
+</span></span><span style="display:flex;"><span>	fmt.Println(i == <span style="color:#fff;font-weight:bold">nil</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Now <code>t</code> is itself an <code>interface</code>, but its value is still <code>nil</code>. Assigning <code>t</code> to
+<code>i</code> does not initialize <code>i</code>. In other words, assigning an <code>interface</code> to an
+<code>interface</code> is similar to assigning the underlying type and value, which are
+both <code>nil</code> in this case.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">true</span> <span style="color:#007f7f">// t pre-assignment
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">true</span> <span style="color:#007f7f">// i pre-assignment
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">true</span> <span style="color:#007f7f">// t post-assignment
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">true</span> <span style="color:#007f7f">// i post-assignment
+</span></span></span></code></pre></div><p>Though these examples illustrate potential stumbling blocks, they have been
+<a href="https://jeremymikkola.com/posts/2017_03_29_know_your_nil.html">detailed</a> at
+<a href="https://blog.urth.org/2021/03/27/down-the-golang-nil-rabbit-hole/">length</a> in
+posts over the years. However, the most frequent issues with <code>nil</code> interfaces,
+in my experience, arise when nesting functions.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> NewThing() *Thing {
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> NewI() any {
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> NewThing()
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> main() {
+</span></span><span style="display:flex;"><span>	fmt.Println(NewThing() == <span style="color:#fff;font-weight:bold">nil</span>)
+</span></span><span style="display:flex;"><span>	fmt.Println(NewI() == <span style="color:#fff;font-weight:bold">nil</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>At first glance, one might read the preceding code and think &ldquo;<code>NewI()</code> returns
+<code>NewThing()</code>, which always returns <code>nil</code>. Therefore <code>NewI()</code> always returns
+<code>nil</code>.” As we know from our previous examples, that is not the case. In fact,
+this example mirrors the first, except for that the type declarations are in the
+function signatures rather than on variable declarations, making the behavior
+less obvious.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">true</span> <span style="color:#007f7f">// NewThing() == nil
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">false</span> <span style="color:#007f7f">// NewI() == nil
+</span></span></span></code></pre></div><p>Similarly to the second example, if we changed the return type of <code>NewThing()</code>
+to <code>any</code>, the same example would yield the following results.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">true</span> <span style="color:#007f7f">// NewThing() == nil
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">true</span> <span style="color:#007f7f">// NewI() == nil
+</span></span></span></code></pre></div><p>I generally adhere to the &ldquo;accept interfaces, return structs&rdquo; principle (with a
+few exceptions), but when recently implementing a <code>net.Listener</code>, which requires
+an <code>Accept() (net.Conn, error)</code> method, I found myself wrapping a function that
+returned a struct pointer that implemented <code>net.Conn</code>. Fortunately, when calling
+<code>Accept()</code>, we can check the <code>error</code> return value and a well designed
+<code>net.Listener</code> will return a non-nil <code>error</code> any time that the <code>net.Conn</code> return
+value (or its underlying value) would be <code>nil</code>. However, it is somewhat
+unfortunate that checking <code>net.Conn == nil</code> does not give us any indication as
+to whether calling a method on the value may result in a panic due to
+dereferencing a <code>nil</code> pointer.</p>
+<p>I’ve seen comments online that argue that this is a bug in the language, which I
+would push back on. Though one may disagree with the design choices, the
+behavior is well-specified. That being said, relying on programmers to not make
+mistakes is usually not a recipe for success.</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
