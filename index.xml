@@ -6,7 +6,18 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Fri, 20 Oct 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 03 Nov 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Setting Up Verible for Verilog with Neovim</title>
+      <link>https://danielmangum.com/posts/setup-verible-verilog-neovim/</link>
+      <pubDate>Fri, 03 Nov 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/setup-verible-verilog-neovim/</guid>
+      <description>I have been using Vivado for moss RTL development, which, despite its notoriously large install size, offers a fairly decent developer experience.
+Or maybe I have just been using it for too long. I&amp;rsquo;m not sure I would have said this a few months ago.
+However, I still prefer to write Verilog in Neovim, as it allows me to use vim motions, as well as switch between RTL and software code without changing my workflow.</description>
+    </item>
+    
     <item>
       <title>A Particularly Gnarly Case of Go’s Non-Nil Interfaces</title>
       <link>https://danielmangum.com/posts/go-gnarly-non-nil-interfaces/</link>
