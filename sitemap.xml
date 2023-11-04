@@ -2,16 +2,19 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
+    <loc>https://danielmangum.com/</loc>
+    <lastmod>2023-11-04T00:10:34-06:00</lastmod>
+  </url><url>
+    <loc>https://danielmangum.com/posts/</loc>
+    <lastmod>2023-11-04T00:10:34-06:00</lastmod>
+  </url><url>
+    <loc>https://danielmangum.com/posts/supercon-2023-day-1/</loc>
+    <lastmod>2023-11-04T00:10:34-06:00</lastmod>
+  </url><url>
     <loc>https://danielmangum.com/categories/</loc>
     <lastmod>2023-11-03T00:10:34-06:00</lastmod>
   </url><url>
-    <loc>https://danielmangum.com/</loc>
-    <lastmod>2023-11-03T00:10:34-06:00</lastmod>
-  </url><url>
     <loc>https://danielmangum.com/categories/moss/</loc>
-    <lastmod>2023-11-03T00:10:34-06:00</lastmod>
-  </url><url>
-    <loc>https://danielmangum.com/posts/</loc>
     <lastmod>2023-11-03T00:10:34-06:00</lastmod>
   </url><url>
     <loc>https://danielmangum.com/posts/setup-verible-verilog-neovim/</loc>

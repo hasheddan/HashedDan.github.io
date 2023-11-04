@@ -6,7 +6,16 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Fri, 03 Nov 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 04 Nov 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Supercon 2023 Day 1: Hello Badge</title>
+      <link>https://danielmangum.com/posts/supercon-2023-day-1/</link>
+      <pubDate>Sat, 04 Nov 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/supercon-2023-day-1/</guid>
+      <description>Just a few minutes after arriving at Hackaday Supercon 2023, I decided that I needed to document my experience. Working with two longtime Supercon veterans (they literally started the thing!), I had been adequately prepared for experiencing the event for the first time, but there is nothing quite like actually being there in-person. Even at 9 AM on Friday, the energy and activity was already bubbling. Despite not knowing many folks, or only knowing of them by their online presence, I felt as though I was attending a gathering of old friends.</description>
+    </item>
+    
     <item>
       <title>Setting Up Verible for Verilog with Neovim</title>
       <link>https://danielmangum.com/posts/setup-verible-verilog-neovim/</link>
