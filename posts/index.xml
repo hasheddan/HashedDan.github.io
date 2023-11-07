@@ -6,7 +6,18 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 05 Nov 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 06 Nov 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Supercon 2023 Day 3: badgecase.io</title>
+      <link>https://danielmangum.com/posts/supercon-2023-day-3/</link>
+      <pubDate>Mon, 06 Nov 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/supercon-2023-day-3/</guid>
+      <description>Screenshot of Badgecase gallery page.
+The final day of Supercon 2023 had more great talks, including an incredible recollection of Restoring the Apollo Guidance Computer. However, the real highlight was seeing all of the various badge hacks starting to take their final form, ultimately culminating with the Badge Hacking Ceremony at the end of the day.
+Mike and I had made enough progress on Saturday after pivoting away from our PIO / DMA exploits that the remaining work on Sunday morning primarily revolved around final hardware setup and managing DNS records (riveting stuff I know!</description>
+    </item>
+    
     <item>
       <title>Supercon 2023 Day 2: Talks Begin, Hacking Continues</title>
       <link>https://danielmangum.com/posts/supercon-2023-day-2/</link>

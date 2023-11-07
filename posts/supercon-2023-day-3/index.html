@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  Supercon 2023 Day 3: badgecase.io · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="Screenshot of Badgecase gallery page.
+The final day of Supercon 2023 had more great talks, including an incredible recollection of Restoring the Apollo Guidance Computer. However, the real highlight was seeing all of the various badge hacks starting to take their final form, ultimately culminating with the Badge Hacking Ceremony at the end of the day.
+Mike and I had made enough progress on Saturday after pivoting away from our PIO / DMA exploits that the remaining work on Sunday morning primarily revolved around final hardware setup and managing DNS records (riveting stuff I know!">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="Supercon 2023 Day 3: badgecase.io"/>
+<meta name="twitter:description" content="Screenshot of Badgecase gallery page.
+The final day of Supercon 2023 had more great talks, including an incredible recollection of Restoring the Apollo Guidance Computer. However, the real highlight was seeing all of the various badge hacks starting to take their final form, ultimately culminating with the Badge Hacking Ceremony at the end of the day.
+Mike and I had made enough progress on Saturday after pivoting away from our PIO / DMA exploits that the remaining work on Sunday morning primarily revolved around final hardware setup and managing DNS records (riveting stuff I know!"/>
+
+<meta property="og:title" content="Supercon 2023 Day 3: badgecase.io" />
+<meta property="og:description" content="Screenshot of Badgecase gallery page.
+The final day of Supercon 2023 had more great talks, including an incredible recollection of Restoring the Apollo Guidance Computer. However, the real highlight was seeing all of the various badge hacks starting to take their final form, ultimately culminating with the Badge Hacking Ceremony at the end of the day.
+Mike and I had made enough progress on Saturday after pivoting away from our PIO / DMA exploits that the remaining work on Sunday morning primarily revolved around final hardware setup and managing DNS records (riveting stuff I know!" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/supercon-2023-day-3/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-11-06T00:10:34-06:00" />
+<meta property="article:modified_time" content="2023-11-06T00:10:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/supercon-2023-day-3/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/supercon-2023-day-3/">
+              Supercon 2023 Day 3: badgecase.io
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2023-11-06T00:10:34-06:00">
+                November 6, 2023
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              4-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        
+
+
+<div class="center-img">
+  <img
+    src="../../static/supercon_2023_3_cover.jpg"
+    alt="supercon-2023-3-cover"
+  />
+</div>
+<blockquote>
+<p>Screenshot of Badgecase gallery page.</p>
+</blockquote>
+<p>The final day of Supercon 2023 had more great talks, including an incredible
+recollection of <a href="https://www.youtube.com/live/Ky9aYtN3qT4">Restoring the Apollo Guidance
+Computer</a>. However, the real highlight
+was seeing all of the various badge hacks starting to take their final form,
+ultimately culminating with the <a href="https://www.youtube.com/live/11Js0cOif4c?t=2622">Badge Hacking
+Ceremony</a> at the end of the
+day.</p>
+<p>Mike and I had made enough progress on Saturday after pivoting away from our PIO
+/ DMA exploits that the remaining work on Sunday morning primarily revolved
+around final hardware setup and managing DNS records (riveting stuff I know!).
+It was important for us to get this done early, because our demo involved
+attendee participation. After about an hour,
+<a href="https://supercon23.badgecase.io">badgecase.io</a> was officially live!</p>
+<p>Badgecase works by taking the pixel data from the sketching application
+<a href="https://danielmangum.com/posts/supercon-2023-day-2/">mentioned in yesterday&rsquo;s
+post</a>, delivering it over
+I2C to an <a href="https://www.nordicsemi.com/products/nrf9160">nRF9160</a> on an <a href="https://projects.golioth.io/reference-designs/greenhouse-controller/#parts-list">Aludel
+Mini dev
+board</a>
+(designed by our coworker and Supercon O.G. <a href="https://chrisgammell.com/">Chris
+Gammell</a>), which sends it up as
+<a href="https://cbor.io/">CBOR</a> <a href="https://datatracker.ietf.org/doc/html/rfc7252">CoAP</a>
+payloads to <a href="https://golioth.io/">Golioth</a>. From there, the Badgecase backend, a
+<a href="https://www.rust-lang.org/">Rust</a>
+<a href="https://github.com/tokio-rs/axum"><code>tokio-rs/axum</code></a> webserver I had been hacking
+on throughout the weekend, receives the data from Golioth over
+<a href="https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API">websockets</a>,
+decodes it, renders a PNG, and uploads it to a <a href="https://cloud.google.com/storage">Google Cloud
+Storage</a> bucket. When requests are made to
+<a href="https://supercon23.badgecase.io">badgecase.io</a> or
+<a href="https://supercon23.badgecase.io">supercon23.badgecase.io</a>, the same application
+renders HTML that displays a gallery of all images in the bucket.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/supercon_2023_3_1.jpg"
+    alt="supercon-2023-3-1"
+  />
+</div>
+<blockquote>
+<p>Our full hardware setup.</p>
+</blockquote>
+<p>There were a few interesting optimizations, both for performance and speed of
+development, that we made throughout building the demo. First, because many of
+the images contained primarily white background pixels, we opted to only send
+color pixels up to Golioth. In addition, Mike was able to pack the x and y
+coorindates, as well as the color, into a 16-bit integer. Because we were
+working with a 40x40 pixel canvas, we needed 6 bits each for the x and y values,
+which left us with 4 bits for color encoding. The sketch application only
+supported white, black, red, green, and blue, so 4 bits was more than enough.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>XXXXXX XXXXXX XXXX
+</span></span><span style="display:flex;"><span>  x      y      c
+</span></span></code></pre></div><p>Nevertheless, with more detailed sketches, we were unable to stuff all of the
+data into a single CoAP message, so points were fragmented across multiple
+messages, with the first providing metadata including the total number of
+expected points. Also tucked in that metadata was the name of the sketch, which
+was picked by the author and delivered to the
+<a href="https://www.nordicsemi.com/products/nrf9160">nRF9160</a> prior to sending the
+pixel data via a Golioth <a href="https://docs.golioth.io/firmware/golioth-firmware-sdk/remote-procedure-call">Remote Procedure Call
+(RPC)</a>.</p>
+<p>On the backend, these fragmented points were re-assembled, and used to encode a
+PNG image using the Rust <a href="https://crates.io/crates/image"><code>image</code> crate</a>. The
+name of the sketch, and a unique ID that was generated on the device and
+included in the first message&rsquo;s metadata, were used to form a name for the image
+when uploading to the bucket. On each request for
+<a href="https://supercon23.badgecase.io/">badgecase.io</a>, the HTML page was rendered by
+listing all objects in the bucket, parsing the names for metadata, and passing
+it to a <a href="https://handlebarsjs.com/">handlebars</a> template engine. While I would
+not recommend using a blob storage bucket as your database, doing so minimized
+the dependencies of the application. Furthermore, because
+<a href="https://supercon23.badgecase.io/">badgecase.io</a> is running on <a href="https://cloud.google.com/run">Google Cloud
+Run</a>, authorizing access from the container to the
+bucket was seamless.</p>
+<p>In between attending talks and having impromptu conversations with other
+attendess, Mike and I were able to collect a small gallery of sketches that
+folks at the conference, and those following at home, could see updating in real
+time. By the end of the day, we here able to <a href="https://www.youtube.com/live/Ky9aYtN3qT4">show off a
+demo</a> that included images from many
+of the attendess in the audience. It is worth watching the entire badge hacking
+ceremony as ours was just one in a fascinating display of creativy and
+engineering.</p>
+<p>Outside of our Badgecase shenanigans, a few personal highlights from Day 3 for
+me included meeting <a href="https://tomverbeure.github.io/">Tom Verbeure</a> and <a href="https://github.com/mithro">Time
+&ldquo;mithro&rdquo; Ansell</a>. I have been following both of these
+folks for quite some time, and their work and writing has been a huge
+inspiration for me as I have explored FPGAs and chip design. Tim was also nice
+enough to give me a
+<a href="https://www.hackster.io/news/the-fomu-an-fpga-that-fits-in-your-usb-port-1b09560b5541">Fomu</a>!</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/supercon_2023_3_2.jpg"
+    alt="supercon-2023-3-2"
+  />
+</div>
+<blockquote>
+<p>The Fomu!</p>
+</blockquote>
+<p>Meeting both of them, as well as getting to have an extended conversation with
+<a href="https://www.mattvenn.net/">Matt Venn</a> of
+<a href="https://tinytapeout.com/">TinyTapeout</a> fame the day before, was an incredible
+opportunity, and I hope the work that I do will someday have a similar level of
+impact. The other highlight was getting to spend the weekend hacking with Mike.
+He did so much to make my first Supercon an awesome experience for me, and I&rsquo;m
+grateful to work with awesome folks like him.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/supercon_2023_3_3.jpg"
+    alt="supercon-2023-3-3"
+  />
+</div>
+<blockquote>
+<p>Mike and I in front of the add-on wall.</p>
+</blockquote>
+<p>For now, after experiencing the true wonder of Hackaday
+Supercon, I&rsquo;m off to <a href="https://events.linuxfoundation.org/riscv-summit/">RISC-V
+Summit</a> for even more hardware
+goodness. If you&rsquo;ll be there and want to chat, feel free to reach out via one of
+the social links on the <a href="https://danielmangum.com/">homepage</a>!</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
