@@ -6,7 +6,17 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 06 Nov 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 19 Dec 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Zero to WASI with Clang 17</title>
+      <link>https://danielmangum.com/posts/wasm-wasi-clang-17/</link>
+      <pubDate>Tue, 19 Dec 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/wasm-wasi-clang-17/</guid>
+      <description>I am currently working on a few projects that involve leveraging WebAssembly (WASM) modules, particularly with WebAssembly System Interface (WASI) support. While WASI is still in its early stages, support has already been added to the Rust compiler and Clang, as well as runtimes such as wasmtime and WAMR. However, getting an environment setup to compile arbitrary C programs to WASM can still be challenging.
+I recently updated to Clang 17, which was first released as 17.</description>
+    </item>
+    
     <item>
       <title>Supercon 2023 Day 3: badgecase.io</title>
       <link>https://danielmangum.com/posts/supercon-2023-day-3/</link>

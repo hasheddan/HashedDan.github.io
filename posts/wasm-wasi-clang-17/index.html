@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  Zero to WASI with Clang 17 · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="I am currently working on a few projects that involve leveraging WebAssembly (WASM) modules, particularly with WebAssembly System Interface (WASI) support. While WASI is still in its early stages, support has already been added to the Rust compiler and Clang, as well as runtimes such as wasmtime and WAMR. However, getting an environment setup to compile arbitrary C programs to WASM can still be challenging.
+I recently updated to Clang 17, which was first released as 17.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="Zero to WASI with Clang 17"/>
+<meta name="twitter:description" content="I am currently working on a few projects that involve leveraging WebAssembly (WASM) modules, particularly with WebAssembly System Interface (WASI) support. While WASI is still in its early stages, support has already been added to the Rust compiler and Clang, as well as runtimes such as wasmtime and WAMR. However, getting an environment setup to compile arbitrary C programs to WASM can still be challenging.
+I recently updated to Clang 17, which was first released as 17."/>
+
+<meta property="og:title" content="Zero to WASI with Clang 17" />
+<meta property="og:description" content="I am currently working on a few projects that involve leveraging WebAssembly (WASM) modules, particularly with WebAssembly System Interface (WASI) support. While WASI is still in its early stages, support has already been added to the Rust compiler and Clang, as well as runtimes such as wasmtime and WAMR. However, getting an environment setup to compile arbitrary C programs to WASM can still be challenging.
+I recently updated to Clang 17, which was first released as 17." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/wasm-wasi-clang-17/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2023-12-19T00:10:34-06:00" />
+<meta property="article:modified_time" content="2023-12-19T00:10:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/wasm-wasi-clang-17/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/wasm-wasi-clang-17/">
+              Zero to WASI with Clang 17
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2023-12-19T00:10:34-06:00">
+                December 19, 2023
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              8-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>I am currently working on a few projects that involve leveraging <a href="https://webassembly.org/">WebAssembly
+(WASM)</a> modules, particularly with <a href="https://wasi.dev/">WebAssembly System
+Interface (WASI)</a> support. While WASI is still in its early
+stages, support has already been added to the <a href="https://doc.rust-lang.org/rustc/platform-support/wasm32-wasi-preview1-threads.html">Rust
+compiler</a>
+and <a href="https://clang.llvm.org/">Clang</a>, as well as runtimes such as
+<a href="https://github.com/bytecodealliance/wasmtime">wasmtime</a> and
+<a href="https://github.com/bytecodealliance/wasm-micro-runtime">WAMR</a>. However, getting
+an environment setup to compile arbitrary C programs to WASM can still be
+challenging.</p>
+<p>I recently updated to Clang 17, which was <a href="https://discourse.llvm.org/t/llvm-17-0-1-released/73549">first released as
+<code>17.0.1</code></a> in September of
+2023. This release <a href="https://releases.llvm.org/17.0.1/tools/clang/docs/ReleaseNotes.html#webassembly-support">added
+support</a>
+for shared libraries and position independent code (PIC) for WASM, but otherwise
+had relatively few updates for the target. Installing Clang and the releated
+LLVM packages has become rather straightforward with the <a href="https://apt.llvm.org/#llvmsh">automatic installation
+script</a>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-console" data-lang="console"><span style="display:flex;"><span>$ bash -c <span style="color:#0ff;font-weight:bold">&#34;</span><span style="color:#fff;font-weight:bold">$(</span>wget -O - https://apt.llvm.org/llvm.sh<span style="color:#fff;font-weight:bold">)</span><span style="color:#0ff;font-weight:bold">&#34;</span>
+</span></span></code></pre></div><blockquote>
+<p><code>wget</code> / <code>bash</code> at your own peril!</p>
+</blockquote>
+<p>This will install the latest stable release, which is currently <code>17.0.6</code>. If you
+wish to install a specific version, you can invoke the script with an argument
+as indicated in the documentation.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-console" data-lang="console"><span style="display:flex;"><span>$ wget https://apt.llvm.org/llvm.sh
+</span></span><span style="display:flex;"><span>$ chmod +x llvm.sh
+</span></span><span style="display:flex;"><span>$ sudo ./llvm.sh &lt;version number&gt;
+</span></span></code></pre></div><p>On my Linux machine running Ubuntu 22.04, this installs LLVM in <code>/usr/lib</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ /usr/lib/llvm-17/
+</span></span><span style="display:flex;"><span>├── bin
+</span></span><span style="display:flex;"><span>├── build
+</span></span><span style="display:flex;"><span>├── cmake -&gt; lib/cmake/llvm
+</span></span><span style="display:flex;"><span>├── include
+</span></span><span style="display:flex;"><span>├── lib
+</span></span><span style="display:flex;"><span>└── share
+</span></span></code></pre></div><p>Clang can be found at <code>/usr/lib/llvm-17/bin/clang</code>. We can compile C to WASM
+without any further steps if we don&rsquo;t need to perform any I/O. For example, the
+following program can be compiled as a WASM module with <code>two</code> exposed to the
+embedder.</p>
+<blockquote>
+<p><strong>Embedder</strong> is the term used in the WASM specification to describe host
+environments in which WASM modules are executed.</p>
+</blockquote>
+<p><code>wasm32.c</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">int</span> two() {
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">return</span> <span style="color:#ff0;font-weight:bold">2</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ /usr/lib/llvm-17/bin/clang -target wasm32 -nostdlib -Wl,--no-entry -Wl,--export-all  -o wasm32.wasm wasm32.c
+</span></span></code></pre></div><p>Because Clang is typically compiling a binary that can be executed from a start
+symbol, we need to inform it, or specifically the linker it invokes, that it
+should not expect an entrypoint to be defined (<code>-Wl,--no-entry</code>). We also need
+to inform the linker that it should not attempt to include a standard library,
+which we don&rsquo;t have for our WASM target (<code>-nostdlib</code>). Lastly, we need to ensure
+that our <code>two()</code> function is exported so that it can be called by the embedder
+(<code>-Wl,--export-all</code>). You can find the full set of linker options available for
+<code>wasm-lld</code> <a href="https://lld.llvm.org/WebAssembly.html">here</a>.</p>
+<p>To execute the <code>two()</code> function in a host environment, we can use <code>wasmtime</code>
+with the <code>--invoke</code> flag. If you haven&rsquo;t already installed <code>wasmtime</code>, you can
+do so with the provided script.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-console" data-lang="console"><span style="display:flex;"><span>curl https://wasmtime.dev/install.sh -sSf | bash
+</span></span></code></pre></div><p>Then invoke <code>two()</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-console" data-lang="console"><span style="display:flex;"><span>$ wasmtime run --invoke two wasm32.wasm
+</span></span><span style="display:flex;"><span>2
+</span></span></code></pre></div><p>This is interesting, but most meaningful programs need to perform some sort of
+I/O. If running in a traditional host environment, such as Linux on my machine,
+a C program can perform I/O operations by calling functions from the <a href="https://en.wikipedia.org/wiki/C_standard_library">C standard
+library</a>. Behind the scenes
+these functions are frequently invoking
+<a href="https://danielmangum.com/posts/risc-v-bytes-privilege-levels/">syscalls</a>, which
+allow a program running in userspace to access privileged resources (e.g.
+memory, disk, networking peripherals) via the operating system kernel. The
+embedder of our WASM module can be thought of similarly to an operating system;
+it has access to privileged resources that the module does not.</p>
+<p>However, unlike binary executables compiled for an operating system and
+instruction set architecture, WASM modules sacrifice knowledge of a standard
+interface for accessing privileged resources in favor of portability. WASM
+modules can be run by any embedder when they don&rsquo;t rely on the embedder
+<em>importing</em> any functionality. One option for accessing data outside of the WASM
+module is to accept arguments to <em>exported</em> functions. We can modify our
+previous example to demonstrate this.</p>
+<p><code>wasm32_args.c</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">int</span> add(<span style="color:#fff;font-weight:bold">int</span> a, <span style="color:#fff;font-weight:bold">int</span> b) {
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">return</span> a+b;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>We can use the same command to compile this new module as we previously
+specified that all symbols should be exported (<code>-Wl,--no-entry</code>).</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ /usr/lib/llvm-17/bin/clang -target wasm32 -nostdlib -Wl,--no-entry -Wl,--export-all  -o wasm32_args.wasm wasm32_args.c
+</span></span></code></pre></div><p>We can also use <code>wasmtime</code> again to invoke the <code>add()</code> function, this time
+passing the necessary arguments.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ wasmtime run --invoke add wasm32_args.wasm 1 2
+</span></span><span style="display:flex;"><span>3
+</span></span></code></pre></div><p>This certainly expands the functionality that can be offered by a WASM module,
+and other mechanisms for passing data between the embedder and the module, such
+as writing to the module memory, then passing a pointer to the data, can be
+utilized in more sophisticated scenarios. However, this pushes much of the logic
+to the embedder, meaning that the module remains portable, but more work is
+required of consumers. If all embedders could agree on a standard set of
+functionality that would be exposed to modules, the modules could maintain
+portability, while being able to do almost anything that native binary
+executables can. Even more importantly, <em>existing</em> programs could be recompiled
+to target the WASM instruction set without having to change any code.</p>
+<blockquote>
+<p>In reality, there are still frequently small code changes required to target
+WASM.</p>
+</blockquote>
+<p>WASI was
+<a href="https://hacks.mozilla.org/2019/03/standardizing-wasi-a-webassembly-system-interface/">introduced</a>
+to fill this gap. It is similar to <a href="https://en.wikipedia.org/wiki/POSIX">POSIX</a>,
+but as <a href="https://code-cartoons.com/">Lin Clark</a> describes:</p>
+<blockquote>
+<p>POSIX provides source code portability. You can compile the same source code
+with different versions of libc to target different machines. But WebAssembly
+needs to go one step beyond this. We need to be able to compile once and run
+across a whole bunch of different machines. We need portable binaries.</p>
+</blockquote>
+<p>Because of this binary portability, only one libc implementation is necessary,
+namely <a href="https://github.com/WebAssembly/wasi-libc"><code>wasi-libc</code></a>. In order to
+utilize the functionality it offers in our WASM modules, we need to build a
+<a href="https://clang.llvm.org/docs/CrossCompilation.html#toolchain-options"><code>sysroot</code></a>
+that can be linked against when compiling a module. This can be accomplished by
+cloning the repository, then running <code>make</code> with our Clang 17 installation.</p>
+<blockquote>
+<p>If you are just interested in getting things working and don&rsquo;t care to use
+your existing Clang / LLVM installation, you can download pre-compiled
+binaries from the <a href="https://github.com/WebAssembly/wasi-sdk"><code>wasi-sdk</code></a>
+repository. In fact, a <a href="https://github.com/WebAssembly/wasi-sdk/releases/tag/wasi-sdk-21">new release for LLVM
+17</a> was
+published while I was writing this post.</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-console" data-lang="console"><span style="display:flex;"><span>$ git clone https://github.com/WebAssembly/wasi-libc.git &amp;&amp; <span style="color:#fff;font-weight:bold">cd</span> wasi-libc
+</span></span><span style="display:flex;"><span>$ make CC=/usr/lib/llvm-17/bin/clang
+</span></span></code></pre></div><p>This should produce a <code>sysroot</code> directory, which contains the necessary header
+files and libraries, as denoted in the output.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>#
+</span></span><span style="display:flex;"><span># The build succeeded! The generated sysroot is in /home/hasheddan/code/github.com/WebAssembly/wasi-libc/sysroot.
+</span></span><span style="display:flex;"><span>#
+</span></span></code></pre></div><p>We can inform Clang of the <code>sysroot</code> location using the <code>--sysroot</code> flag. By
+default, Clang will attempt to also link the <a href="https://compiler-rt.llvm.org/">LLVM <code>compiler-rt</code>
+<code>builtins</code></a> library. LLVM packages do not
+currently include the WASM build of the library
+(<code>libclang_rt.builtins-wasm32.a</code>), so we must either build it ourselves, or
+download the pre-compiled binary from the <a href="https://github.com/WebAssembly/wasi-sdk/releases/tag/wasi-sdk-20"><code>wasi-sdk</code>
+release</a>.
+Or&hellip; we could use some magic incantations with Clang to avoid attempting to
+link it for our simple example. First let&rsquo;s define a program that utilizes I/O.</p>
+<p><code>wasm32_wasi.c</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;stdio.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;stdlib.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;string.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;errno.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">int</span> main() {
+</span></span><span style="display:flex;"><span>  FILE *fp;
+</span></span><span style="display:flex;"><span>  fp = fopen(<span style="color:#0ff;font-weight:bold">&#34;hello.txt&#34;</span>, <span style="color:#0ff;font-weight:bold">&#34;w&#34;</span>);
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">if</span> (fp == <span style="color:#fff;font-weight:bold">NULL</span>) {
+</span></span><span style="display:flex;"><span>    fprintf(stderr, <span style="color:#0ff;font-weight:bold">&#34;error opening file: %s</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>, strerror(errno));
+</span></span><span style="display:flex;"><span>    exit(<span style="color:#ff0;font-weight:bold">1</span>);
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  fputs(<span style="color:#0ff;font-weight:bold">&#34;Hello, world!</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>, fp);
+</span></span><span style="display:flex;"><span>  fclose(fp);
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">return</span> <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>All we are doing is opening a file and writing <code>Hello, world!</code> to it, but we are
+making use of several libc functions to do so. To compile this program to a WASM
+module with WASI support, we can use the following command.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ /usr/lib/llvm-17/bin/clang -target wasm32-wasi --sysroot=/home/hasheddan/code/github.com/WebAssembly/wasi-libc/sysroot -nodefaultlibs -lc -o wasm32_wasi.wasm wasm32_wasi.c
+</span></span></code></pre></div><p>There are a few notable differences from our previous invocations, including:</p>
+<ul>
+<li>The <code>-target</code> is now specified as <code>wasm32-wasi</code> to indicate that we need WASI
+support.</li>
+<li>We have provided a path to our <code>sysroot</code> that we built with <code>wasi-libc</code>.</li>
+<li>We have added the <code>-nodefaultlibs</code> flag to prevent the linker from attempting
+to link <code>libclang_rt.builtins-wasm32.a</code>, then provided <code>-lc</code> to re-add linking
+libc.</li>
+<li>We have removed <code>-nostdlib</code>, <code>-Wl,--no-entry</code>, and <code>-Wl,--export-all</code> as we do
+want to use the standard library (libc), we do have a defined entrypoint, and
+we don&rsquo;t need to export all symbols (<code>_start</code> will be exported automatically).</li>
+</ul>
+<p>Finally, we can use <code>wasmtime</code> to run our WASM WASI module, this time without
+specifying a function to invoke.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ wasmtime run wasm32_wasi.wasm
+</span></span><span style="display:flex;"><span>error opening file: No such file or directory
+</span></span></code></pre></div><p>The error here is due to <a href="https://github.com/bytecodealliance/wasmtime/blob/main/docs/WASI-capabilities.md">WASI capabilities
+model</a>,
+specifically related to <a href="https://github.com/bytecodealliance/wasmtime/blob/main/docs/WASI-capabilities.md#filesystem-rules">filesystem
+rules</a>,
+which differ from permissions in a POSIX environment.</p>
+<blockquote>
+<p>One difference though is that POSIX normally allows processes to request a
+file descriptor for any file in the entire filesystem hierarchy, which is
+granted based on whatever security policies are in place. This doesn&rsquo;t violate
+the capability model, but it doesn&rsquo;t take full advantage of it. CloudABI,
+Fuchsia, and other capability-oriented systems prefer to take advantage of the
+hierarchical nature of the filesystem and require untrusted code to have a
+capability for a directory in order to access things inside that directory.
+This way, you can launch untrusted code, and at runtime give it access to
+specific directories, without having to set permissions in the filesystem or
+in per-application or per-user configuration settings.</p>
+</blockquote>
+<p>In order for our program to create a file in the current directory, we need to
+give it access to the current directory.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ wasmtime run --dir=. wasm32_wasi.wasm
+</span></span><span style="display:flex;"><span>$ cat hello.txt
+</span></span><span style="display:flex;"><span>Hello, world!
+</span></span></code></pre></div><p>By exposing libc functions to our module, and granting it capabilities to access
+resources outside of its environment, we are now able to write programs that
+look much more like the native binaries we are used to. That&rsquo;s enough to get us
+started, but check back for more posts as I continue diving deeper into the
+current state of WASM / WASI.</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2023
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
