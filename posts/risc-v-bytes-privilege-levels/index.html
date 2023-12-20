@@ -327,7 +327,7 @@ pseudoinstructions</a>
 to interact with CSRs, which have the following mapping to the instructions
 defined above:</p>
 <ul>
-<li><code>csrr rd, rs</code> -&gt; <code>csrrs rd, csr, x0</code></li>
+<li><code>csrr rd, csr</code> -&gt; <code>csrrs rd, csr, x0</code></li>
 <li><code>csrw csr, rs</code> -&gt; <code>csrrw x0, csr, rs</code></li>
 <li><code>csrs csr, rs</code> -&gt; <code>csrrs x0, csr, rs</code></li>
 <li><code>csrc csr, rs</code> -&gt; <code>csrrc x0, csr, rs</code></li>
