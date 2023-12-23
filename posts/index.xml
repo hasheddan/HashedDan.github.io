@@ -6,7 +6,17 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 19 Dec 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 22 Dec 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Understanding Every Byte in a WASM Module</title>
+      <link>https://danielmangum.com/posts/every-byte-wasm-module/</link>
+      <pubDate>Fri, 22 Dec 2023 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/every-byte-wasm-module/</guid>
+      <description>In my last post, we explored how to build WASM modules, both with and without WASI support, using Clang. In a comment on Reddit, it was mentioned that much of the setup I walked through in that post could be avoided by just leveraging Zig&amp;rsquo;s WASI supprt. This is a great point, and I would recommend doing the same. The following command is inarguably simpler than what I described.
+$ zig cc --target=wasm32-wasi However, there are two reasons why knowing how to use Clang for compilation is useful.</description>
+    </item>
+    
     <item>
       <title>Zero to WASI with Clang 17</title>
       <link>https://danielmangum.com/posts/wasm-wasi-clang-17/</link>

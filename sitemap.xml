@@ -3,10 +3,13 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://danielmangum.com/</loc>
-    <lastmod>2023-12-19T00:10:34-06:00</lastmod>
+    <lastmod>2023-12-22T00:10:34-06:00</lastmod>
   </url><url>
     <loc>https://danielmangum.com/posts/</loc>
-    <lastmod>2023-12-19T00:10:34-06:00</lastmod>
+    <lastmod>2023-12-22T00:10:34-06:00</lastmod>
+  </url><url>
+    <loc>https://danielmangum.com/posts/every-byte-wasm-module/</loc>
+    <lastmod>2023-12-22T00:10:34-06:00</lastmod>
   </url><url>
     <loc>https://danielmangum.com/posts/wasm-wasi-clang-17/</loc>
     <lastmod>2023-12-19T00:10:34-06:00</lastmod>
