@@ -6,22 +6,22 @@
     <description>Recent content in Categories on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Fri, 03 Nov 2023 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/categories/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 22 Jan 2024 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/categories/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>RISC-V Bytes</title>
+      <link>https://danielmangum.com/categories/risc-v-bytes/</link>
+      <pubDate>Mon, 22 Jan 2024 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/categories/risc-v-bytes/</guid>
+      <description></description>
+    </item>
+    
     <item>
       <title>moss</title>
       <link>https://danielmangum.com/categories/moss/</link>
       <pubDate>Fri, 03 Nov 2023 00:10:34 -0600</pubDate>
       
       <guid>https://danielmangum.com/categories/moss/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>RISC-V Bytes</title>
-      <link>https://danielmangum.com/categories/risc-v-bytes/</link>
-      <pubDate>Tue, 30 May 2023 00:10:34 -0600</pubDate>
-      
-      <guid>https://danielmangum.com/categories/risc-v-bytes/</guid>
       <description></description>
     </item>
     

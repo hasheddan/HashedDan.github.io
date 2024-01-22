@@ -6,7 +6,17 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 02 Jan 2024 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 22 Jan 2024 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>RISC-V Bytes: Soldering the Pinecil Breakout Board</title>
+      <link>https://danielmangum.com/posts/risc-v-bytes-soldering-pinecil-breakout-board/</link>
+      <pubDate>Mon, 22 Jan 2024 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/risc-v-bytes-soldering-pinecil-breakout-board/</guid>
+      <description>This post is the first in a RISC-V Bytes subseries on the PINE64 Pinecil soldering iron and development board. Subsequent posts can be found under the RISC-V Bytes category.
+I&amp;rsquo;ve been using the Pinecil as my primary soldering iron for a few months now. The neat thing about the Pinecil is that it is not only a highly portable USB-C powered iron, but it is also an interesting RISC-V development board.</description>
+    </item>
+    
     <item>
       <title>Reflections on Running 3,000 Miles in 2023</title>
       <link>https://danielmangum.com/posts/3000-miles-2023/</link>

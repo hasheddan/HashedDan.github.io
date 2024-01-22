@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  RISC-V Bytes: Soldering the Pinecil Breakout Board · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="This post is the first in a RISC-V Bytes subseries on the PINE64 Pinecil soldering iron and development board. Subsequent posts can be found under the RISC-V Bytes category.
+I&rsquo;ve been using the Pinecil as my primary soldering iron for a few months now. The neat thing about the Pinecil is that it is not only a highly portable USB-C powered iron, but it is also an interesting RISC-V development board.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="RISC-V Bytes: Soldering the Pinecil Breakout Board"/>
+<meta name="twitter:description" content="This post is the first in a RISC-V Bytes subseries on the PINE64 Pinecil soldering iron and development board. Subsequent posts can be found under the RISC-V Bytes category.
+I&rsquo;ve been using the Pinecil as my primary soldering iron for a few months now. The neat thing about the Pinecil is that it is not only a highly portable USB-C powered iron, but it is also an interesting RISC-V development board."/>
+
+<meta property="og:title" content="RISC-V Bytes: Soldering the Pinecil Breakout Board" />
+<meta property="og:description" content="This post is the first in a RISC-V Bytes subseries on the PINE64 Pinecil soldering iron and development board. Subsequent posts can be found under the RISC-V Bytes category.
+I&rsquo;ve been using the Pinecil as my primary soldering iron for a few months now. The neat thing about the Pinecil is that it is not only a highly portable USB-C powered iron, but it is also an interesting RISC-V development board." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/risc-v-bytes-soldering-pinecil-breakout-board/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2024-01-22T00:10:34-06:00" />
+<meta property="article:modified_time" content="2024-01-22T00:10:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/risc-v-bytes-soldering-pinecil-breakout-board/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/risc-v-bytes-soldering-pinecil-breakout-board/">
+              RISC-V Bytes: Soldering the Pinecil Breakout Board
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2024-01-22T00:10:34-06:00">
+                January 22, 2024
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              3-minute read
+            </span>
+          </div>
+          
+          <div class="categories">
+  <i class="fa fa-folder" aria-hidden="true"></i>
+    <a href="https://danielmangum.com/categories/risc-v-bytes/">RISC-V Bytes</a></div>
+
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <blockquote>
+<p>This post is the first in a RISC-V Bytes subseries on the
+<a href="https://pine64.org/">PINE64</a> Pinecil soldering iron and development board.
+Subsequent posts can be found under the <a href="https://danielmangum.com/categories/risc-v-bytes/">RISC-V
+Bytes</a> category.</p>
+</blockquote>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/risc_v_pinecil_breakout_header.png"
+    alt="risc-v-pinecil-breakout-header"
+  />
+</div>
+<p>I&rsquo;ve been using the
+<a href="https://pine64.com/product/pinecil-smart-mini-portable-soldering-iron/">Pinecil</a>
+as my primary soldering iron for a few months now. The neat thing about the
+Pinecil is that it is not only a highly portable USB-C powered iron, but it is
+also an interesting RISC-V development board. In fact, the <a href="https://wiki.pine64.org/wiki/Pinecil">Pinecil
+wiki</a> lists this as an explicit goal.</p>
+<blockquote>
+<p>Other irons only care if they can solder. The Pinecil is held to an additional
+standard; how well can it meet the needs of the open source community as a
+RISC-V development tool. It includes hardware features not found on other
+soldering irons such as BLE Bluetooth in the V2 in order to support FOSS
+community feature requests for both fun and science.</p>
+</blockquote>
+<p>On top of this, the Pinecil also runs open source
+<a href="https://github.com/Ralim/IronOS">IronOS</a> making it straightforward to modify
+and update its firmware. We&rsquo;ll have plenty of fun with that in future posts, but
+step one in using the Pinecil as a development board is assembling the <a href="https://pine64.com/product/pinecil-break-out-board/">breakout
+board</a>, which provides
+access to JTAG, ADC/DAC, I2C, UART, and SPI on the board.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/risc_v_pinecil_breakout_0.jpg"
+    alt="risc-v-pinecil-breakout-0"
+  />
+</div>
+<p>The board comes with a single-row male header pin strip (20x1), as well as a
+double-row male 10-pin header strip (5x2). The 10-pin strip is for the JTAG
+breakout, while the single-row strip can be broken up into five groups of 4-pin
+headers for the remaining protocol breakouts.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/risc_v_pinecil_breakout_1.jpg"
+    alt="risc-v-pinecil-breakout-1"
+  />
+</div>
+<p>If you have a breadboard available, you can stick the long ends of the male pins
+into the breadboard, then place the breakout board on top with the short ends
+sticking through. The through-holes in the breakout board are nicely aligned
+such that the vertical distance between each group is one row.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/risc_v_pinecil_breakout_2.jpg"
+    alt="risc-v-pinecil-breakout-2"
+  />
+</div>
+<p>I started with just two groups of header pins, but placing them all before
+beginning soldering will allow you to avoid having to pull the breakout board
+out of the breadboard before you are done with all header pins. To solder
+through-hole header pins, touch the tip of your iron to one side of the pad,
+then apply solder to the other side of the pad. The solder should flow around
+the pad, resulting in a strong joint.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/risc_v_pinecil_breakout_3.jpg"
+    alt="risc-v-pinecil-breakout-3"
+  />
+</div>
+<blockquote>
+<p>This was not my finest soldering work, but it got the job done.</p>
+</blockquote>
+<p>With the header pins in place, we are ready to start using the Pinecil as a
+development board. In our next post, we&rsquo;ll see how we can connect to the
+breakout board to start interacting with the RISC-V microcontroller.</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2024
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
