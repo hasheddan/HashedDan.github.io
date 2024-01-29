@@ -6,7 +6,17 @@
     <description>Recent content in RISC-V Bytes on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 22 Jan 2024 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/categories/risc-v-bytes/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 29 Jan 2024 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/categories/risc-v-bytes/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>RISC-V Bytes: Accessing the Pinecil UART with picoprobe</title>
+      <link>https://danielmangum.com/posts/risc-v-bytes-accessing-pinecil-uart-picoprobe/</link>
+      <pubDate>Mon, 29 Jan 2024 00:10:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/risc-v-bytes-accessing-pinecil-uart-picoprobe/</guid>
+      <description>This post is the second in a RISC-V Bytes subseries on the PINE64 Pinecil soldering iron and development board. Previous and subsequent posts can be found under the RISC-V Bytes category.
+In the most recent Pinecil post, we walked through how to solder the header pins on the Pinecil breakout board. With the headers attached, we can now communicate with the Pinecil&amp;rsquo;s microcontroller via a number of protocols. Today we are going to focus on accessing the Universal Asynchronous Receiver / Transmitter (UART) hardware in order to receive serial data from the microcontroller, such as log messages, on a development machine (e.</description>
+    </item>
+    
     <item>
       <title>RISC-V Bytes: Soldering the Pinecil Breakout Board</title>
       <link>https://danielmangum.com/posts/risc-v-bytes-soldering-pinecil-breakout-board/</link>

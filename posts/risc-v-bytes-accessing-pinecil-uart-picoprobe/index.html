@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  RISC-V Bytes: Accessing the Pinecil UART with picoprobe · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="This post is the second in a RISC-V Bytes subseries on the PINE64 Pinecil soldering iron and development board. Previous and subsequent posts can be found under the RISC-V Bytes category.
+In the most recent Pinecil post, we walked through how to solder the header pins on the Pinecil breakout board. With the headers attached, we can now communicate with the Pinecil&rsquo;s microcontroller via a number of protocols. Today we are going to focus on accessing the Universal Asynchronous Receiver / Transmitter (UART) hardware in order to receive serial data from the microcontroller, such as log messages, on a development machine (e.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="RISC-V Bytes: Accessing the Pinecil UART with picoprobe"/>
+<meta name="twitter:description" content="This post is the second in a RISC-V Bytes subseries on the PINE64 Pinecil soldering iron and development board. Previous and subsequent posts can be found under the RISC-V Bytes category.
+In the most recent Pinecil post, we walked through how to solder the header pins on the Pinecil breakout board. With the headers attached, we can now communicate with the Pinecil&rsquo;s microcontroller via a number of protocols. Today we are going to focus on accessing the Universal Asynchronous Receiver / Transmitter (UART) hardware in order to receive serial data from the microcontroller, such as log messages, on a development machine (e."/>
+
+<meta property="og:title" content="RISC-V Bytes: Accessing the Pinecil UART with picoprobe" />
+<meta property="og:description" content="This post is the second in a RISC-V Bytes subseries on the PINE64 Pinecil soldering iron and development board. Previous and subsequent posts can be found under the RISC-V Bytes category.
+In the most recent Pinecil post, we walked through how to solder the header pins on the Pinecil breakout board. With the headers attached, we can now communicate with the Pinecil&rsquo;s microcontroller via a number of protocols. Today we are going to focus on accessing the Universal Asynchronous Receiver / Transmitter (UART) hardware in order to receive serial data from the microcontroller, such as log messages, on a development machine (e." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/risc-v-bytes-accessing-pinecil-uart-picoprobe/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2024-01-29T00:10:34-06:00" />
+<meta property="article:modified_time" content="2024-01-29T00:10:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/risc-v-bytes-accessing-pinecil-uart-picoprobe/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/risc-v-bytes-accessing-pinecil-uart-picoprobe/">
+              RISC-V Bytes: Accessing the Pinecil UART with picoprobe
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2024-01-29T00:10:34-06:00">
+                January 29, 2024
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              10-minute read
+            </span>
+          </div>
+          
+          <div class="categories">
+  <i class="fa fa-folder" aria-hidden="true"></i>
+    <a href="https://danielmangum.com/categories/risc-v-bytes/">RISC-V Bytes</a></div>
+
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <blockquote>
+<p>This post is the second in a RISC-V Bytes subseries on the
+<a href="https://pine64.org/">PINE64</a> Pinecil soldering iron and development board.
+Previous and subsequent posts can be found under the <a href="https://danielmangum.com/categories/risc-v-bytes/">RISC-V
+Bytes</a> category.</p>
+</blockquote>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/risc_v_pinecil_uart_picoprobe_header.png"
+    alt="risc-v-pinecil-uart-picoprobe-header"
+  />
+</div>
+<p>In the <a href="https://danielmangum.com/posts/risc-v-bytes-soldering-pinecil-breakout-board/">most recent Pinecil
+post</a>,
+we walked through how to solder the header pins on the Pinecil <a href="https://pine64.com/product/pinecil-break-out-board/">breakout
+board</a>. With the headers
+attached, we can now communicate with the Pinecil&rsquo;s microcontroller via a number
+of protocols. Today we are going to focus on accessing the Universal
+Asynchronous Receiver / Transmitter (UART) hardware in order to receive serial
+data from the microcontroller, such as log messages, on a development machine
+(e.g. laptop).</p>
+<p>However, though the breakout board does allow us to access the UART pins, it is
+likely that your development machine does not expose its own UART interface.
+Instead, most machines are equipped with more commonly used ports for
+peripherals, such as <a href="https://en.wikipedia.org/wiki/USB">Universal Serial Bus
+(USB)</a>. In order to communicate between the
+Pinecil microcontroller and the development machine, we&rsquo;ll need some sort of
+bridge. While there is plenty of dedicated hardware that can be purchased for a
+few dollars, such as this <a href="https://www.adafruit.com/product/5335">USB to serial
+converter</a>, I have been leveraging my
+small collection of <a href="https://www.raspberrypi.com/documentation/microcontrollers/raspberry-pi-pico.html">Raspberry Pi
+Pico&rsquo;s</a>
+for tasks such as this since <a href="https://danielmangum.com/posts/supercon-2023-day-1/">attending Hackaday Supercon
+2023</a> and <a href="https://danielmangum.com/posts/supercon-2023-day-2/">hacking on the
+conference badge</a>, which
+included a Pico <a href="https://hackaday.com/2023/10/18/2023-hackaday-supercon-badge-welcome-to-the-vectorscope/#under-the-hood">on the back of the
+PCB</a>.</p>
+<p>The Pico is the first Raspberry Pi product to use in-house silicon,
+incorporating the <a href="https://www.raspberrypi.com/products/rp2040/">RP2040</a>, a
+microcontroller with dual ARM
+<a href="https://developer.arm.com/Processors/Cortex-M0-Plus">Cortex-M0+</a> processors,
+and a highly flexible <a href="https://www.raspberrypi.com/news/what-is-pio/">programmable input / output
+(PIO)</a> system. The &ldquo;downside&rdquo; of
+using a general purpose microcontroller, rather than dedicated hardware, for our
+USB-UART bridge is that we&rsquo;ll need to write or obtain firmware that performs the
+desired functionality.</p>
+<p>Fortunately, Raspbery Pi explicitly encourages using the Pico for this type of
+use case.</p>
+<h2 id="building-the-pico-firmware">
+  Building the Pico Firmware
+  <a class="heading-link" href="#building-the-pico-firmware">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>Appendix A of the <a href="https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf">Pico Getting Started
+Guide</a>
+introduces the use of the Pico as a programming and debugging device. To support
+this scenario, they have supplied open source firmware, appropriately <a href="https://github.com/raspberrypi/picoprobe">named
+<code>picoprobe</code></a>, that is built on
+<a href="https://github.com/FreeRTOS/FreeRTOS-Kernel">FreeRTOS</a> and the <a href="https://github.com/raspberrypi/pico-sdk">Pico C/C++
+SDK</a>.</p>
+<p>While the guide primarily describes its use when working with a second Pico,
+<code>picoprobe</code> can be useful with any other device that exposes UART pins or a
+<a href="https://developer.arm.com/documentation/ihi0031/a/The-Serial-Wire-Debug-Port--SW-DP-/Introduction-to-the-ARM-Serial-Wire-Debug--SWD--protocol">Serial Wire Debug
+(SWD)</a>
+port. Raspberry Pi also offers a <a href="https://www.raspberrypi.com/products/debug-probe/">debug
+probe</a>, which is essentially
+a Pico with <code>picoprobe</code> pre-programmed on the RP2040, and dedicated ports and
+connectors for UART and SWD.</p>
+<p><code>picoprobe</code> is configured using a header file, which is then included <a href="https://github.com/raspberrypi/picoprobe/blob/721b69cf5c8535e57995dbdd2e74f1bbc2f36944/src/picoprobe_config.h#L68">in
+<code>src/picoprobe_config.h</code></a>.
+There are two built-in configurations, one for the
+<a href="https://github.com/raspberrypi/picoprobe/blob/721b69cf5c8535e57995dbdd2e74f1bbc2f36944/include/board_pico_config.h">Pico</a>
+and one for the <a href="https://github.com/raspberrypi/picoprobe/blob/721b69cf5c8535e57995dbdd2e74f1bbc2f36944/include/board_debugprobe_config.h">debug
+probe</a>.
+We can use the Pico configuration, and because it is the default, the following
+steps can be used to build <code>picoprobe</code> without any updates.</p>
+<ol>
+<li>Ensure all submodules are up to date.</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ git submodule update --init
+</span></span><span style="display:flex;"><span>Submodule <span style="color:#0ff;font-weight:bold">&#39;CMSIS_5&#39;</span> (https://github.com/ARM-software/CMSIS_5) registered <span style="color:#fff;font-weight:bold">for</span> path <span style="color:#0ff;font-weight:bold">&#39;CMSIS_5&#39;</span>
+</span></span><span style="display:flex;"><span>Submodule <span style="color:#0ff;font-weight:bold">&#39;freertos&#39;</span> (https://github.com/FreeRTOS/FreeRTOS-Kernel) registered <span style="color:#fff;font-weight:bold">for</span> path <span style="color:#0ff;font-weight:bold">&#39;freertos&#39;</span>
+</span></span><span style="display:flex;"><span>Cloning into <span style="color:#0ff;font-weight:bold">&#39;/home/hasheddan/code/github.com/raspberrypi/picoprobe/CMSIS_5&#39;</span>...
+</span></span><span style="display:flex;"><span>Cloning into <span style="color:#0ff;font-weight:bold">&#39;/home/hasheddan/code/github.com/raspberrypi/picoprobe/freertos&#39;</span>...
+</span></span><span style="display:flex;"><span>Submodule path <span style="color:#0ff;font-weight:bold">&#39;CMSIS_5&#39;</span>: checked out <span style="color:#0ff;font-weight:bold">&#39;a65b7c9a3e6502127fdb80eb288d8cbdf251a6f4&#39;</span>
+</span></span><span style="display:flex;"><span>Submodule path <span style="color:#0ff;font-weight:bold">&#39;freertos&#39;</span>: checked out <span style="color:#0ff;font-weight:bold">&#39;2dfdfc4ba4d8bb487c8ea6b5428d7d742ce162b8&#39;</span>
+</span></span></code></pre></div><ol start="2">
+<li>Create a build directory and enter it.</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ mkdir build &amp;&amp; <span style="color:#fff;font-weight:bold">cd</span> <span style="color:#0ff;font-weight:bold">&#34;</span>$_<span style="color:#0ff;font-weight:bold">&#34;</span>
+</span></span></code></pre></div><ol start="3">
+<li>Generate build files with <code>cmake</code>, specifying that the Pico SDK should be
+fetched as part of the operation (<code>PICO_SDK_FETCH_FROM_GIT</code>).</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ PICO_SDK_FETCH_FROM_GIT=on cmake ..
+</span></span><span style="display:flex;"><span>Using PICO_SDK_FETCH_FROM_GIT from environment (<span style="color:#0ff;font-weight:bold">&#39;on&#39;</span>)
+</span></span><span style="display:flex;"><span>Downloading Raspberry Pi Pico SDK
+</span></span><span style="display:flex;"><span>PICO_SDK_PATH is /home/hasheddan/code/github.com/raspberrypi/picoprobe/build/_deps/pico_sdk-src
+</span></span><span style="display:flex;"><span>Defaulting PICO_PLATFORM to rp2040 since not specified.
+</span></span><span style="display:flex;"><span>Defaulting PICO platform compiler to pico_arm_gcc since not specified.
+</span></span><span style="display:flex;"><span>-- Defaulting build <span style="color:#fff;font-weight:bold">type</span> to <span style="color:#0ff;font-weight:bold">&#39;Release&#39;</span> since not specified.
+</span></span><span style="display:flex;"><span>PICO compiler is pico_arm_gcc
+</span></span><span style="display:flex;"><span>-- The C compiler identification is GNU 10.3.1
+</span></span><span style="display:flex;"><span>-- The CXX compiler identification is GNU 10.3.1
+</span></span><span style="display:flex;"><span>-- Detecting C compiler ABI info
+</span></span><span style="display:flex;"><span>-- Detecting C compiler ABI info - <span style="color:#fff;font-weight:bold">done</span>
+</span></span><span style="display:flex;"><span>-- Check <span style="color:#fff;font-weight:bold">for</span> working C compiler: /usr/bin/arm-none-eabi-gcc - skipped
+</span></span><span style="display:flex;"><span>-- Detecting C compile features
+</span></span><span style="display:flex;"><span>-- Detecting C compile features - <span style="color:#fff;font-weight:bold">done</span>
+</span></span><span style="display:flex;"><span>-- Detecting CXX compiler ABI info
+</span></span><span style="display:flex;"><span>-- Detecting CXX compiler ABI info - <span style="color:#fff;font-weight:bold">done</span>
+</span></span><span style="display:flex;"><span>-- Check <span style="color:#fff;font-weight:bold">for</span> working CXX compiler: /usr/bin/arm-none-eabi-g++ - skipped
+</span></span><span style="display:flex;"><span>-- Detecting CXX compile features
+</span></span><span style="display:flex;"><span>-- Detecting CXX compile features - <span style="color:#fff;font-weight:bold">done</span>
+</span></span><span style="display:flex;"><span>-- The ASM compiler identification is GNU
+</span></span><span style="display:flex;"><span>-- Found assembler: /usr/bin/arm-none-eabi-gcc
+</span></span><span style="display:flex;"><span>Build <span style="color:#fff;font-weight:bold">type</span> is Release
+</span></span><span style="display:flex;"><span>Defaulting PICO target board to pico since not specified.
+</span></span><span style="display:flex;"><span>Using board configuration from /home/hasheddan/code/github.com/raspberrypi/picoprobe/build/_deps/pico_sdk-src/src/boards/include/boards/pico.h
+</span></span><span style="display:flex;"><span>-- Found Python3: /usr/bin/python3.10 (found version <span style="color:#0ff;font-weight:bold">&#34;3.10.12&#34;</span>) found components: Interpreter 
+</span></span><span style="display:flex;"><span>TinyUSB available at /home/hasheddan/code/github.com/raspberrypi/picoprobe/build/_deps/pico_sdk-src/lib/tinyusb/src/portable/raspberrypi/rp2040; enabling build support <span style="color:#fff;font-weight:bold">for</span> USB.
+</span></span><span style="display:flex;"><span>BTstack available at /home/hasheddan/code/github.com/raspberrypi/picoprobe/build/_deps/pico_sdk-src/lib/btstack
+</span></span><span style="display:flex;"><span>cyw43-driver available at /home/hasheddan/code/github.com/raspberrypi/picoprobe/build/_deps/pico_sdk-src/lib/cyw43-driver
+</span></span><span style="display:flex;"><span>Pico W Bluetooth build support available.
+</span></span><span style="display:flex;"><span>lwIP available at /home/hasheddan/code/github.com/raspberrypi/picoprobe/build/_deps/pico_sdk-src/lib/lwip
+</span></span><span style="display:flex;"><span>mbedtls available at /home/hasheddan/code/github.com/raspberrypi/picoprobe/build/_deps/pico_sdk-src/lib/mbedtls
+</span></span><span style="display:flex;"><span>-- Configuring <span style="color:#fff;font-weight:bold">done</span>
+</span></span><span style="display:flex;"><span>-- Generating <span style="color:#fff;font-weight:bold">done</span>
+</span></span><span style="display:flex;"><span>-- Build files have been written to: /home/hasheddan/code/github.com/raspberrypi/picoprobe/build
+</span></span></code></pre></div><ol start="4">
+<li>Build the firmware.</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ make
+</span></span><span style="display:flex;"><span>[  2%] Built target bs2_default
+</span></span><span style="display:flex;"><span>[  4%] Built target bs2_default_padded_checksummed_asm
+</span></span><span style="display:flex;"><span>[  5%] Performing build step <span style="color:#fff;font-weight:bold">for</span> <span style="color:#0ff;font-weight:bold">&#39;PioasmBuild&#39;</span>
+</span></span><span style="display:flex;"><span>[100%] Built target pioasm
+</span></span><span style="display:flex;"><span>[  6%] No install step <span style="color:#fff;font-weight:bold">for</span> <span style="color:#0ff;font-weight:bold">&#39;PioasmBuild&#39;</span>
+</span></span><span style="display:flex;"><span>[  7%] Completed <span style="color:#0ff;font-weight:bold">&#39;PioasmBuild&#39;</span>
+</span></span><span style="display:flex;"><span>[ 11%] Built target PioasmBuild
+</span></span><span style="display:flex;"><span>[ 12%] Built target picoprobe_probe_pio_h
+</span></span><span style="display:flex;"><span>[ 13%] Built target picoprobe_probe_oen_pio_h
+</span></span><span style="display:flex;"><span>[ 14%] Performing build step <span style="color:#fff;font-weight:bold">for</span> <span style="color:#0ff;font-weight:bold">&#39;ELF2UF2Build&#39;</span>
+</span></span><span style="display:flex;"><span>[100%] Built target elf2uf2
+</span></span><span style="display:flex;"><span>[ 15%] No install step <span style="color:#fff;font-weight:bold">for</span> <span style="color:#0ff;font-weight:bold">&#39;ELF2UF2Build&#39;</span>
+</span></span><span style="display:flex;"><span>[ 15%] Completed <span style="color:#0ff;font-weight:bold">&#39;ELF2UF2Build&#39;</span>
+</span></span><span style="display:flex;"><span>[ 19%] Built target ELF2UF2Build
+</span></span><span style="display:flex;"><span>[ 20%] Building C object CMakeFiles/picoprobe.dir/src/led.c.obj
+</span></span><span style="display:flex;"><span>[ 21%] Building C object CMakeFiles/picoprobe.dir/src/main.c.obj
+</span></span><span style="display:flex;"><span>[ 22%] Building C object CMakeFiles/picoprobe.dir/src/usb_descriptors.c.obj
+</span></span><span style="display:flex;"><span>[ 23%] Building C object CMakeFiles/picoprobe.dir/src/probe.c.obj
+</span></span><span style="display:flex;"><span>[ 24%] Building C object CMakeFiles/picoprobe.dir/src/cdc_uart.c.obj
+</span></span><span style="display:flex;"><span>[ 25%] Building C object CMakeFiles/picoprobe.dir/src/sw_dp_pio.c.obj
+</span></span><span style="display:flex;"><span>[ 25%] Building C object CMakeFiles/picoprobe.dir/src/tusb_edpt_handler.c.obj
+</span></span><span style="display:flex;"><span>[ 26%] Building C object CMakeFiles/picoprobe.dir/CMSIS_5/CMSIS/DAP/Firmware/Source/DAP.c.obj
+</span></span><span style="display:flex;"><span>[ 27%] Building C object CMakeFiles/picoprobe.dir/CMSIS_5/CMSIS/DAP/Firmware/Source/JTAG_DP.c.obj
+</span></span><span style="display:flex;"><span>[ 28%] Building C object CMakeFiles/picoprobe.dir/CMSIS_5/CMSIS/DAP/Firmware/Source/DAP_vendor.c.obj
+</span></span><span style="display:flex;"><span>[ 29%] Building C object CMakeFiles/picoprobe.dir/CMSIS_5/CMSIS/DAP/Firmware/Source/SWO.c.obj
+</span></span><span style="display:flex;"><span>[ 30%] Linking CXX executable picoprobe.elf
+</span></span><span style="display:flex;"><span>[100%] Built target picoprobe
+</span></span></code></pre></div><p>After the build is complete, we should see a number of artifacts in the <code>build</code>
+directory.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ls
+</span></span><span style="display:flex;"><span>CMakeCache.txt  cmake_install.cmake  elf2uf2          generated  picoprobe.bin  picoprobe.elf      picoprobe.hex  pico-sdk  probe_oen.pio.h
+</span></span><span style="display:flex;"><span>CMakeFiles      _deps                FREERTOS_KERNEL  Makefile   picoprobe.dis  picoprobe.elf.map  picoprobe.uf2  pioasm    probe.pio.h
+</span></span></code></pre></div><h2 id="programming-the-pico">
+  Programming the Pico
+  <a class="heading-link" href="#programming-the-pico">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>There are multiple ways to program the Pico, but the simplest is by holding down
+the boot select (<code>BOOTSEL</code>) button while you connect it to your development
+machine. This will cause the Pico to appear as a <a href="https://en.wikipedia.org/wiki/USB_mass_storage_device_class">USB Mass Storage
+Device</a>, meaning
+you can access it from your machine&rsquo;s filesystem.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ls /media/hasheddan/RPI-RP2/
+</span></span><span style="display:flex;"><span>INDEX.HTM  INFO_UF2.TXT
+</span></span></code></pre></div><p>Copying the <code>picoprobe.uf2</code> file into the mounted directory will cause the
+RP2040 to reboot and start running the firmware.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ cp picoprobe.uf2 /media/hasheddan/RPI-RP2/
+</span></span></code></pre></div><p>The Pico should now show up as a USB serial device.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ls /dev/ | grep <span style="color:#0ff;font-weight:bold">&#34;ACM\|USB&#34;</span>
+</span></span><span style="display:flex;"><span>ttyACM0
+</span></span></code></pre></div><p>We can use <code>minicom</code> to monitor the serial output. Initially we shouldn&rsquo;t see
+any output as <code>picoprobe</code> is configured to direct its debug information to
+<code>UART0</code> by default. The output we eventually see over USB serial will be the
+bridged output from the Pinecil microcontroller.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ minicom -D /dev/ttyACM0 -b <span style="color:#ff0;font-weight:bold">2000000</span>
+</span></span></code></pre></div><h2 id="building-the-pinecil-firmware">
+  Building the Pinecil Firmware
+  <a class="heading-link" href="#building-the-pinecil-firmware">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>The Pinecil v2 runs on the <a href="https://en.bouffalolab.com/product/?type=detail&amp;id=8">Bouffalo Lab
+BL706</a> chipset, which
+includes a <a href="https://riscv.org/">32-bit RISC-V processor</a> based on the <a href="https://sifive-china.oss-cn-zhangjiakou.aliyuncs.com/Standard%20Core%20IP/e24_core_complex_manual_21G2.pdf">SiFive
+E24
+core</a>.
+It is supported by the open source <a href="https://github.com/Ralim/IronOS">IronOS</a>
+project, which was originally developed as alternative firmware for the
+<a href="https://www.ifixit.com/products/ts100-soldering-iron">TS100</a> iron. IronOS is
+the default firmware on the Pinecil.</p>
+<p>IronOS is also built on FreeRTOS, and leverages the <code>bl_mcu_sdk</code>, which has
+evolved into <a href="https://github.com/bouffalolab/bouffalo_sdk">the <code>bouffalo_sdk</code></a>.
+According to the
+<a href="http://download.bl602.fun/BL702_%E5%AE%98%E6%96%B9%E8%8A%AF%E7%89%87%E6%89%8B%E5%86%8C.pdf">datasheet</a>,
+the BL706 has two built-in UARTs, and IronOS
+<a href="https://github.com/Ralim/IronOS/blob/6e2bca9699347d9d1381087149ab70ca0f6fcb4c/source/Core/BSP/Pinecilv2/peripheral_config.h#L82">configures</a>
+<code>UART0</code> to run at <code>2000000</code> baud, which is why we supplied the <code>-b 2000000</code> to
+<code>minicom</code> above.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(BSP_USING_UART0)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifndef UART0_CONFIG
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#define UART0_CONFIG \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">  { .id = 0, .baudrate = 2000000, .databits = UART_DATA_LEN_8, .stopbits = UART_STOP_ONE, .parity = UART_PAR_NONE, .fifo_threshold = 0, }
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span></code></pre></div><p>IronOS has an excellent <a href="https://github.com/Ralim/IronOS/blob/6e2bca9699347d9d1381087149ab70ca0f6fcb4c/Documentation/Development.md#building-pinecil-v20">Docker-based build
+flow</a>,
+which alleviates the need to install your own RISC-V toolchain. The following
+steps can be used to build an English binary for the Pinecil v2.</p>
+<ol>
+<li>Start the build container.</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ./scripts/deploy.sh 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>====&gt;&gt;&gt;&gt; Firing up &amp; starting container...
+</span></span><span style="display:flex;"><span>	* <span style="color:#fff;font-weight:bold">type</span> <span style="color:#0ff;font-weight:bold">&#34;./scripts/deploy.sh clean&#34;</span> to delete created container (but not cached data)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>====&gt;&gt;&gt;&gt; /usr/bin/docker  compose  -f /home/hasheddan/code/github.com/Ralim/IronOS/./scripts/../Env.yml  run  --rm  builder
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/build/ironos <span style="color:#007f7f">#</span>
+</span></span></code></pre></div><ol start="2">
+<li>Run build script.</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>/build/ironos <span style="color:#007f7f"># cd source/ &amp;&amp; ./build.sh -l EN -m Pinecilv2</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>********************************************
+</span></span><span style="display:flex;"><span>               IronOS Firmware
+</span></span><span style="display:flex;"><span>        builder <span style="color:#fff;font-weight:bold">for</span> Miniware + Pine64
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                                    by Ralim
+</span></span><span style="display:flex;"><span>********************************************
+</span></span><span style="display:flex;"><span>Available languages : BE BG CS DA DE EL EN ES ET FI FR HR HU IT JA_JP LT NB NL NL_BE PL PT RO RU SK SL SR_CYRL SR_LATN SV TR UK VI YUE_HK ZH_CN ZH_TW
+</span></span><span style="display:flex;"><span>Requested languages : EN 
+</span></span><span style="display:flex;"><span>********************************************
+</span></span><span style="display:flex;"><span>Available models : TS100 TS80 TS80P Pinecil MHP30 Pinecilv2 S60 TS101
+</span></span><span style="display:flex;"><span>Requested models : Pinecilv2 
+</span></span><span style="display:flex;"><span>********************************************
+</span></span><span style="display:flex;"><span>Cleaning previous builds
+</span></span><span style="display:flex;"><span>    [Success]
+</span></span><span style="display:flex;"><span>********************************************
+</span></span><span style="display:flex;"><span>Building firmware <span style="color:#fff;font-weight:bold">for</span> Pinecilv2 in EN
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>    [Success]
+</span></span><span style="display:flex;"><span>********************************************
+</span></span><span style="display:flex;"><span> -- Firmwares successfully generated --
+</span></span><span style="display:flex;"><span>End...
+</span></span></code></pre></div><p>After the build completes, you can type <code>exit</code> to exit the container. Build
+artifacts should be present in <code>source/Hexfile/</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ ls source/Hexfile/
+</span></span><span style="display:flex;"><span>Pinecilv2_EN.bin  Pinecilv2_EN.dfu  Pinecilv2_EN.elf  Pinecilv2_EN.elf.map  Pinecilv2_EN.hex
+</span></span></code></pre></div><h2 id="programming-the-pinecil">
+  Programming the Pinecil
+  <a class="heading-link" href="#programming-the-pinecil">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>The Pinecil can be programmed, including when connecting via the breakout board,
+by holding down the button labeled <code>-</code> while plugging the USB cable into your
+development machine. Pine64 offers an <a href="https://en.wikipedia.org/wiki/In-system_programming">in-system programming
+(ISP)</a> tool for its
+Bouffalo Lab devices, appropriately named <code>blisp</code>, which can be downloaded from
+the project&rsquo;s <a href="https://github.com/pine64/blisp/releases">releases page</a>.</p>
+<p>After installing, the following command can be used to flash the IronOS firmware
+onto the device.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ sudo ./blisp write -c bl70x --reset Pinecilv2_EN.bin
+</span></span><span style="display:flex;"><span>Sending a handshake...
+</span></span><span style="display:flex;"><span>Handshake successful!
+</span></span><span style="display:flex;"><span>Getting chip info...
+</span></span><span style="display:flex;"><span>BootROM version 1.0.2.7, ChipID: 0000C41CD8FDD7C4
+</span></span><span style="display:flex;"><span>0b / <span style="color:#ff0;font-weight:bold">59200</span> (0.00%)
+</span></span><span style="display:flex;"><span>4092b / <span style="color:#ff0;font-weight:bold">59200</span> (6.91%)
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>59200b / <span style="color:#ff0;font-weight:bold">59200</span> (100.00%)
+</span></span><span style="display:flex;"><span>Sending a handshake...
+</span></span><span style="display:flex;"><span>Handshake with eflash_loader successful.
+</span></span><span style="display:flex;"><span>Input file identified as a .bin file
+</span></span><span style="display:flex;"><span>Erasing flash to flash boot header
+</span></span><span style="display:flex;"><span>Flashing boot header...
+</span></span><span style="display:flex;"><span>Erasing flash <span style="color:#fff;font-weight:bold">for</span> firmware, this might take a <span style="color:#fff;font-weight:bold">while</span>...
+</span></span><span style="display:flex;"><span>Flashing the firmware <span style="color:#ff0;font-weight:bold">188440</span> bytes @ 0x00002000...
+</span></span><span style="display:flex;"><span>0b / <span style="color:#ff0;font-weight:bold">188440</span> (0.00%)
+</span></span><span style="display:flex;"><span>2052b / <span style="color:#ff0;font-weight:bold">188440</span> (1.09%)
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>188440b / <span style="color:#ff0;font-weight:bold">188440</span> (100.00%)
+</span></span><span style="display:flex;"><span>Checking program...
+</span></span><span style="display:flex;"><span>Program OK!
+</span></span><span style="display:flex;"><span>Resetting the chip.
+</span></span><span style="display:flex;"><span>Flash complete!
+</span></span></code></pre></div><h2 id="connecting-the-pinecil-to-the-pico">
+  Connecting the Pinecil to the Pico
+  <a class="heading-link" href="#connecting-the-pinecil-to-the-pico">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>The last step to see the serial output emitted by the IronOS firmware running on
+the Pinecil is to connect the UART pins on the breakout board to the Pico
+running <code>picoprobe</code>. <code>UART1</code> on the Pico is used for the USB-UART bridge, and
+pins 6 and 7 correspond to <code>UART1 TX</code> and <code>UART1 RX</code> respectively. The <code>RX</code> pin
+on the Pinecil breakout UART header should be connected to pin 6 on the Pico,
+while <code>TX</code> should be connected to pin 7. Lastly, the UART <code>GND</code> (ground) pin on
+the breakout board should be connected to a <code>GND</code> pin, such as pin 3, on the
+Pico. The full mapping is provided below.</p>
+<table>
+<thead>
+<tr>
+<th><strong>Pinecil Breakout</strong></th>
+<th><strong>Pico</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UART RX</td>
+<td>Pin 6 (UART1 TX)</td>
+</tr>
+<tr>
+<td>UART TX</td>
+<td>Pin 7 (UART1 RX)</td>
+</tr>
+<tr>
+<td>UART GND</td>
+<td>Pin 3 (GND)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>For a visual representation of the mapping, view the cover image of this post,
+which is a pin-accurate depiction of the wiring.</p>
+</blockquote>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/risc_v_pinecil_uart_picoprobe_0.jpg"
+    alt="risc-v-pinecil-uart-picoprobe-0"
+  />
+</div>
+<p>With the wiring in place, the Pico connected to your development machine, and
+<code>minicom</code> running, we can connect the Pinecil to a power source via the breakout
+board. We should see the following output in our <code>minicom</code> session with the
+Pico.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>dynamic memory init success,heap size = 48 Kbyte                                                                      
+</span></span><span style="display:flex;"><span>show flash cfg:                                                                                                       
+</span></span><span style="display:flex;"><span>jedec id   0x000000                                                                                                   
+</span></span><span style="display:flex;"><span>mid            0xC2
+</span></span><span style="display:flex;"><span>iomode         0x11
+</span></span><span style="display:flex;"><span>clk delay      0x01
+</span></span><span style="display:flex;"><span>clk invert     0x01
+</span></span><span style="display:flex;"><span>read reg cmd0  0x05
+</span></span><span style="display:flex;"><span>read reg cmd1  0x00
+</span></span><span style="display:flex;"><span>write reg cmd0 0x01
+</span></span><span style="display:flex;"><span>write reg cmd1 0x00
+</span></span><span style="display:flex;"><span>qe write len   0x02
+</span></span><span style="display:flex;"><span>cread support  0x00
+</span></span><span style="display:flex;"><span>cread code     0x00
+</span></span><span style="display:flex;"><span>burst wrap cmd 0x77
+</span></span><span style="display:flex;"><span>-------------------
+</span></span><span style="display:flex;"><span>Enable IRQ&#39;s
+</span></span><span style="display:flex;"><span>Hello from Pinecil via picoprobe!
+</span></span><span style="display:flex;"><span>Pine64 Pinecilv2 Starting
+</span></span><span style="display:flex;"><span>BLE Starting
+</span></span><span style="display:flex;"><span>            BLE Starting...Done
+</span></span><span style="display:flex;"><span>                               BLE Starting advertising
+</span></span></code></pre></div><p>This information is emitted by <a href="https://github.com/Ralim/IronOS/blob/6e2bca9699347d9d1381087149ab70ca0f6fcb4c/source/Core/BSP/Pinecilv2/bl_mcu_sdk/bsp/bsp_common/platform/bflb_platform.c#L72">invoking
+<code>bflb_platform_init()</code></a>
+on startup. With the ability to build, program, and monitor the firmware, we can
+start to make changes and test them out on the Pinecil hardware. In our next
+post, we&rsquo;ll begin walking through exactly what the Bouffalo Lab SDK and IronOS
+are doing, then see how we can modify them to include new functionality.</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2024
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
