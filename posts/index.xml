@@ -6,7 +6,16 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 29 Jan 2024 00:10:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 10 Mar 2024 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>The Most Important Skill in Startup Engineering Leadership</title>
+      <link>https://danielmangum.com/posts/most-important-skill-startup-engineering-leadership/</link>
+      <pubDate>Sun, 10 Mar 2024 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/most-important-skill-startup-engineering-leadership/</guid>
+      <description>I have been very fortunate to have both worked alongside some incredible engineering leaders, as well as lead engineering teams myself. These experiences have primarily been in the context of startups that are growing rapidly in terms of both customers and employees. The longer I have worked in these environments, the more convinced I have become that there is a singular skill that ultimately decides the success of a leader, and thus their team: pacing.</description>
+    </item>
+    
     <item>
       <title>RISC-V Bytes: Accessing the Pinecil UART with picoprobe</title>
       <link>https://danielmangum.com/posts/risc-v-bytes-accessing-pinecil-uart-picoprobe/</link>
