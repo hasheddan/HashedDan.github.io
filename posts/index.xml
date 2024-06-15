@@ -6,7 +6,17 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 10 Mar 2024 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 15 Jun 2024 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Wireframes are Cheap, Engineering Should Be Too</title>
+      <link>https://danielmangum.com/posts/wireframes-cheap-engineering-too/</link>
+      <pubDate>Sat, 15 Jun 2024 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/wireframes-cheap-engineering-too/</guid>
+      <description>I have spent the majority of my career in engineering roles at startups. Both at companies I have worked at, and in the general startup ecosystem, I have frequently heard some variation of the refrain “engineers are expensive, but wireframes are cheap”. While I align with the underlying sentiment that doing the least amount of work to get customer signal is optimal, the phrase has always bothered me.
+As an engineering leader, I do not want the rest of the organization to view the work that my colleagues and I do as some luxury that should only be leveraged after we have reached complete confidence that a product or feature needs to be built.</description>
+    </item>
+    
     <item>
       <title>The Most Important Skill in Startup Engineering Leadership</title>
       <link>https://danielmangum.com/posts/most-important-skill-startup-engineering-leadership/</link>
