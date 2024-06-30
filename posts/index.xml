@@ -6,7 +6,17 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sat, 15 Jun 2024 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 30 Jun 2024 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Static Allocation in External RAM on ESP32</title>
+      <link>https://danielmangum.com/posts/static-alloc-external-ram-esp32/</link>
+      <pubDate>Sun, 30 Jun 2024 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/static-alloc-external-ram-esp32/</guid>
+      <description>I frequently work with ESP32 microcontrollers (MCU), both at my day job and in my free time. These devices are very flexible, but like any microcontroller they are quite resource constrained in comparison to anything equivalent to or larger than a single-board computer.
+There are a few different variants of the ESP32 these days, but one of the newer and most popular is the ESP32-S3. Compared to the ESP32-S2, it offers a dual-core 32-bit Xtensa processor, support for Bluetooth 5.</description>
+    </item>
+    
     <item>
       <title>Wireframes are Cheap, Engineering Should Be Too</title>
       <link>https://danielmangum.com/posts/wireframes-cheap-engineering-too/</link>

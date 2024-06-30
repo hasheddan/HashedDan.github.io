@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  Static Allocation in External RAM on ESP32 · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="I frequently work with ESP32 microcontrollers (MCU), both at my day job and in my free time. These devices are very flexible, but like any microcontroller they are quite resource constrained in comparison to anything equivalent to or larger than a single-board computer.
+There are a few different variants of the ESP32 these days, but one of the newer and most popular is the ESP32-S3. Compared to the ESP32-S2, it offers a dual-core 32-bit Xtensa processor, support for Bluetooth 5.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="Static Allocation in External RAM on ESP32"/>
+<meta name="twitter:description" content="I frequently work with ESP32 microcontrollers (MCU), both at my day job and in my free time. These devices are very flexible, but like any microcontroller they are quite resource constrained in comparison to anything equivalent to or larger than a single-board computer.
+There are a few different variants of the ESP32 these days, but one of the newer and most popular is the ESP32-S3. Compared to the ESP32-S2, it offers a dual-core 32-bit Xtensa processor, support for Bluetooth 5."/>
+
+<meta property="og:title" content="Static Allocation in External RAM on ESP32" />
+<meta property="og:description" content="I frequently work with ESP32 microcontrollers (MCU), both at my day job and in my free time. These devices are very flexible, but like any microcontroller they are quite resource constrained in comparison to anything equivalent to or larger than a single-board computer.
+There are a few different variants of the ESP32 these days, but one of the newer and most popular is the ESP32-S3. Compared to the ESP32-S2, it offers a dual-core 32-bit Xtensa processor, support for Bluetooth 5." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/static-alloc-external-ram-esp32/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2024-06-30T01:41:34-06:00" />
+<meta property="article:modified_time" content="2024-06-30T01:41:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/static-alloc-external-ram-esp32/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/static-alloc-external-ram-esp32/">
+              Static Allocation in External RAM on ESP32
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2024-06-30T01:41:34-06:00">
+                June 30, 2024
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              8-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>I frequently work with ESP32 <a href="https://en.wikipedia.org/wiki/Microcontroller">microcontrollers
+(MCU)</a>, both at my day job and in
+my free time. These devices are very flexible, but like any microcontroller they
+are quite resource constrained in comparison to anything equivalent to or larger
+than a single-board computer.</p>
+<p>There are a few different variants of the ESP32 these days, but one of the newer
+and most popular is the
+<a href="https://www.espressif.com/en/products/socs/esp32-s3">ESP32-S3</a>. Compared to the
+<a href="https://www.espressif.com/en/products/socs/esp32-s2">ESP32-S2</a>, it offers a
+dual-core 32-bit Xtensa processor, support for Bluetooth 5.0, and more on-chip
+SRAM and ROM (full comparison can be found
+<a href="https://docs.espressif.com/projects/esp-idf/en/v5.0/esp32s3/hw-reference/chip-series-comparison.html">here</a>).
+Both of these SoC&rsquo;s, as well as others from Espressif, allow for integrating
+external RAM and flash, making it possible to run larger, more complex firmware.</p>
+<p>At first thought, it may seem as though it would be desirable for
+microcontrollers to use <a href="https://en.wikipedia.org/wiki/Dynamic_random-access_memory">dynamic random access memory
+(DRAM)</a> as it is
+more dense than <a href="https://en.wikipedia.org/wiki/Static_random-access_memory">static random access memory
+(SRAM)</a>, and thus
+cheaper. However, as the name suggests, DRAM must be constantly refreshed, which
+leads to higher power consumption when idle. The refresh behavior of DRAM also
+makes it more complex to integrate into a system. Given that microcontrollers
+typically only require a small amount of RAM, SRAM is generally used for on-chip
+memory.</p>
+<p>The ESP32-S3 has 512 KB of on-chip SRAM, but is capable of mapping up to 32 MB
+of <a href="https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-guides/external-ram.html">external
+RAM</a>
+into its memory address space. In order to make this larger external RAM exhibit
+similar properties to the on-chip RAM, <a href="https://en.wikipedia.org/wiki/Dynamic_random-access_memory#PSRAM">pseudostatic RAM
+(PSRAM)</a> is
+used. PSRAM is technically DRAM, but the external chip contains its own refresh
+circuitry, allowing it to appear to the MCU like SRAM that is communicated with
+via a <a href="https://en.wikipedia.org/wiki/Serial_Peripheral_Interface">serial peripheral interface
+(SPI)</a> bus.</p>
+<p><a href="https://github.com/espressif/esp-idf"><code>esp-idf</code></a> provides a few different
+mechanisms for dynamically allocating in external RAM, which are enabled via the
+<code>CONFIG_SPIRAM_USE</code> options.</p>
+<ul>
+<li><code>CONFIG_SPIRAM_USE_MEMMAP</code>: maps external RAM into the virtual address space,
+but leaves all access and management to the programmer.</li>
+<li><code>CONFIG_SPIRAM_USE_CAPS_ALLOC</code>: maps external RAM into the virtual address
+space, and makes it accessible to the <a href="https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-reference/system/mem_alloc.html#memory-capabilities">capability-based heap memory
+allocator</a>.
+This allows the programmer to utilize the memory by specifying
+<code>MALLOC_CAP_SPIRAM</code> explicitly with <code>heap_caps_malloc()</code>.</li>
+<li><code>CONFIG_SPIRAM_USE_MALLOC</code>: does the same as <code>CONFIG_SPIRAM_USE_CAPS_ALLOC</code>,
+but also allows for a standard <code>malloc()</code> call to allocate in external RAM.</li>
+</ul>
+<p>I was recently working on a project where I wanted to use a buffer that exceeded
+the size of the on-chip RAM. The buffer would be reused and would be needed
+throughout the duration of execution. I started out with using the capability
+allocator with <code>MALLOC_CAP_SPIRAM</code> to dynamically allocate the memory for the
+buffer early in the program&rsquo;s execution. The following is a toy program
+demonstrating the functionality.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&#34;esp_heap_caps.h&#34;</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;assert.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;stdint.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;stdio.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">uint8_t</span> *buf = <span style="color:#fff;font-weight:bold">NULL</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">void</span> app_main(<span style="color:#fff;font-weight:bold">void</span>) {
+</span></span><span style="display:flex;"><span>  printf(<span style="color:#0ff;font-weight:bold">&#34;Let&#39;s allocate some external memory!</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>);
+</span></span><span style="display:flex;"><span>  buf = heap_caps_malloc(<span style="color:#ff0;font-weight:bold">1000000</span>, MALLOC_CAP_SPIRAM);
+</span></span><span style="display:flex;"><span>  assert(buf);
+</span></span><span style="display:flex;"><span>  printf(<span style="color:#0ff;font-weight:bold">&#34;Address: %p</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>, (<span style="color:#fff;font-weight:bold">void</span> *)buf);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Attempting to allocate the 1 MB buffer in on-chip memory would fail as it alone
+exceeds the 512 KB capacity. Specifying that external memory should be used
+results in successful allocation. Flashing and running this program results in
+the following output.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>I (1204) main_task: Started on CPU0
+</span></span><span style="display:flex;"><span>I (1214) main_task: Calling app_main()
+</span></span><span style="display:flex;"><span>Let&#39;s allocate some external memory!
+</span></span><span style="display:flex;"><span>Address: 0x3c030b4c
+</span></span><span style="display:flex;"><span>I (1214) main_task: Returned from app_main()
+</span></span></code></pre></div><p>If we look at the sections of the ELF file from our build, we can see that the
+virtual address of the allocated memory (<code>0x3c030b4c</code>) is slightly offset from
+the <code>.ext_ram.bss</code> section address, which currently has a size of zero.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ readelf -S  build/esp_psram_static.elf | head -27
+</span></span><span style="display:flex;"><span>There are 95 section headers, starting at offset 0x3d2ea4:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Section Headers:
+</span></span><span style="display:flex;"><span>  [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
+</span></span><span style="display:flex;"><span>  [ 0]                   NULL            00000000 000000 000000 00      0   0  0
+</span></span><span style="display:flex;"><span>  [ 1] .rtc.text         NOBITS          600fe000 03e000 000010 00  WA  0   0  1
+</span></span><span style="display:flex;"><span>  [ 2] .rtc.force_fast   PROGBITS        600fe010 03d5f3 000000 00   W  0   0  1
+</span></span><span style="display:flex;"><span>  [ 3] .rtc_noinit       PROGBITS        50000000 03d5f3 000000 00   W  0   0  1
+</span></span><span style="display:flex;"><span>  [ 4] .rtc.force_slow   PROGBITS        50000000 03d5f3 000000 00   W  0   0  1
+</span></span><span style="display:flex;"><span>  [ 5] .rtc_reserved     NOBITS          600fffe8 03dfe8 000018 00  WA  0   0  8
+</span></span><span style="display:flex;"><span>  [ 6] .iram0.vectors    PROGBITS        40374000 01a000 000403 00  AX  0   0  4
+</span></span><span style="display:flex;"><span>  [ 7] .iram0.text       PROGBITS        40374404 01a404 00c4d7 00  AX  0   0  4
+</span></span><span style="display:flex;"><span>  [ 8] .dram0.dummy      NOBITS          3fc88000 00e000 008900 00  WA  0   0  1
+</span></span><span style="display:flex;"><span>  [ 9] .dram0.data       PROGBITS        3fc90900 016900 00275c 00  WA  0   0 16
+</span></span><span style="display:flex;"><span>  [10] .noinit           NOBITS          3fc9305c 000000 000000 00  WA  0   0  1
+</span></span><span style="display:flex;"><span>  [11] .dram0.bss        NOBITS          3fc93060 01905c 000900 00  WA  0   0  8
+</span></span><span style="display:flex;"><span>  [12] .flash.text       PROGBITS        42000020 027020 0165d3 00  AX  0   0  4
+</span></span><span style="display:flex;"><span>  [13] .flash_rodat[...] NOBITS          3c000020 001020 020000 00  WA  0   0  1
+</span></span><span style="display:flex;"><span>  [14] .flash.appdesc    PROGBITS        3c020020 001020 000100 00   A  0   0 16
+</span></span><span style="display:flex;"><span>  [15] .flash.rodata     PROGBITS        3c020120 001120 00c59c 00  WA  0   0 16
+</span></span><span style="display:flex;"><span>  [16] .flash.rodat[...] PROGBITS        3c02c6bc 03d5f3 000000 00   W  0   0  1
+</span></span><span style="display:flex;"><span>  [17] .ext_ram.dummy    NOBITS          3c000020 001020 02ffe0 00  WA  0   0  1
+</span></span><span style="display:flex;"><span>  [18] .ext_ram.bss      PROGBITS        3c030000 03d5f3 000000 00   W  0   0  1
+</span></span><span style="display:flex;"><span>  [19] .iram0.text_end   NOBITS          403808db 0268db 000025 00  WA  0   0  1
+</span></span><span style="display:flex;"><span>  [20] .iram0.data       PROGBITS        40380900 03d5f3 000000 00   W  0   0  1
+</span></span><span style="display:flex;"><span>  [21] .iram0.bss        PROGBITS        40380900 03d5f3 000000 00   W  0   0  1
+</span></span><span style="display:flex;"><span>  [22] .dram0.heap_start PROGBITS        3fc93960 03d5f3 000000 00   W  0   0  1
+</span></span></code></pre></div><blockquote>
+<p><code>dram</code> and <code>iram</code> refer to &ldquo;data RAM&rdquo; and &ldquo;instruction RAM&rdquo;. They describe how
+a memory region is being used, not the technology of the underlying physical
+memory component. Data RAM is not to be confused with dynamic random access
+memory.</p>
+</blockquote>
+<p>The starting virtual address was assigned by the <a href="https://en.wikipedia.org/wiki/Memory_management_unit">memory management unit
+(MMU)</a> on PSRAM
+initialization by identifying the largest block of free virtual address space,
+then reserving a block with size equivalent to the minimum of the largest block
+size and the available PSRAM capacity.</p>
+<p><code>esp-idf/components/esp_psram/esp_psram.c</code> (<a href="https://github.com/espressif/esp-idf/blob/e7070e777a079695f69720ffb3c631c5fe620cc6/components/esp_psram/esp_psram.c#L214">link</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>    <span style="color:#007f7f">//----------------------------------Map the PSRAM physical range to MMU-----------------------------//
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    <span style="color:#007f7f">/**
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">     * @note 2
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">     * Similarly to @note 1, we expect HW DBUS memory to be consecutive.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">     *
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">     * If situation is worse in the future (memory region isn&#39;t consecutive), we need to put these logics into chip-specific files
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">     */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">size_t</span> total_mapped_size = <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">size_t</span> size_to_map = <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">size_t</span> byte_aligned_size = <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span>    ret = esp_mmu_map_get_max_consecutive_free_block_size(MMU_MEM_CAP_READ | MMU_MEM_CAP_WRITE | MMU_MEM_CAP_8BIT | MMU_MEM_CAP_32BIT, MMU_TARGET_PSRAM0, &amp;byte_aligned_size);
+</span></span><span style="display:flex;"><span>    assert(ret == ESP_OK);
+</span></span><span style="display:flex;"><span>    size_to_map = MIN(byte_aligned_size, psram_available_size);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">void</span> *v_start_8bit_aligned = <span style="color:#fff;font-weight:bold">NULL</span>;
+</span></span><span style="display:flex;"><span>    ret = esp_mmu_map_reserve_block_with_caps(size_to_map, MMU_MEM_CAP_READ | MMU_MEM_CAP_WRITE | MMU_MEM_CAP_8BIT | MMU_MEM_CAP_32BIT, MMU_TARGET_PSRAM0, &amp;v_start_8bit_aligned);
+</span></span><span style="display:flex;"><span>    assert(ret == ESP_OK);
+</span></span></code></pre></div><p>This block is subsequently added to the heap allocator when
+<code>CONFIG_SPIRAM_USE_CAPS_ALLOC=y</code>.</p>
+<p><code>esp-idf/components/esp_psram/esp_psram.c</code> (<a href="https://github.com/espressif/esp-idf/blob/e7070e777a079695f69720ffb3c631c5fe620cc6/components/esp_psram/esp_psram.c#L366">link</a>)</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">esp_err_t</span> esp_psram_extram_add_to_heap_allocator(<span style="color:#fff;font-weight:bold">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">esp_err_t</span> ret = ESP_FAIL;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">uint32_t</span> byte_aligned_caps[] = {MALLOC_CAP_SPIRAM | MALLOC_CAP_DEFAULT, <span style="color:#ff0;font-weight:bold">0</span>, MALLOC_CAP_8BIT | MALLOC_CAP_32BIT};
+</span></span><span style="display:flex;"><span>    ret = heap_caps_add_region_with_caps(byte_aligned_caps,
+</span></span><span style="display:flex;"><span>                                         s_psram_ctx.regions_to_heap[PSRAM_MEM_8BIT_ALIGNED].vaddr_start,
+</span></span><span style="display:flex;"><span>                                         s_psram_ctx.regions_to_heap[PSRAM_MEM_8BIT_ALIGNED].vaddr_end);
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> (ret != ESP_OK) {
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span> ret;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> (s_psram_ctx.regions_to_heap[PSRAM_MEM_32BIT_ALIGNED].size) {
+</span></span><span style="display:flex;"><span>        assert(s_psram_ctx.regions_to_heap[PSRAM_MEM_32BIT_ALIGNED].vaddr_start);
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">uint32_t</span> word_aligned_caps[] = {MALLOC_CAP_SPIRAM | MALLOC_CAP_DEFAULT, <span style="color:#ff0;font-weight:bold">0</span>, MALLOC_CAP_32BIT};
+</span></span><span style="display:flex;"><span>        ret = heap_caps_add_region_with_caps(word_aligned_caps,
+</span></span><span style="display:flex;"><span>                                             s_psram_ctx.regions_to_heap[PSRAM_MEM_32BIT_ALIGNED].vaddr_start,
+</span></span><span style="display:flex;"><span>                                             s_psram_ctx.regions_to_heap[PSRAM_MEM_32BIT_ALIGNED].vaddr_end);
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">if</span> (ret != ESP_OK) {
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">return</span> ret;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ESP_EARLY_LOGI(TAG, <span style="color:#0ff;font-weight:bold">&#34;Adding pool of %dK of PSRAM memory to heap allocator&#34;</span>,
+</span></span><span style="display:flex;"><span>                   (s_psram_ctx.regions_to_heap[PSRAM_MEM_8BIT_ALIGNED].size + s_psram_ctx.regions_to_heap[PSRAM_MEM_32BIT_ALIGNED].size) / <span style="color:#ff0;font-weight:bold">1024</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> ESP_OK;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>We can see this in action by observing the logs that preceded our entry to the
+<code>main_task</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>I (1174) esp_psram: Adding pool of 8192K of PSRAM memory to heap allocator
+</span></span></code></pre></div><p>However, in this use-case the buffer only needs to be initialized to zero and we
+aren&rsquo;t going to reclaim the memory. Ideally we could avoid the need to
+dynamically allocate at all, and instead specify the size of the buffer that we
+need at compile time. Fortunately, <code>esp-idf</code> allows for use of the
+<code>EXT_RAM_BSS_ATTR</code> macro when <code>CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y</code>.
+<code>EXT_RAM_BSS_ATTR</code> expands to <code>__attribute__((section(&quot;.ext_ram.bss&quot;)))</code>, which
+indicates that a variable should be placed in the <code>.bss</code> (zero-initialized
+memory) section of the <code>.ext_ram</code> (external RAM).</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&#34;esp_heap_caps.h&#34;</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;stdint.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#include</span> <span style="color:#0f0;font-weight:bold">&lt;stdio.h&gt;</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> EXT_RAM_BSS_ATTR <span style="color:#fff;font-weight:bold">uint8_t</span> buf[<span style="color:#ff0;font-weight:bold">1000000</span>];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">void</span> app_main(<span style="color:#fff;font-weight:bold">void</span>) {
+</span></span><span style="display:flex;"><span>  printf(<span style="color:#0ff;font-weight:bold">&#34;Let&#39;s allocate some external memory!</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>);
+</span></span><span style="display:flex;"><span>  printf(<span style="color:#0ff;font-weight:bold">&#34;Address: %p</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>, (<span style="color:#fff;font-weight:bold">void</span> *)&amp;buf);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Building and running now yields the following output.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>I (1275) main_task: Started on CPU0
+</span></span><span style="display:flex;"><span>I (1285) main_task: Calling app_main()
+</span></span><span style="display:flex;"><span>Let&#39;s allocate some external memory!
+</span></span><span style="display:flex;"><span>Address: 0x3c030000
+</span></span><span style="display:flex;"><span>I (1285) main_task: Returned from app_main()
+</span></span></code></pre></div><p>If we take a look at the ELF section headers, we&rsquo;ll see that the <code>.ext_ram.bss</code>
+no longer has a size of zero, and the address matches that of the statically
+allocated buffer (<code>0x3c030000</code>). The size (<code>0x0f4240</code>) matches that of our
+<code>1000000</code> byte buffer.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ readelf -S  build/esp_psram_static.elf | head -27
+</span></span><span style="display:flex;"><span>There are 95 section headers, starting at offset 0x3d2c48:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Section Headers:
+</span></span><span style="display:flex;"><span>  [Nr] Name              Type            Addr     Off    Size   ES Flg Lk Inf Al
+</span></span><span style="display:flex;"><span>  [ 0]                   NULL            00000000 000000 000000 00      0   0  0
+</span></span><span style="display:flex;"><span>  [ 1] .rtc.text         NOBITS          600fe000 03e000 000010 00  WA  0   0  1
+</span></span><span style="display:flex;"><span>  [ 2] .rtc.force_fast   PROGBITS        600fe010 03d5c3 000000 00   W  0   0  1
+</span></span><span style="display:flex;"><span>  [ 3] .rtc_noinit       PROGBITS        50000000 03d5c3 000000 00   W  0   0  1
+</span></span><span style="display:flex;"><span>  [ 4] .rtc.force_slow   PROGBITS        50000000 03d5c3 000000 00   W  0   0  1
+</span></span><span style="display:flex;"><span>  [ 5] .rtc_reserved     NOBITS          600fffe8 03dfe8 000018 00  WA  0   0  8
+</span></span><span style="display:flex;"><span>  [ 6] .iram0.vectors    PROGBITS        40374000 01a000 000403 00  AX  0   0  4
+</span></span><span style="display:flex;"><span>  [ 7] .iram0.text       PROGBITS        40374404 01a404 00c4d7 00  AX  0   0  4
+</span></span><span style="display:flex;"><span>  [ 8] .dram0.dummy      NOBITS          3fc88000 00e000 008900 00  WA  0   0  1
+</span></span><span style="display:flex;"><span>  [ 9] .dram0.data       PROGBITS        3fc90900 016900 00275c 00  WA  0   0 16
+</span></span><span style="display:flex;"><span>  [10] .noinit           NOBITS          3fc9305c 000000 000000 00  WA  0   0  1
+</span></span><span style="display:flex;"><span>  [11] .dram0.bss        NOBITS          3fc93060 01905c 0008f8 00  WA  0   0  8
+</span></span><span style="display:flex;"><span>  [12] .flash.text       PROGBITS        42000020 027020 0165a3 00  AX  0   0  4
+</span></span><span style="display:flex;"><span>  [13] .flash_rodat[...] NOBITS          3c000020 001020 020000 00  WA  0   0  1
+</span></span><span style="display:flex;"><span>  [14] .flash.appdesc    PROGBITS        3c020020 001020 000100 00   A  0   0 16
+</span></span><span style="display:flex;"><span>  [15] .flash.rodata     PROGBITS        3c020120 001120 00c57c 00  WA  0   0 16
+</span></span><span style="display:flex;"><span>  [16] .flash.rodat[...] PROGBITS        3c02c69c 03d5c3 000000 00   W  0   0  1
+</span></span><span style="display:flex;"><span>  [17] .ext_ram.dummy    NOBITS          3c000020 001020 02ffe0 00  WA  0   0  1
+</span></span><span style="display:flex;"><span>  [18] .ext_ram.bss      NOBITS          3c030000 00e000 0f4240 00  WA  0   0  1
+</span></span><span style="display:flex;"><span>  [19] .iram0.text_end   NOBITS          403808db 0268db 000025 00  WA  0   0  1
+</span></span><span style="display:flex;"><span>  [20] .iram0.data       PROGBITS        40380900 03d5c3 000000 00   W  0   0  1
+</span></span><span style="display:flex;"><span>  [21] .iram0.bss        PROGBITS        40380900 03d5c3 000000 00   W  0   0  1
+</span></span><span style="display:flex;"><span>  [22] .dram0.heap_start PROGBITS        3fc93958 03d5c3 000000 00   W  0   0  1
+</span></span></code></pre></div><p>While statically allocating is not always the right option, using the technique
+described in this post to target external memory allows for larger static
+allocation than would be possible if only targeting on-chip RAM.</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2024
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
