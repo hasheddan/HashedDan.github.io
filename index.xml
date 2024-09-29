@@ -6,7 +6,17 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 03 Sep 2024 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 29 Sep 2024 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>The Taxonomy of Hardware Security Mechanisms</title>
+      <link>https://danielmangum.com/posts/taxonomy-hardware-security-mechanisms/</link>
+      <pubDate>Sun, 29 Sep 2024 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/taxonomy-hardware-security-mechanisms/</guid>
+      <description>Isolating sensitive data and operations is a fundamental issue in computing. Ideally, we want to minimize the possibility of a software defect compromising the security of a device. However, in order for the software we write to be useful, it typically needs to interact with that sensitive data in some form or fashion. So how do we interact with sensitive data without being able to access it?
+The answer is that we bring only the operations that must access the sensitive data closer to the data, then force all other software to invoke those operations via some sort of interface.</description>
+    </item>
+    
     <item>
       <title>Founder Mode for Non-Founders</title>
       <link>https://danielmangum.com/posts/founder-mode-non-founders/</link>
