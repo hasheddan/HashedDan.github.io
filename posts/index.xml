@@ -6,7 +6,17 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 11 Nov 2024 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 24 Nov 2024 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>This Website is Hosted on Bluesky</title>
+      <link>https://danielmangum.com/posts/this-website-is-hosted-on-bluesky/</link>
+      <pubDate>Sun, 24 Nov 2024 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/this-website-is-hosted-on-bluesky/</guid>
+      <description>Well, not this one. But this one is! How? Let&amp;rsquo;s take a closer look at Bluesky and the AT Protocol that underpins it.
+Note: I communicated with the Bluesky team prior to the publishing of this post. While the functionality described is not the intended use of the application, it is known behavior and does not constitue a vulnerability disclosure process. My main motivation for reaching out to them was because I like the folks and don&amp;rsquo;t want to make their lives harder.</description>
+    </item>
+    
     <item>
       <title>USB On-The-Go on the ESP32-S3</title>
       <link>https://danielmangum.com/posts/usb-otg-esp32s3/</link>
