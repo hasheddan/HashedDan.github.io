@@ -461,7 +461,7 @@ architecture</a>, meaning that the least
 significant byte is stored at the smallest memory address. If we take the 4
 bytes at <code>0x101b8</code>, which is the location of our <code>addw</code> instruction, we can
 re-arrange the bytes so that the least significant bit (LSB) is on the right and
-the most significant bit (MSB) is on the right:</p>
+the most significant bit (MSB) is on the left:</p>
 <p><code>00000000 10110101 00000101 00111011</code></p>
 <p>Now we can fit this into the <code>R</code> format we defined earlier:</p>
 <p><img src="../../static/risc_v_inst_intro_2.png" alt="addw R Format"></p>

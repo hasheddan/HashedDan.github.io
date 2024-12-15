@@ -6,7 +6,17 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 24 Nov 2024 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 15 Dec 2024 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>USB UART on the Thingy:91 X</title>
+      <link>https://danielmangum.com/posts/usb-uart-thingy91-x/</link>
+      <pubDate>Sun, 15 Dec 2024 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/usb-uart-thingy91-x/</guid>
+      <description>Nordic Semiconductor recently made their new IoT prototyping platform, the Thingy:91 X, generally available. The Thingy:91 X is an upgrade to their existing prototyping platform, the Thingy:91, replacing the nRF9160 System-in-Package (SiP) with an nRF9151 SiP, the nRF52840 System-on-Chip (SoC) with an nRF5340 SoC, and adding the nRF7002 integrated circuit (IC). Each of these components enables a different type of connectivity:
+nRF9151: cellular (LTE-M / NB-IoT), DECT NR+, GNSS nRF5340: Bluetooth LE, 802.</description>
+    </item>
+    
     <item>
       <title>This Website is Hosted on Bluesky</title>
       <link>https://danielmangum.com/posts/this-website-is-hosted-on-bluesky/</link>
