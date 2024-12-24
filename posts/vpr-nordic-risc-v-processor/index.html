@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  VPR: Nordic&#39;s First RISC-V Processor · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="VPR (pronounced &ldquo;Viper&rdquo;) is Nordic Semiconductor&rsquo;s first RISC-V processor, landing in the new nRF54H and nRF54L lines of SoCs after their initial announcements in April and October of 2023 respectively. Readers of this blog are familiar with my long-running obsession interest in RISC-V (see my RISC-V Tips and RISC-V Bytes series). However, Nordic&rsquo;s introduction of a RISC-V processor is particularly interesing to me as their lineup of microcontrollers is extremely popular in low power wireless domains, a common use case for Golioth customers.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="VPR: Nordic&#39;s First RISC-V Processor"/>
+<meta name="twitter:description" content="VPR (pronounced &ldquo;Viper&rdquo;) is Nordic Semiconductor&rsquo;s first RISC-V processor, landing in the new nRF54H and nRF54L lines of SoCs after their initial announcements in April and October of 2023 respectively. Readers of this blog are familiar with my long-running obsession interest in RISC-V (see my RISC-V Tips and RISC-V Bytes series). However, Nordic&rsquo;s introduction of a RISC-V processor is particularly interesing to me as their lineup of microcontrollers is extremely popular in low power wireless domains, a common use case for Golioth customers."/>
+
+<meta property="og:title" content="VPR: Nordic&#39;s First RISC-V Processor" />
+<meta property="og:description" content="VPR (pronounced &ldquo;Viper&rdquo;) is Nordic Semiconductor&rsquo;s first RISC-V processor, landing in the new nRF54H and nRF54L lines of SoCs after their initial announcements in April and October of 2023 respectively. Readers of this blog are familiar with my long-running obsession interest in RISC-V (see my RISC-V Tips and RISC-V Bytes series). However, Nordic&rsquo;s introduction of a RISC-V processor is particularly interesing to me as their lineup of microcontrollers is extremely popular in low power wireless domains, a common use case for Golioth customers." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/vpr-nordic-risc-v-processor/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2024-12-24T01:41:34-06:00" />
+<meta property="article:modified_time" content="2024-12-24T01:41:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/vpr-nordic-risc-v-processor/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/vpr-nordic-risc-v-processor/">
+              VPR: Nordic&#39;s First RISC-V Processor
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2024-12-24T01:41:34-06:00">
+                December 24, 2024
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              13-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>VPR (pronounced &ldquo;Viper&rdquo;) is <a href="https://www.nordicsemi.com/">Nordic
+Semiconductor&rsquo;s</a> first
+<a href="https://en.wikipedia.org/wiki/RISC-V">RISC-V</a> processor, landing in the new
+<a href="https://www.nordicsemi.com/Products/nRF54H20">nRF54H</a> and
+<a href="https://www.nordicsemi.com/Products/nRF54L15">nRF54L</a> lines of SoCs after their
+<a href="https://www.nordicsemi.com/Nordic-news/2023/04/nordic-semiconductor-redefines-its-leadership-in-bluetooth-low-energy-with-the-nrf54-series">initial</a>
+<a href="https://www.nordicsemi.com/Nordic-news/2023/10/Nordic-announces-nRF54L-Series-expanding-industrys-most-efficient-Bluetooth-LE-portfolio">announcements</a>
+in April and October of 2023 respectively. Readers of this blog are familiar
+with my long-running <del>obsession</del> interest in RISC-V (see my <a href="https://danielmangum.com/risc-v-tips/">RISC-V
+Tips</a> and <a href="https://danielmangum.com/categories/risc-v-bytes/">RISC-V
+Bytes</a> series). However,
+Nordic&rsquo;s introduction of a RISC-V processor is particularly interesing to me as
+their lineup of microcontrollers is extremely popular in low power wireless
+domains, a common use case for <a href="https://golioth.io/">Golioth</a> customers.</p>
+<p>Naturally, I was eager to look into the details of VPR as more information
+became available. A basic description of registers and initialization can be
+found in the <a href="https://docs.nordicsemi.com/bundle/ps_nrf54L15/page/vpr.html">nRF54L
+documentation</a>.
+VPR is an RV32E processor, meaning that it uses 32-bit registers but implements
+only the lower 16 registers required by the embedded (E) specification rather
+than the 32 defined by the full 32-bit integer (RV32I) specification. It also
+implements multiplication and division operations (M), as well as the compressed
+instruction (C) extension, which adds support for 16-bit instruction variants to
+improve code density. All instructions are executed in machine mode (M), which
+is the only implemented <a href="https://danielmangum.com/posts/risc-v-bytes-privilege-levels/">privilege
+level</a>.</p>
+<p>Alongside the <a href="https://en.wikipedia.org/wiki/ARM_Cortex-M#Cortex-M33">Arm
+Cortex-M33</a> application
+processor, nRF54L MCUs include a single VPR processor, referred to as the <a href="https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/device_guides/nrf54l/features.html#vpr_core"><em>fast
+lightweight peripheral
+processor</em></a>
+(FLPR, pronounced &ldquo;flipper&rdquo;), while the nRF54H20 includes both a FLPR and a
+<a href="https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/device_guides/nrf54h/ug_nrf54h20_architecture_cpu.html#peripheral_processor_ppr"><em>peripheral
+processor</em></a>
+(PPR, pronounced &ldquo;pepper&rdquo;) alongside its dual Arm Cortex-M33 application and
+network processors. The PPR is meant for peripheral handling with low power
+consumption and it runs at 16 MHz. The FLPR runs at 320 MHz and is intended for
+software-defined peripherals.</p>
+<p>VPR processors must be configured and started by their controlling application
+processor. This consists of setting the VPR&rsquo;s program counter in the <a href="https://docs.nordicsemi.com/bundle/ps_nrf54L15/page/vpr.html#register.INITPC"><code>INITPC</code>
+register</a>,
+then writing to the <a href="https://docs.nordicsemi.com/bundle/ps_nrf54L15/page/vpr.html#ariaid-title38"><code>CPURUN</code>
+register</a>
+to start the processor. On the nRF54H20, the PPR VPR executes code from <a href="https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/device_guides/nrf54h/ug_nrf54h20_architecture_memory.html#slow_global_ram_ram3x"><em>slow
+global RAM</em>
+(RAM3x)</a>.
+Therefore, the controlling processor must copy code into the appropriate region,
+before updating the program counter and starting the VPR processor.</p>
+<p>I have previously written about the <a href="https://danielmangum.com/posts/risc-v-bytes-zephyr-before-main/">Zephyr boot
+process</a>, and
+specifically about <a href="https://danielmangum.com/posts/risc-v-bytes-zephyr-before-main/#hardware-initialization">hardware
+initialization</a>.
+Zephyr uses <a href="https://www.devicetree.org/">devicetree</a> to describe the hardware
+and peripherals of supported processors and boards. In the
+<a href="https://github.com/zephyrproject-rtos/zephyr/blob/f51729aadae9a7413290ee6417fb13b18d417147/dts/common/nordic/nrf54h20.dtsi#L46">nrf54h20.dtsi</a>
+devicetree include file, there is a node representing the PPR VPR processor.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>		cpuppr: cpu@d {
+</span></span><span style="display:flex;"><span>			compatible = &#34;nordic,vpr&#34;;
+</span></span><span style="display:flex;"><span>			reg = &lt;13&gt;;
+</span></span><span style="display:flex;"><span>			device_type = &#34;cpu&#34;;
+</span></span><span style="display:flex;"><span>			clocks = &lt;&amp;fll16m&gt;;
+</span></span><span style="display:flex;"><span>			clock-frequency = &lt;DT_FREQ_M(16)&gt;;
+</span></span><span style="display:flex;"><span>			riscv,isa = &#34;rv32emc&#34;;
+</span></span><span style="display:flex;"><span>			nordic,bus-width = &lt;32&gt;;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>			cpuppr_vevif_rx: mailbox {
+</span></span><span style="display:flex;"><span>				compatible = &#34;nordic,nrf-vevif-task-rx&#34;;
+</span></span><span style="display:flex;"><span>				status = &#34;disabled&#34;;
+</span></span><span style="display:flex;"><span>				interrupt-parent = &lt;&amp;cpuppr_clic&gt;;
+</span></span><span style="display:flex;"><span>				interrupts = &lt;0 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;1 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;2 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;3 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;4 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;5 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;6 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;7 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;8 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;9 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;10 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;11 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;12 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;13 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;14 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;15 NRF_DEFAULT_IRQ_PRIORITY&gt;;
+</span></span><span style="display:flex;"><span>				#mbox-cells = &lt;1&gt;;
+</span></span><span style="display:flex;"><span>				nordic,tasks = &lt;16&gt;;
+</span></span><span style="display:flex;"><span>				nordic,tasks-mask = &lt;0xfffffff0&gt;;
+</span></span><span style="display:flex;"><span>			};
+</span></span><span style="display:flex;"><span>		};
+</span></span></code></pre></div><p>Previously mentioned attributes, such as the support for the <code>rv32emc</code> RISC-V
+ISA, as well as the 16 MHz (<code>DT_FREQ_M(16)</code>) clock speed, are defined. There is
+also a <a href="https://github.com/zephyrproject-rtos/zephyr/blob/f51729aadae9a7413290ee6417fb13b18d417147/dts/common/nordic/nrf54h20.dtsi#L697C1-L714C6">node under
+<code>soc</code></a>
+that defines the PPR as a coprocessor peripheral.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>			cpuppr_vpr: vpr@908000 {
+</span></span><span style="display:flex;"><span>				compatible = &#34;nordic,nrf-vpr-coprocessor&#34;;
+</span></span><span style="display:flex;"><span>				reg = &lt;0x908000 0x1000&gt;;
+</span></span><span style="display:flex;"><span>				status = &#34;disabled&#34;;
+</span></span><span style="display:flex;"><span>				#address-cells = &lt;1&gt;;
+</span></span><span style="display:flex;"><span>				#size-cells = &lt;1&gt;;
+</span></span><span style="display:flex;"><span>				ranges = &lt;0x0 0x908000 0x1000&gt;;
+</span></span><span style="display:flex;"><span>				power-domains = &lt;&amp;gpd NRF_GPD_SLOW_ACTIVE&gt;;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>				cpuppr_vevif_tx: mailbox@0 {
+</span></span><span style="display:flex;"><span>					compatible = &#34;nordic,nrf-vevif-task-tx&#34;;
+</span></span><span style="display:flex;"><span>					reg = &lt;0x0 0x1000&gt;;
+</span></span><span style="display:flex;"><span>					status = &#34;disabled&#34;;
+</span></span><span style="display:flex;"><span>					#mbox-cells = &lt;1&gt;;
+</span></span><span style="display:flex;"><span>					nordic,tasks = &lt;16&gt;;
+</span></span><span style="display:flex;"><span>					nordic,tasks-mask = &lt;0xfffffff0&gt;;
+</span></span><span style="display:flex;"><span>				};
+</span></span><span style="display:flex;"><span>			};
+</span></span></code></pre></div><p>The <code>compatible</code> property associates the PPR with the appropriate driver that
+the controlling processor, in this case the nRF54H20 application processor
+(<code>cpuapp</code>), can use to configure and start it. In the miscellaneous drivers,
+there <a href="https://github.com/zephyrproject-rtos/zephyr/blob/b7575e8b95c6d963aa207f264d425dbae456f5c2/drivers/misc/nordic_vpr_launcher">is a
+<code>nordic_vpr_launcher</code></a>,
+which <a href="https://github.com/zephyrproject-rtos/zephyr/blob/b7575e8b95c6d963aa207f264d425dbae456f5c2/drivers/misc/nordic_vpr_launcher/nordic_vpr_launcher.c#L6C1-L6C49">defines its device
+compatability</a>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#define DT_DRV_COMPAT nordic_nrf_vpr_coprocessor
+</span></span></span></code></pre></div><p>The driver is relatively simple because it is only responsible for device
+initialization. The <a href="https://github.com/zephyrproject-rtos/zephyr/blob/b7575e8b95c6d963aa207f264d425dbae456f5c2/drivers/misc/nordic_vpr_launcher/nordic_vpr_launcher.c#L32C1-L53C2">initialization
+function</a>
+performs the operations described in the documentation.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">int</span> nordic_vpr_launcher_init(<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">struct</span> device *dev)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">struct</span> nordic_vpr_launcher_config *config = dev-&gt;config;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if DT_ANY_INST_HAS_PROP_STATUS_OKAY(source_memory)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">if</span> (config-&gt;size &gt; <span style="color:#ff0;font-weight:bold">0U</span>) {
+</span></span><span style="display:flex;"><span>		LOG_DBG(<span style="color:#0ff;font-weight:bold">&#34;Loading VPR (%p) from %p to %p (%zu bytes)&#34;</span>, config-&gt;vpr,
+</span></span><span style="display:flex;"><span>			(<span style="color:#fff;font-weight:bold">void</span> *)config-&gt;src_addr, (<span style="color:#fff;font-weight:bold">void</span> *)config-&gt;exec_addr, config-&gt;size);
+</span></span><span style="display:flex;"><span>		memcpy((<span style="color:#fff;font-weight:bold">void</span> *)config-&gt;exec_addr, (<span style="color:#fff;font-weight:bold">void</span> *)config-&gt;src_addr, config-&gt;size);
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_SOC_NRF54L_CPUAPP_COMMON) &amp;&amp; !defined(CONFIG_TRUSTED_EXECUTION_NONSECURE)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	nrf_spu_periph_perm_secattr_set(NRF_SPU00, nrf_address_slave_get((<span style="color:#fff;font-weight:bold">uint32_t</span>)config-&gt;vpr),
+</span></span><span style="display:flex;"><span>					<span style="color:#fff;font-weight:bold">true</span>);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	LOG_DBG(<span style="color:#0ff;font-weight:bold">&#34;Launching VPR (%p) from %p&#34;</span>, config-&gt;vpr, (<span style="color:#fff;font-weight:bold">void</span> *)config-&gt;exec_addr);
+</span></span><span style="display:flex;"><span>	nrf_vpr_initpc_set(config-&gt;vpr, config-&gt;exec_addr);
+</span></span><span style="display:flex;"><span>	nrf_vpr_cpurun_set(config-&gt;vpr, <span style="color:#fff;font-weight:bold">true</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The various <code>nrf_vpr_*</code> functions are <a href="https://github.com/zephyrproject-rtos/hal_nordic/blob/dbfe4a14cf0ac7425ef58f1a01576873f5976f4c/nrfx/hal/nrf_vpr.h">provided as inline by
+<code>hal_nordic</code></a>.
+The device configuration, which determines the memory source and destination
+addresses used by the launcher, is <a href="https://github.com/zephyrproject-rtos/zephyr/blob/b7575e8b95c6d963aa207f264d425dbae456f5c2/drivers/misc/nordic_vpr_launcher/nordic_vpr_launcher.c#L55C1-L76C56">instantiated using various <code>DT_*</code> devicetree
+macros</a>,
+which are performed for every compatible node using
+<code>DT_INST_FOREACH_STATUS_OKAY</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#007f7f">/* obtain VPR address either from memory or partition */</span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#define VPR_ADDR(node_id)                                                                          \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">	(DT_REG_ADDR(node_id) +                                                                    \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">	 COND_CODE_0(DT_FIXED_PARTITION_EXISTS(node_id), (0), (DT_REG_ADDR(DT_GPARENT(node_id)))))
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#define NORDIC_VPR_LAUNCHER_DEFINE(inst)                                                           \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">	IF_ENABLED(DT_INST_NODE_HAS_PROP(inst, source_memory),                                     \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">		   (BUILD_ASSERT((DT_REG_SIZE(DT_INST_PHANDLE(inst, execution_memory)) &lt;=          \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">				  DT_REG_SIZE(DT_INST_PHANDLE(inst, source_memory))),              \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">				 &#34;Execution memory exceeds source memory size&#34;);))                 \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">                                                                                                   \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">	static const struct nordic_vpr_launcher_config config##inst = {                            \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">		.vpr = (NRF_VPR_Type *)DT_INST_REG_ADDR(inst),                                     \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">		.exec_addr = VPR_ADDR(DT_INST_PHANDLE(inst, execution_memory)),                    \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">		IF_ENABLED(DT_INST_NODE_HAS_PROP(inst, source_memory),                             \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">			   (.src_addr = VPR_ADDR(DT_INST_PHANDLE(inst, source_memory)),            \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">			    .size = DT_REG_SIZE(DT_INST_PHANDLE(inst, execution_memory)),))};      \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">                                                                                                   \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">	DEVICE_DT_INST_DEFINE(inst, nordic_vpr_launcher_init, NULL, NULL, &amp;config##inst,           \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">			      POST_KERNEL, CONFIG_NORDIC_VPR_LAUNCHER_INIT_PRIORITY, NULL);
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>DT_INST_FOREACH_STATUS_OKAY(NORDIC_VPR_LAUNCHER_DEFINE)
+</span></span></code></pre></div><p>We can see the initialization in action by building applications for both the
+application processor and the PPR. Zephyr&rsquo;s
+<a href="https://docs.zephyrproject.org/latest/build/sysbuild/index.html">sysbuild</a>
+allows for building for multiple targets. The <a href="https://docs.zephyrproject.org/latest/samples/sysbuild/hello_world/README.html"><code>hello_world</code>
+sample</a>
+demonstrates this capability by building the same application, which just prints
+<code>Hello world from {target}</code>, for all specified targets.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>west build -p -b nrf54h20dk/nrf54h20/cpuapp -T sample.sysbuild.hello_world.nrf54h20dk_cpuapp_cpuppr .
+</span></span></code></pre></div><p>The <code>-T</code> argument specifies one of the sample&rsquo;s <a href="https://github.com/zephyrproject-rtos/zephyr/blob/4a7ef5c010bc0d184521ba042345feb038ad84f4/samples/sysbuild/hello_world/sample.yaml">test
+configurations</a>,
+which will automatically inject extra arguments into the build.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>  <span style="font-weight:bold">sample.sysbuild.hello_world.nrf54h20dk_cpuapp_cpuppr</span>:
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">platform_allow</span>:
+</span></span><span style="display:flex;"><span>      - nrf54h20dk/nrf54h20/cpuapp
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">integration_platforms</span>:
+</span></span><span style="display:flex;"><span>      - nrf54h20dk/nrf54h20/cpuapp
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">extra_args</span>:
+</span></span><span style="display:flex;"><span>      SB_CONF_FILE=sysbuild/nrf54h20dk_nrf54h20_cpuppr.conf
+</span></span><span style="display:flex;"><span>      hello_world_SNIPPET=nordic-ppr
+</span></span></code></pre></div><p>The <code>SB_CONF_FILE</code> specifies the <a href="https://github.com/zephyrproject-rtos/zephyr/blob/4a7ef5c010bc0d184521ba042345feb038ad84f4/samples/sysbuild/hello_world/sysbuild/nrf54h20dk_nrf54h20_cpuppr.conf">sysbuild
+configuration</a>.
+For the nRF24H20 development kit (DK), the configuration file only serves to
+specify the board target for the <code>remote</code> variant of the application, which is
+the PPR.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>SB_CONFIG_REMOTE_BOARD=&#34;nrf54h20dk/nrf54h20/cpuppr&#34;
+</span></span></code></pre></div><p>The <code>hello_world_SNIPPET</code> specifies a snippet that should be included in the
+build. It includes two devicetree overlay files.
+<a href="https://github.com/zephyrproject-rtos/zephyr/blob/4137c11ee37bdc4e7ea1242828d027e27e9ec4d9/snippets/nordic-ppr/nordic-ppr.overlay">One</a>,
+<code>nordic-ppr.overlay</code>, enables the <code>cpuppr_vpr</code> node for any boards that
+incoporate a PPR.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>&amp;cpuppr_vpr {
+</span></span><span style="display:flex;"><span>	status = &#34;okay&#34;;
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><blockquote>
+<p>Observant readers will notice that it appears Nordic&rsquo;s upcoming nRF9280 also
+includes a PPR.</p>
+</blockquote>
+<p>The
+<a href="https://github.com/zephyrproject-rtos/zephyr/blob/4a7ef5c010bc0d184521ba042345feb038ad84f4/snippets/nordic-ppr/soc/nrf54h20_cpuapp.overlay">second</a>,
+<code>nrf54h20_cpuapp.overlay</code>, enables the memory region that is shared between the
+application processor and the PPR.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>&amp;cpuppr_ram3x_region {
+</span></span><span style="display:flex;"><span>	status = &#34;okay&#34;;
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>After build, the application processor image will reside in <code>build/hello_world</code>,
+while the PPR image will reside in <code>build/remote</code>. We can use the respective Arm
+and RISC-V toolchains from the <a href="https://github.com/zephyrproject-rtos/sdk-ng">Zephyr
+SDK</a> to inspect the ELF files and
+understand how the configuration translates to instructions in the binary.</p>
+<p>To disassemble the application processor image, use the <code>arm-zephyr-eabi</code>
+toolchain&rsquo;s <code>objdump</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ZEPHYR_SDK_PATH/arm-zephyr-eabi/bin/arm-zephyr-eabi-objdump -D build/hello_world/zephyr/zephyr.elf
+</span></span></code></pre></div><p>For the PPR image, the <code>riscv64-zephyr-elf</code> variant can be used.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>$ZEPHYR_SDK_PATH/riscv64-zephyr-elf/bin/riscv64-zephyr-elf-objdump -D build/remote/zephyr/zephyr.elf
+</span></span></code></pre></div><p>In the previously shown <code>nordic_vpr_launcher</code> driver initialization, the
+<code>DEVICE_DT_INST_DEFINE</code> macro is used to define the PPR peripheral device with a
+<code>POST_KERNEL</code> initialization level. This means that the device should be
+initialized after the kernel boots. This is handled by <a href="https://github.com/zephyrproject-rtos/zephyr/blob/4a7ef5c010bc0d184521ba042345feb038ad84f4/kernel/init.c#L347">a call to
+<code>z_sys_init_run_level</code></a>
+with level <code>POST_KERNEL</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">void</span> z_sys_init_run_level(<span style="color:#fff;font-weight:bold">enum</span> init_level level)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">struct</span> init_entry *levels[] = {
+</span></span><span style="display:flex;"><span>		__init_EARLY_start,
+</span></span><span style="display:flex;"><span>		__init_PRE_KERNEL_1_start,
+</span></span><span style="display:flex;"><span>		__init_PRE_KERNEL_2_start,
+</span></span><span style="display:flex;"><span>		__init_POST_KERNEL_start,
+</span></span><span style="display:flex;"><span>		__init_APPLICATION_start,
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_SMP
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>		__init_SMP_start,
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* CONFIG_SMP */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>		<span style="color:#007f7f">/* End marker */</span>
+</span></span><span style="display:flex;"><span>		__init_end,
+</span></span><span style="display:flex;"><span>	};
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">struct</span> init_entry *entry;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">for</span> (entry = levels[level]; entry &lt; levels[level+<span style="color:#ff0;font-weight:bold">1</span>]; entry++) {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">struct</span> device *dev = entry-&gt;dev;
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">int</span> result;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		sys_trace_sys_init_enter(entry, level);
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">if</span> (dev != <span style="color:#fff;font-weight:bold">NULL</span>) {
+</span></span><span style="display:flex;"><span>			result = do_device_init(entry);
+</span></span><span style="display:flex;"><span>		} <span style="color:#fff;font-weight:bold">else</span> {
+</span></span><span style="display:flex;"><span>			result = entry-&gt;init_fn.sys();
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		sys_trace_sys_init_exit(entry, level, result);
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>We can see the disassembly in the application processor image.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#f00">0</span>e0a9ca4 <span style="color:#f00">&lt;</span>z_sys_init_run_level<span style="color:#f00">&gt;</span>:
+</span></span><span style="display:flex;"><span> e0a9ca4:	b538      	push	<span style="color:#f00">{</span>r3, r4, r5, lr<span style="color:#f00">}</span>
+</span></span><span style="display:flex;"><span> e0a9ca6:	<span style="color:#f00">4</span>b09      	ldr	r3, [pc, <span style="color:#007f7f">#36]	; (e0a9ccc &lt;z_sys_init_run_level+0x28&gt;)
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0a9ca8:	f853 <span style="color:#ff0;font-weight:bold">4020</span> 	ldr.w	r4, [r3, r0, lsl <span style="color:#007f7f">#2]
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0a9cac:	<span style="color:#f00">3001</span>      	adds	r0, <span style="color:#007f7f">#1
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0a9cae:	f853 <span style="color:#ff0;font-weight:bold">5020</span> 	ldr.w	r5, [r3, r0, lsl <span style="color:#007f7f">#2]
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0a9cb2:	<span style="color:#f00">42</span>a5      	cmp	r5, r4
+</span></span><span style="display:flex;"><span> e0a9cb4:	d800      	bhi.n	<span style="color:#ff0;font-weight:bold">e0a9cb8</span> &lt;z_sys_init_run_level+<span style="color:#ff0;font-weight:bold">0x14</span>&gt;
+</span></span><span style="display:flex;"><span> e0a9cb6:	bd38      	pop	<span style="color:#f00">{</span>r3, r4, r5, pc<span style="color:#f00">}</span>
+</span></span><span style="display:flex;"><span> e0a9cb8:	<span style="color:#f00">6863</span>      	ldr	r3, [r4, <span style="color:#007f7f">#4]
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0a9cba:	b123      	cbz	r3, <span style="color:#ff0;font-weight:bold">e0a9cc6</span> &lt;z_sys_init_run_level+<span style="color:#ff0;font-weight:bold">0x22</span>&gt;
+</span></span><span style="display:flex;"><span> e0a9cbc:	<span style="color:#f00">4620</span>      	mov	r0, r4
+</span></span><span style="display:flex;"><span> e0a9cbe:	f003 f81f 	bl	<span style="color:#ff0;font-weight:bold">e0acd00</span> &lt;do_device_init&gt;
+</span></span><span style="display:flex;"><span> e0a9cc2:	<span style="color:#f00">3408</span>      	adds	r4, <span style="color:#007f7f">#8
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0a9cc4:	e7f5      	b.n	<span style="color:#ff0;font-weight:bold">e0a9cb2</span> &lt;z_sys_init_run_level+<span style="color:#ff0;font-weight:bold">0xe</span>&gt;
+</span></span><span style="display:flex;"><span> e0a9cc6:	<span style="color:#f00">6823</span>      	ldr	r3, [r4, <span style="color:#007f7f">#0]
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0a9cc8:	<span style="color:#f00">4798</span>      	blx	r3
+</span></span><span style="display:flex;"><span> e0a9cca:	e7fa      	b.n	<span style="color:#ff0;font-weight:bold">e0a9cc2</span> &lt;z_sys_init_run_level+<span style="color:#ff0;font-weight:bold">0x1e</span>&gt;
+</span></span><span style="display:flex;"><span> e0a9ccc:	<span style="color:#f00">0</span>e0ae818 	mcreq	<span style="color:#ff0;font-weight:bold">8</span>, <span style="color:#ff0;font-weight:bold">0</span>, lr, cr10, cr8, <span style="color:#f00">{</span><span style="color:#ff0;font-weight:bold">0</span><span style="color:#f00">}</span>
+</span></span></code></pre></div><p>The second instruction, <code>ldr r3, [pc, #36]</code> loads the address at a 36 byte
+offset from the current program counter (<code>pc</code>), which is the last entry in the
+function disassembly: <code>0e0ae818</code>.</p>
+<blockquote>
+<p>Ignore the attempted instruction decoding by <code>objdump</code> for this address and
+all stored memory addresses below.</p>
+</blockquote>
+<p>This is the address of the <code>levels</code> array, which contains <a href="https://github.com/zephyrproject-rtos/zephyr/blob/4a7ef5c010bc0d184521ba042345feb038ad84f4/include/zephyr/init.h#L103"><code>init_entry</code>
+items</a>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#f00">0</span>e0ae818 <span style="color:#f00">&lt;</span>levels.0<span style="color:#f00">&gt;</span>:
+</span></span><span style="display:flex;"><span> e0ae818:	<span style="color:#f00">0</span>e0ad3cc 	cdpeq	<span style="color:#ff0;font-weight:bold">3</span>, <span style="color:#ff0;font-weight:bold">0</span>, cr13, cr10, cr12, <span style="color:#f00">{</span><span style="color:#ff0;font-weight:bold">6</span><span style="color:#f00">}</span>
+</span></span><span style="display:flex;"><span> e0ae81c:	<span style="color:#f00">0</span>e0ad3cc 	cdpeq	<span style="color:#ff0;font-weight:bold">3</span>, <span style="color:#ff0;font-weight:bold">0</span>, cr13, cr10, cr12, <span style="color:#f00">{</span><span style="color:#ff0;font-weight:bold">6</span><span style="color:#f00">}</span>
+</span></span><span style="display:flex;"><span> e0ae820:	<span style="color:#f00">0</span>e0ad40c 	cdpeq	<span style="color:#ff0;font-weight:bold">4</span>, <span style="color:#ff0;font-weight:bold">0</span>, cr13, cr10, cr12, <span style="color:#f00">{</span><span style="color:#ff0;font-weight:bold">0</span><span style="color:#f00">}</span>
+</span></span><span style="display:flex;"><span> e0ae824:	<span style="color:#f00">0</span>e0ad414 	cfmvdlreq	mvd10, sp
+</span></span><span style="display:flex;"><span> e0ae828:	<span style="color:#f00">0</span>e0ad464 	cdpeq	<span style="color:#ff0;font-weight:bold">4</span>, <span style="color:#ff0;font-weight:bold">0</span>, cr13, cr10, cr4, <span style="color:#f00">{</span><span style="color:#ff0;font-weight:bold">3</span><span style="color:#f00">}</span>
+</span></span><span style="display:flex;"><span> e0ae82c:	<span style="color:#f00">0</span>e0ad474 	mcreq	<span style="color:#ff0;font-weight:bold">4</span>, <span style="color:#ff0;font-weight:bold">0</span>, sp, cr10, cr4, <span style="color:#f00">{</span><span style="color:#ff0;font-weight:bold">3</span><span style="color:#f00">}</span>
+</span></span><span style="display:flex;"><span> e0ae830:	<span style="color:#f00">3566726</span>e 	strbcc	r7, [r6, <span style="color:#007f7f">#-622]!	; 0xfffffd92
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae834:	<span style="color:#f00">30326834</span> 	eorscc	r6, r2, r4, lsr r8
+</span></span><span style="display:flex;"><span> e0ae838:	<span style="color:#f00">30406</span>b64 	subcc	r6, r0, r4, ror <span style="color:#007f7f">#22
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae83c:	<span style="color:#f00">302</span>e392e 	eorcc	r3, lr, lr, lsr <span style="color:#007f7f">#18
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae840:	<span style="color:#f00">66726</span>e2f 	ldrbtvs	r6, [r2], -pc, lsr <span style="color:#007f7f">#28
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae844:	<span style="color:#f00">32683435</span> 	rsbcc	r3, r8, <span style="color:#007f7f">#889192448	; 0x35000000
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae848:	<span style="color:#f00">70632</span>f30 	rsbvc	r2, r3, r0, lsr pc
+</span></span><span style="display:flex;"><span> e0ae84c:	<span style="color:#f00">70706175</span> 	rsbsvc	r6, r0, r5, ror r1
+</span></span><span style="display:flex;"><span> e0ae850:	<span style="color:#f00">6</span>c654800 	stclvs	<span style="color:#ff0;font-weight:bold">8</span>, cr4, [r5], <span style="color:#007f7f">#-0
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae854:	<span style="color:#f00">77206</span>f6c 	strvc	r6, [r0, -ip, ror <span style="color:#007f7f">#30]!
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae858:	<span style="color:#f00">646</span>c726f 	strbtvs	r7, [ip], <span style="color:#007f7f">#-623	; 0xfffffd91
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae85c:	<span style="color:#f00">6</span>f726620 	svcvs	<span style="color:#ff0;font-weight:bold">0x00726620</span>
+</span></span><span style="display:flex;"><span> e0ae860:	<span style="color:#f00">7325206</span>d 			<span style="color:#007f7f">; &lt;UNDEFINED&gt; instruction: 0x7325206d
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae864:	<span style="color:#f00">6146000</span>a 	cmpvs	r6, sl
+</span></span><span style="display:flex;"><span> e0ae868:	<span style="color:#f00">64656</span>c69 	strbtvs	r6, [r5], <span style="color:#007f7f">#-3177	; 0xfffff397
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae86c:	<span style="color:#f00">206</span>f7420 	rsbcs	r7, pc, r0, lsr <span style="color:#007f7f">#8
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae870:	<span style="color:#f00">6</span>f626572 	svcvs	<span style="color:#ff0;font-weight:bold">0x00626572</span>
+</span></span><span style="display:flex;"><span> e0ae874:	<span style="color:#f00">203</span>a746f 	eorscs	r7, sl, pc, ror <span style="color:#007f7f">#8
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae878:	<span style="color:#f00">6</span>e697073 	mcrvs	<span style="color:#ff0;font-weight:bold">0</span>, <span style="color:#ff0;font-weight:bold">3</span>, r7, cr9, cr3, <span style="color:#f00">{</span><span style="color:#ff0;font-weight:bold">3</span><span style="color:#f00">}</span>
+</span></span><span style="display:flex;"><span> e0ae87c:	<span style="color:#f00">676</span>e696e 	strbvs	r6, [lr, -lr, ror <span style="color:#007f7f">#18]!
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae880:	<span style="color:#f00">646</span>e6520 	strbtvs	r6, [lr], <span style="color:#007f7f">#-1312	; 0xfffffae0
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae884:	<span style="color:#f00">7373656</span>c 	cmnvc	r3, <span style="color:#007f7f">#108, 10	; 0x1b000000
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae888:	<span style="color:#f00">2</span>e2e796c 	vnmulcs.f16	s14, s28, s25	<span style="color:#007f7f">; &lt;UNPREDICTABLE&gt;
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae88c:	<span style="color:#f00">69000</span>a2e 	stmdbvs	r0, <span style="color:#f00">{</span>r1, r2, r3, r5, r9, fp<span style="color:#f00">}</span>
+</span></span><span style="display:flex;"><span> e0ae890:	<span style="color:#f00">322</span>d6370 	eorcc	r6, sp, <span style="color:#007f7f">#112, 6	; 0xc0000001
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae894:	<span style="color:#f00">0032312</span>d 	eorseq	r3, r2, sp, lsr <span style="color:#007f7f">#2
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae898:	<span style="color:#f00">2</span>d637069 	stclcs	<span style="color:#ff0;font-weight:bold">0</span>, cr7, [r3, <span style="color:#007f7f">#-420]!	; 0xfffffe5c
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae89c:	<span style="color:#f00">00332</span>d32 	eorseq	r2, r3, r2, lsr sp
+</span></span><span style="display:flex;"><span> e0ae8a0:	<span style="color:#f00">736</span>d6369 	cmnvc	sp, <span style="color:#007f7f">#-1543503871	; 0xa4000001
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ae8a4:	<span style="color:#f00">6</span>f775f67 	svcvs	<span style="color:#ff0;font-weight:bold">0x00775f67</span>
+</span></span><span style="display:flex;"><span> e0ae8a8:	<span style="color:#f00">00716</span>b72 	rsbseq	r6, r1, r2, ror fp
+</span></span></code></pre></div><p>The fourth entry, <code>0e0ad414</code>, is the <code>init_entry</code> for the PPR peripheral device.
+At that address, we&rsquo;ll find the address of its <code>init_function</code> (<code>0e0ac7cb</code>) and a
+pointer to the device structure (<code>0e0ad474</code>).</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#f00">0</span>e0ad414 <span style="color:#f00">&lt;</span>__init___device_dts_ord_60<span style="color:#f00">&gt;</span>:
+</span></span><span style="display:flex;"><span> e0ad414:	<span style="color:#f00">0</span>e0ac7cb 	cdpeq	<span style="color:#ff0;font-weight:bold">7</span>, <span style="color:#ff0;font-weight:bold">0</span>, cr12, cr10, cr11, <span style="color:#f00">{</span><span style="color:#ff0;font-weight:bold">6</span><span style="color:#f00">}</span>
+</span></span><span style="display:flex;"><span> e0ad418:	<span style="color:#f00">0</span>e0ad474 	mcreq	<span style="color:#ff0;font-weight:bold">4</span>, <span style="color:#ff0;font-weight:bold">0</span>, sp, cr10, cr4, <span style="color:#f00">{</span><span style="color:#ff0;font-weight:bold">3</span><span style="color:#f00">}</span>
+</span></span></code></pre></div><p>As expected, the <code>init_function</code> address is the location of the
+<code>nordic_vpr_launcher_init</code> function. Or, almost. There is a one byte offset in
+the address stored in the <code>init_entry</code> (<code>0e0ac7cb</code>) from the address of the
+launcher function (<code>0e0ac7ca</code>). In a moment we&rsquo;ll see why.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#f00">0</span>e0ac7ca <span style="color:#f00">&lt;</span>nordic_vpr_launcher_init<span style="color:#f00">&gt;</span>:
+</span></span><span style="display:flex;"><span> e0ac7ca:	b510      	push	<span style="color:#f00">{</span>r4, lr<span style="color:#f00">}</span>
+</span></span><span style="display:flex;"><span> e0ac7cc:	<span style="color:#f00">6844</span>      	ldr	r4, [r0, <span style="color:#007f7f">#4]
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ac7ce:	<span style="color:#f00">68</span>e2      	ldr	r2, [r4, <span style="color:#007f7f">#12]
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ac7d0:	b11a      	cbz	r2, <span style="color:#ff0;font-weight:bold">e0ac7da</span> &lt;nordic_vpr_launcher_init+<span style="color:#ff0;font-weight:bold">0x10</span>&gt;
+</span></span><span style="display:flex;"><span> e0ac7d2:	e9d4 <span style="color:#ff0;font-weight:bold">0101</span> 	ldrd	r0, r1, [r4, <span style="color:#007f7f">#4]
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ac7d6:	f000 fd56 	bl	<span style="color:#ff0;font-weight:bold">e0ad286</span> &lt;memcpy&gt;
+</span></span><span style="display:flex;"><span> e0ac7da:	e9d4 <span style="color:#ff0;font-weight:bold">3200</span> 	ldrd	r3, r2, [r4]
+</span></span><span style="display:flex;"><span> e0ac7de:	f8c3 <span style="color:#ff0;font-weight:bold">2808</span> 	str.w	r2, [r3, <span style="color:#007f7f">#2056]	; 0x808
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ac7e2:	<span style="color:#f00">2201</span>      	movs	r2, <span style="color:#007f7f">#1
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ac7e4:	<span style="color:#f00">6823</span>      	ldr	r3, [r4, <span style="color:#007f7f">#0]
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ac7e6:	<span style="color:#f00">2000</span>      	movs	r0, <span style="color:#007f7f">#0
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ac7e8:	f8c3 <span style="color:#ff0;font-weight:bold">2800</span> 	str.w	r2, [r3, <span style="color:#007f7f">#2048]	; 0x800
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ac7ec:	bd10      	pop	<span style="color:#f00">{</span>r4, pc
+</span></span></code></pre></div><p><code>z_sys_init_run_level</code> calls <code>do_device_init</code> on the PPR peripheral.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">int</span> do_device_init(<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">struct</span> init_entry *entry)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">struct</span> device *dev = entry-&gt;dev;
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">int</span> rc = <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (entry-&gt;init_fn.dev != <span style="color:#fff;font-weight:bold">NULL</span>) {
+</span></span><span style="display:flex;"><span>		rc = entry-&gt;init_fn.dev(dev);
+</span></span><span style="display:flex;"><span>		<span style="color:#007f7f">/* Mark device initialized. If initialization
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">		 * failed, record the error condition.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">		 */</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">if</span> (rc != <span style="color:#ff0;font-weight:bold">0</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">if</span> (rc &lt; <span style="color:#ff0;font-weight:bold">0</span>) {
+</span></span><span style="display:flex;"><span>				rc = -rc;
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">if</span> (rc &gt; UINT8_MAX) {
+</span></span><span style="display:flex;"><span>				rc = UINT8_MAX;
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>			dev-&gt;state-&gt;init_res = rc;
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	dev-&gt;state-&gt;initialized = <span style="color:#fff;font-weight:bold">true</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (rc == <span style="color:#ff0;font-weight:bold">0</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#007f7f">/* Run automatic device runtime enablement */</span>
+</span></span><span style="display:flex;"><span>		(<span style="color:#fff;font-weight:bold">void</span>)pm_device_runtime_auto_enable(dev);
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> rc;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>It loads the <code>init_function</code> address and device pointer from the passed
+<code>init_entry</code> into <code>r3</code> and <code>r4</code> respectively (<code>ldrd r3, r4, [r0]</code>). Then, if the
+device initialization function is not <code>NULL</code>, invokes the function (<code>blx r3</code>)
+after moving the device pointer into <code>r0</code> to be passed (<code>mov r0, r4</code>).</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#f00">0</span>e0acd00 <span style="color:#f00">&lt;</span>do_device_init<span style="color:#f00">&gt;</span>:
+</span></span><span style="display:flex;"><span> e0acd00:	b510      	push	<span style="color:#f00">{</span>r4, lr<span style="color:#f00">}</span>
+</span></span><span style="display:flex;"><span> e0acd02:	e9d0 <span style="color:#ff0;font-weight:bold">3400</span> 	ldrd	r3, r4, [r0]
+</span></span><span style="display:flex;"><span> e0acd06:	b933      	cbnz	r3, <span style="color:#ff0;font-weight:bold">e0acd16</span> &lt;do_device_init+<span style="color:#ff0;font-weight:bold">0x16</span>&gt;
+</span></span><span style="display:flex;"><span> e0acd08:	<span style="color:#f00">2000</span>      	movs	r0, <span style="color:#007f7f">#0
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0acd0a:	<span style="color:#f00">68</span>e2      	ldr	r2, [r4, <span style="color:#007f7f">#12]
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0acd0c:	<span style="color:#f00">7853</span>      	ldrb	r3, [r2, <span style="color:#007f7f">#1]
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0acd0e:	f043 <span style="color:#ff0;font-weight:bold">0301</span> 	orr.w	r3, r3, <span style="color:#007f7f">#1
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0acd12:	<span style="color:#f00">7053</span>      	strb	r3, [r2, <span style="color:#007f7f">#1]
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0acd14:	bd10      	pop	<span style="color:#f00">{</span>r4, pc<span style="color:#f00">}</span>
+</span></span><span style="display:flex;"><span> e0acd16:	<span style="color:#f00">4620</span>      	mov	r0, r4
+</span></span><span style="display:flex;"><span> e0acd18:	<span style="color:#f00">4798</span>      	blx	r3
+</span></span><span style="display:flex;"><span> e0acd1a:	<span style="color:#f00">2800</span>      	cmp	r0, <span style="color:#007f7f">#0
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0acd1c:	d0f4      	beq.n	<span style="color:#ff0;font-weight:bold">e0acd08</span> &lt;do_device_init+<span style="color:#ff0;font-weight:bold">0x8</span>&gt;
+</span></span><span style="display:flex;"><span> e0acd1e:	<span style="color:#f00">2800</span>      	cmp	r0, <span style="color:#007f7f">#0
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0acd20:	bfb8      	it	lt
+</span></span><span style="display:flex;"><span> e0acd22:	<span style="color:#f00">4240</span>      	neglt	r0, r0
+</span></span><span style="display:flex;"><span> e0acd24:	<span style="color:#f00">28</span>ff      	cmp	r0, <span style="color:#007f7f">#255	; 0xff
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0acd26:	bfa8      	it	ge
+</span></span><span style="display:flex;"><span> e0acd28:	<span style="color:#f00">20</span>ff      	movge	r0, <span style="color:#007f7f">#255	; 0xff
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0acd2a:	<span style="color:#f00">68</span>e3      	ldr	r3, [r4, <span style="color:#007f7f">#12]
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0acd2c:	<span style="color:#f00">7018</span>      	strb	r0, [r3, <span style="color:#007f7f">#0]
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0acd2e:	e7ec      	b.n	<span style="color:#ff0;font-weight:bold">e0acd0a</span> &lt;do_device_init+<span style="color:#ff0;font-weight:bold">0xa</span>&gt;
+</span></span></code></pre></div><p>The use of the <code>blx</code> instruction (&ldquo;Branch with Link and Exchange&rdquo;) is the reason
+for the 1 byte offset in address. The Cortex-M33 implements the Armv8-M
+architecture, which uses the T32 (formerly Thumb2) instruction set. Armv8
+supports
+<a href="https://developer.arm.com/documentation/den0013/d/Introduction-to-Assembly-Language/Interworking">&ldquo;interworking&rdquo;</a>,
+which allows dynamically switching between A32 and T32 instruction sets using
+the least significant bit of the destination address for applicable interworking
+instructions to indicate the ISA used by the callee. However, Armv8-M only
+supports T32, so the least significant bit must always be a <code>1</code>. The Armv8-M
+Architecture Reference Manual includes the following description for the <code>blx</code>
+instruction.</p>
+<blockquote>
+<p>Bit[0] complies with the Arm architecture interworking rules for switching
+between the A32 and T32 instruction sets. However, Armv8-M only supports the
+T32 instruction set, so bit[0] must be 1. If bit[0] is 0 the PE takes an
+INVSTATE UsageFault exception on the instruction at the target address.</p>
+</blockquote>
+<p>In the <code>device_area</code> section of the application processor binary, there is a
+<code>device</code> structure for the PPR peripheral. Its address matches the second member of
+the <code>init_entry</code> that was passed to <code>do_device_init</code> (<code>0e0ad474</code>).</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#f00">0</span>e0ad474 <span style="color:#f00">&lt;</span>__device_dts_ord_60<span style="color:#f00">&gt;</span>:
+</span></span><span style="display:flex;"><span> e0ad474:	<span style="color:#f00">0</span>e0ae95e 			<span style="color:#007f7f">; &lt;UNDEFINED&gt; instruction: 0x0e0ae95e
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ad478:	<span style="color:#f00">0</span>e0ae5e8 	cfsh32eq	mvfx14, mvfx10, <span style="color:#007f7f">#-8
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span> e0ad47c:	<span style="color:#f00">00000000</span> 	andeq	r0, r0, r0
+</span></span><span style="display:flex;"><span> e0ad480:	<span style="color:#f00">2</span>f011404 	svccs	<span style="color:#ff0;font-weight:bold">0x00011404</span>
+</span></span><span style="display:flex;"><span> e0ad484:	<span style="color:#f00">00000000</span> 	andeq	r0, r0, r0
+</span></span></code></pre></div><p>The second member of the <code>device</code> is a pointer to the <code>config</code> (<code>0e0ae5e8</code>) for
+the PPR peripheral.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#f00">0</span>e0ae5e8 <span style="color:#f00">&lt;</span>config0<span style="color:#f00">&gt;</span>:
+</span></span><span style="display:flex;"><span> e0ae5e8:	<span style="color:#f00">5</span>f908000 	svcpl	<span style="color:#ff0;font-weight:bold">0x00908000</span>
+</span></span><span style="display:flex;"><span> e0ae5ec:	<span style="color:#f00">2</span>fc00000 	svccs	<span style="color:#ff0;font-weight:bold">0x00c00000</span>
+</span></span><span style="display:flex;"><span> e0ae5f0:	<span style="color:#f00">0</span>e0e4000 	cdpeq	<span style="color:#ff0;font-weight:bold">0</span>, <span style="color:#ff0;font-weight:bold">0</span>, cr4, cr14, cr0, <span style="color:#f00">{</span><span style="color:#ff0;font-weight:bold">0</span><span style="color:#f00">}</span>
+</span></span><span style="display:flex;"><span> e0ae5f4:	<span style="color:#f00">0000</span>f800 	andeq	pc, r0, r0, lsl <span style="color:#007f7f">#16
+</span></span></span></code></pre></div><p>The <code>nordic_vpr_launcher</code> defines the <code>config</code> as follows.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">struct</span> nordic_vpr_launcher_config {
+</span></span><span style="display:flex;"><span>	NRF_VPR_Type *vpr;
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">uintptr_t</span> exec_addr;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if DT_ANY_INST_HAS_PROP_STATUS_OKAY(source_memory)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">uintptr_t</span> src_addr;
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">size_t</span> size;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>};
+</span></span></code></pre></div><p>In the nRF54H20 <a href="https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/device_guides/nrf54h/ug_nrf54h20_architecture_memory.html">memory layout
+documentation</a>,
+the slow global RAM (RAM3x) that the PRR executes from has address range from
+<code>2fc00000</code> to <code>2fc14000</code>. The <code>exec_addr</code> matches the top of the range
+<code>2fc00000</code>. The <code>src_addr</code> is <code>0e0e4000</code>, which resides in the
+<a href="https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/device_guides/nrf54h/ug_nrf54h20_architecture_memory.html#mram10">MRAM_10</a>
+address range (<code>0e000000</code> to <code>0e100000</code>). MRAM_10 is non-volatile memory used
+for storing firmware images. The VPR launcher copies the PPR firmware from
+MRAM_10 to RAM3x, sets the PPR program counter to the start address of RAM3x,
+then starts the PPR. In the dump of the PPR firmware image (now we&rsquo;re looking at
+RISC-V instructions), we can see that the start address corresponds to the
+expected <code>__start</code> symbol.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-asm" data-lang="asm"><span style="display:flex;"><span><span style="color:#f00">2</span>fc00000 <span style="color:#f00">&lt;</span>__start<span style="color:#f00">&gt;</span>:
+</span></span><span style="display:flex;"><span><span style="color:#f00">2</span>fc00000:	<span style="color:#f00">00001297</span>          	auipc	t0,<span style="color:#ff0;font-weight:bold">0x1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f00">2</span>fc00004:	<span style="color:#f00">90028293</span>          	addi	t0,t0,-<span style="color:#ff0;font-weight:bold">1792</span> <span style="color:#007f7f"># 2fc00900 &lt;_isr_wrapper&gt;
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#f00">2</span>fc00008:	<span style="color:#f00">00328293</span>          	addi	t0,t0,<span style="color:#ff0;font-weight:bold">3</span>
+</span></span><span style="display:flex;"><span><span style="color:#f00">2</span>fc0000c:	<span style="color:#f00">30529073</span>          	csrw	mtvec,t0
+</span></span><span style="display:flex;"><span><span style="color:#f00">2</span>fc00010:	<span style="color:#f00">00000297</span>          	auipc	t0,<span style="color:#ff0;font-weight:bold">0x0</span>
+</span></span><span style="display:flex;"><span><span style="color:#f00">2</span>fc00014:	<span style="color:#f00">0</span>f028293          	addi	t0,t0,<span style="color:#ff0;font-weight:bold">240</span> <span style="color:#007f7f"># 2fc00100 &lt;_irq_vector_table&gt;
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#f00">2</span>fc00018:	<span style="color:#f00">30729073</span>          	csrw	<span style="color:#ff0;font-weight:bold">0x307</span>,t0
+</span></span><span style="display:flex;"><span><span style="color:#f00">2</span>fc0001c:	<span style="color:#f00">0</span>a50006f          	j	<span style="color:#ff0;font-weight:bold">2fc008c0</span> &lt;_vector_end&gt;
+</span></span></code></pre></div><p>However, the PPR firmware image needs to be present in the MRAM_10 region before
+it can be copied. This is handled by sysbuild on <code>west flash</code> as the flash order
+is defined in the generated <code>domains.yaml</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="font-weight:bold">default</span>: hello_world
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">build_dir</span>: zephyr/samples/sysbuild/hello_world/build
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">domains</span>:
+</span></span><span style="display:flex;"><span>  - <span style="font-weight:bold">name</span>: hello_world
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">build_dir</span>: zephyr/samples/sysbuild/hello_world/build/hello_world
+</span></span><span style="display:flex;"><span>  - <span style="font-weight:bold">name</span>: remote
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">build_dir</span>: zephyr/samples/sysbuild/hello_world/build/remote
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">flash_order</span>:
+</span></span><span style="display:flex;"><span>  - remote
+</span></span><span style="display:flex;"><span>  - hello_world
+</span></span></code></pre></div><p>After successful programming, the application processor will boot, initialize
+and start the PPR, then print to the configured console on <code>/dev/ttyACM0</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>*** Booting nRF Connect SDK v2.8.0-a2386bfc8401 ***
+</span></span><span style="display:flex;"><span>*** Using Zephyr OS v3.7.99-0bc3393fb112 ***
+</span></span><span style="display:flex;"><span>Hello world from nrf54h20dk@0.9.0/nrf54h20/cpuapp
+</span></span></code></pre></div><p>After being started by the application processor, the PPR will boot and also
+print to its configured console on <code>/dev/ttyACM1</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>*** Booting nRF Connect SDK v2.8.0-a2386bfc8401 ***
+</span></span><span style="display:flex;"><span>*** Using Zephyr OS v3.7.99-0bc3393fb112 ***
+</span></span><span style="display:flex;"><span>Hello world from nrf54h20dk@0.9.0/nrf54h20/cpuppr
+</span></span></code></pre></div><p>It is exciting to see the use of RISC-V for domain specific operations alongside
+the familiar Arm processors present in many microcontrollers. With the
+incoporation of VPR processors across many of Nordic&rsquo;s new SoCs, it is clear
+that we&rsquo;ll continue to see more heterogeneous compute resources in the coming
+years. Understanding the architecture of the system and the interaction between
+components allows us to more fully leverage the capabilities of these products.
+As we continue exploring the PPR and FLPR VPR processors, we&rsquo;ll see how they can
+be used to improve performance and expand functionality.</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2024
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
