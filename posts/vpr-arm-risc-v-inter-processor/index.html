@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  VPR: Arm and RISC-V Inter-Processor Communication · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="In our last post, we explored the Nordic VPR RISC-V processor through the lens of the peripheral processor (PPR) on the nRF54H20. While we demonstrated how the application processor can configure and start a VPR processor, we stopped short of demonstrating any further communication between them. Most meaningful use-cases of the PPR and the FLPR, involve communicating with the controlling processor.
+Nordic uses two different hardware peripherals for inter-processor communication (IPC) on the nRF54H20: VEVIF (VPR Event Interface) and BELLBOARD.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="VPR: Arm and RISC-V Inter-Processor Communication"/>
+<meta name="twitter:description" content="In our last post, we explored the Nordic VPR RISC-V processor through the lens of the peripheral processor (PPR) on the nRF54H20. While we demonstrated how the application processor can configure and start a VPR processor, we stopped short of demonstrating any further communication between them. Most meaningful use-cases of the PPR and the FLPR, involve communicating with the controlling processor.
+Nordic uses two different hardware peripherals for inter-processor communication (IPC) on the nRF54H20: VEVIF (VPR Event Interface) and BELLBOARD."/>
+
+<meta property="og:title" content="VPR: Arm and RISC-V Inter-Processor Communication" />
+<meta property="og:description" content="In our last post, we explored the Nordic VPR RISC-V processor through the lens of the peripheral processor (PPR) on the nRF54H20. While we demonstrated how the application processor can configure and start a VPR processor, we stopped short of demonstrating any further communication between them. Most meaningful use-cases of the PPR and the FLPR, involve communicating with the controlling processor.
+Nordic uses two different hardware peripherals for inter-processor communication (IPC) on the nRF54H20: VEVIF (VPR Event Interface) and BELLBOARD." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/vpr-arm-risc-v-inter-processor/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2024-12-31T01:41:34-06:00" />
+<meta property="article:modified_time" content="2024-12-31T01:41:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/vpr-arm-risc-v-inter-processor/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/vpr-arm-risc-v-inter-processor/">
+              VPR: Arm and RISC-V Inter-Processor Communication
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2024-12-31T01:41:34-06:00">
+                December 31, 2024
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              13-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>In our <a href="https://danielmangum.com/posts/vpr-nordic-risc-v-processor/">last post</a>,
+we explored the Nordic <a href="https://docs.nordicsemi.com/bundle/ps_nrf54L15/page/vpr.html">VPR RISC-V
+processor</a> through
+the lens of the <a href="https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/device_guides/nrf54h/ug_nrf54h20_architecture_cpu.html#peripheral_processor_ppr"><em>peripheral processor
+(PPR)</em></a>
+on the <a href="https://www.nordicsemi.com/Products/nRF54H20">nRF54H20</a>. While we
+demonstrated how the application processor can configure and start a VPR
+processor, we stopped short of demonstrating any further communication between
+them. Most meaningful use-cases of the PPR and the
+<a href="https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/device_guides/nrf54h/ug_nrf54h20_architecture_cpu.html#fast_lightweight_processor_flpr">FLPR</a>,
+involve communicating with the controlling processor.</p>
+<p>Nordic uses two different hardware peripherals for <a href="https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/device_guides/nrf54h/ug_nrf54h20_architecture_ipc.html">inter-processor
+communication
+(IPC)</a>
+on the nRF54H20: <a href="https://docs.nordicsemi.com/bundle/nrfx_3.9.0/page/drivers/vpr/vevif/driver.html">VEVIF (VPR Event
+Interface)</a>
+and
+<a href="https://docs.nordicsemi.com/bundle/nrfx_3.9.0/page/drivers/bellboard/index.html">BELLBOARD</a>.
+The former is used for communication with the VPR RISC-V processors, while the
+latter is used for communication with the Arm processors. Zephyr <a href="https://docs.zephyrproject.org/latest/hardware/peripherals/mbox.html">Multi-Channel
+Inter-Processor Mailbox
+(MBOX)</a>
+transmitting and receiving drivers
+<a href="https://github.com/zephyrproject-rtos/zephyr/blob/1207ccfb7e305b74682fb35ef9f9177ba6513cbd/drivers/mbox/mbox_nrf_bellboard_rx.c">are</a>
+<a href="https://github.com/zephyrproject-rtos/zephyr/blob/1207ccfb7e305b74682fb35ef9f9177ba6513cbd/drivers/mbox/mbox_nrf_bellboard_tx.c">implemented</a>
+<a href="https://github.com/zephyrproject-rtos/zephyr/blob/1207ccfb7e305b74682fb35ef9f9177ba6513cbd/drivers/mbox/mbox_nrf_vevif_task_rx.c">for</a>
+<a href="https://github.com/zephyrproject-rtos/zephyr/blob/1207ccfb7e305b74682fb35ef9f9177ba6513cbd/drivers/mbox/mbox_nrf_vevif_task_tx.c">both</a>.
+It is easy to get confused about the organization of drivers used by each
+processor, but the breakdown in the case of communication between the
+application processor (<code>cpuapp</code>) and PPR (<code>cpuppr</code>) on the nRF54H20 is as
+follows.</p>
+<ul>
+<li>VEVIF Task TX: used by <code>cpuapp</code> to signal the <code>cpuppr</code></li>
+<li>VEVIF Task RX: used by <code>cpuppr</code> to receive signals from the <code>cpuapp</code></li>
+<li>BELLBOARD TX: used by <code>cpuppr</code> to signal the <code>cpuapp</code></li>
+<li>BELLBOARD RX: used by <code>cpuapp</code> to receive signals from the <code>cpuppr</code></li>
+</ul>
+<p>These drivers provide Nordic&rsquo;s peripheral interface
+<a href="https://docs.nordicsemi.com/bundle/ps_nrf54L15/page/peripheral_interface.html#ariaid-title6">tasks</a>
+and
+<a href="https://docs.nordicsemi.com/bundle/ps_nrf54L15/page/peripheral_interface.html#ariaid-title7">events</a>
+model. Tasks are used to trigger functionality on a peripheral, whereas events
+are used by a peripheral to notify the CPU or another peripheral about some
+event occurring. The <a href="https://docs.nordicsemi.com/bundle/ps_nrf54L15/page/dppi.html">Distributed Programmable Peripheral Interconnect
+(DPPI)</a> allows
+for configuration of channels so that events can be routed between peripherals
+on a one-to-one, one-to-many, many-to-one, or many-to-many model without a CPU
+having to be involved at all. Without it, coordinating peripherals would require
+a peripheral generating an interrupt on a CPU, then that CPU servicing the
+interrupt by triggering functionality on another peripheral. This not only
+creates additional overhead, but also occupies the CPU when it may have other
+operations to perform. However, in the case of inter-processor communication, we
+are communicating directly between CPUs and want to raise interrupts. Therefore,
+we avoid using the DPPI and instead communicate tasks directly to the PPR
+(VEVIF) and the application processor (BELLBOARD) to generate interrupts.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/nrf54h20_vpr_ipc_0.png"
+    alt="nrf54h20-vpr-ipc-0"
+  />
+</div>
+<p>The Zephyr MBOX API supports
+<a href="https://github.com/zephyrproject-rtos/zephyr/tree/fdf0ec2e5f9cbdc76d86f64df6100b19ca30c48d/samples/drivers/mbox">signalling</a>
+and <a href="https://github.com/zephyrproject-rtos/zephyr/tree/fdf0ec2e5f9cbdc76d86f64df6100b19ca30c48d/samples/drivers/mbox_data">data
+transfer</a>
+modes. If a peripheral supports data transfer, the MBOX API can be used directly
+for communicating between processors. The VEVIF and BELLBOARD peripherals do not
+support data transfer, so we must leverage the Zephyr <a href="https://docs.zephyrproject.org/latest/services/ipc/ipc_service/ipc_service.html">IPC
+Service</a>.
+It abstracts communication by writing to shared memory, then leveraging the MBOX
+API to signal the other processor to read from it. In order to do so,
+partitions in shared memory for sending in each direction (if necessary) must be
+configured.</p>
+<p>The same RAM3x region used in the last post for programming the PPR is used for
+IPC shared memory. This can be observed in the <a href="https://github.com/zephyrproject-rtos/zephyr/blob/fdf0ec2e5f9cbdc76d86f64df6100b19ca30c48d/boards/nordic/nrf54h20dk/nrf54h20dk_nrf54h20-memory_map.dtsi#L136C1-L156C5">memory map devicetree include
+file</a>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>		cpuppr_ram3x_region: memory@2fc00000 {
+</span></span><span style="display:flex;"><span>			compatible = &#34;nordic,owned-memory&#34;;
+</span></span><span style="display:flex;"><span>			reg = &lt;0x2fc00000 DT_SIZE_K(64)&gt;;
+</span></span><span style="display:flex;"><span>			status = &#34;disabled&#34;;
+</span></span><span style="display:flex;"><span>			nordic,access = &lt;NRF_OWNER_ID_APPLICATION NRF_PERM_RWX&gt;;
+</span></span><span style="display:flex;"><span>			#address-cells = &lt;1&gt;;
+</span></span><span style="display:flex;"><span>			#size-cells = &lt;1&gt;;
+</span></span><span style="display:flex;"><span>			ranges = &lt;0x0 0x2fc00000 0x10000&gt;;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>			cpuppr_code_data: memory@0 {
+</span></span><span style="display:flex;"><span>				reg = &lt;0x0 DT_SIZE_K(62)&gt;;
+</span></span><span style="display:flex;"><span>			};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>			cpuapp_cpuppr_ipc_shm: memory@f800 {
+</span></span><span style="display:flex;"><span>				reg = &lt;0xf800 DT_SIZE_K(1)&gt;;
+</span></span><span style="display:flex;"><span>			};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>			cpuppr_cpuapp_ipc_shm: memory@fc00 {
+</span></span><span style="display:flex;"><span>				reg = &lt;0xfc00 DT_SIZE_K(1)&gt;;
+</span></span><span style="display:flex;"><span>			};
+</span></span><span style="display:flex;"><span>		};
+</span></span></code></pre></div><p>We&rsquo;ll use the <code>cpuapp_cpuppr_ipc_shm</code> for <code>cpuapp</code> to <code>cpuppr</code> data transfer,
+and <code>cpuppr_cpuapp_ipc_shm</code> for the other direction. The <a href="https://github.com/zephyrproject-rtos/zephyr/blob/fdf0ec2e5f9cbdc76d86f64df6100b19ca30c48d/boards/nordic/nrf54h20dk/nrf54h20dk_nrf54h20-ipc_conf.dtsi#L41">IPC config devicetree
+include
+file</a>
+is used by both the PPR and the application processor for the base IPC
+configuration. The <code>cpuapp_cpuppr_ipc</code> node indicates compatibility with the
+<a href="https://docs.zephyrproject.org/latest/services/ipc/ipc_service/backends/ipc_service_icmsg.html">Inter-Core Messaging
+(ICMsg)</a>
+IPC service backend.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>		cpuapp_cpuppr_ipc: ipc-2-13 {
+</span></span><span style="display:flex;"><span>			compatible = &#34;zephyr,ipc-icmsg&#34;;
+</span></span><span style="display:flex;"><span>			status = &#34;disabled&#34;;
+</span></span><span style="display:flex;"><span>			dcache-alignment = &lt;32&gt;;
+</span></span><span style="display:flex;"><span>			mboxes = &lt;&amp;cpuapp_bellboard 13&gt;,
+</span></span><span style="display:flex;"><span>				 &lt;&amp;cpuppr_vevif 12&gt;;
+</span></span><span style="display:flex;"><span>		};
+</span></span></code></pre></div><p>The application processor <a href="https://github.com/zephyrproject-rtos/zephyr/blob/fdf0ec2e5f9cbdc76d86f64df6100b19ca30c48d/boards/nordic/nrf54h20dk/nrf54h20dk_nrf54h20_cpuapp.dts#L177C1-L181C3">devicetree
+file</a>
+configures the <code>cpuapp</code> to <code>cpuppr</code> shared memory for sending (tx) and the
+<code>cpuppr</code> to <code>cpuapp</code> region for receiving (rx). It also assigns the <code>rx</code> name to
+the first MBOX (<code>cpuapp_bellboard</code>) and <code>tx</code> to the second (<code>cpuppr_vevif</code>).</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>&amp;cpuapp_cpuppr_ipc {
+</span></span><span style="display:flex;"><span>	mbox-names = &#34;rx&#34;, &#34;tx&#34;;
+</span></span><span style="display:flex;"><span>	tx-region = &lt;&amp;cpuapp_cpuppr_ipc_shm&gt;;
+</span></span><span style="display:flex;"><span>	rx-region = &lt;&amp;cpuppr_cpuapp_ipc_shm&gt;;
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>The PPR <a href="https://github.com/zephyrproject-rtos/zephyr/blob/fdf0ec2e5f9cbdc76d86f64df6100b19ca30c48d/boards/nordic/nrf54h20dk/nrf54h20dk_nrf54h20_cpuppr.dts#L34C1-L38C3">devicetree
+file</a>
+does the opposite.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>&amp;cpuapp_cpuppr_ipc {
+</span></span><span style="display:flex;"><span>	mbox-names = &#34;tx&#34;, &#34;rx&#34;;
+</span></span><span style="display:flex;"><span>	tx-region = &lt;&amp;cpuppr_cpuapp_ipc_shm&gt;;
+</span></span><span style="display:flex;"><span>	rx-region = &lt;&amp;cpuapp_cpuppr_ipc_shm&gt;;
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>The <code>cpuapp_bellboard</code> is first defined in the <a href="https://github.com/zephyrproject-rtos/zephyr/blob/1b70bfa14e288d97b44d2446c8ef0b93226514e6/dts/common/nordic/nrf54h20.dtsi#L534">common nRF54H20 devicetree
+include file</a>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>			cpuapp_bellboard: mailbox@9a000 {
+</span></span><span style="display:flex;"><span>				reg = &lt;0x9a000 0x1000&gt;;
+</span></span><span style="display:flex;"><span>				status = &#34;disabled&#34;;
+</span></span><span style="display:flex;"><span>				power-domains = &lt;&amp;gpd NRF_GPD_FAST_ACTIVE0&gt;;
+</span></span><span style="display:flex;"><span>				#mbox-cells = &lt;1&gt;;
+</span></span><span style="display:flex;"><span>			};
+</span></span></code></pre></div><p>Then, for each processor, the relevant additional properties are added that
+allow the same label (<code>cpuapp_bellboard</code>) to be used for both the sending and
+receiving sides.</p>
+<p><a href="https://github.com/zephyrproject-rtos/zephyr/blob/1b70bfa14e288d97b44d2446c8ef0b93226514e6/dts/arm/nordic/nrf54h20_cpuapp.dtsi#L47">Application Processor</a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>&amp;cpuapp_bellboard {
+</span></span><span style="display:flex;"><span>	compatible = &#34;nordic,nrf-bellboard-rx&#34;;
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p><a href="https://github.com/zephyrproject-rtos/zephyr/blob/1b70bfa14e288d97b44d2446c8ef0b93226514e6/dts/riscv/nordic/nrf54h20_cpuppr.dtsi#L51C1-L53C3">PPR</a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>&amp;cpuapp_bellboard {
+</span></span><span style="display:flex;"><span>	compatible = &#34;nordic,nrf-bellboard-tx&#34;;
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><blockquote>
+<p>Even more properties are defined in the board specific devicetree file for the
+<a href="https://github.com/zephyrproject-rtos/zephyr/blob/1b70bfa14e288d97b44d2446c8ef0b93226514e6/boards/nordic/nrf54h20dk/nrf54h20dk_nrf54h20_cpuapp.dts#L123">application
+processor</a>.</p>
+</blockquote>
+<p>The definition of the <code>cpuppr_vevif</code> MBOX differs slightly, as instead of a
+single <code>global_peripheral</code> with consistent memory mapped registers, the PPR&rsquo;s
+<a href="https://github.com/zephyrproject-rtos/zephyr/blob/1b70bfa14e288d97b44d2446c8ef0b93226514e6/dts/common/nordic/nrf54h20.dtsi#L697C1-L714C6">sending VEVIF
+interface</a>
+is defined as a subnode on the <code>cpuppr_vpr</code> global peripheral with memory mapped
+registers, while the <a href="https://github.com/zephyrproject-rtos/zephyr/blob/1b70bfa14e288d97b44d2446c8ef0b93226514e6/dts/common/nordic/nrf54h20.dtsi#L46C1-L79C5">receiving VEVIF
+interface</a>
+is defined as a subnode of the <code>cpuppr</code> itself.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>			cpuppr_vpr: vpr@908000 {
+</span></span><span style="display:flex;"><span>				compatible = &#34;nordic,nrf-vpr-coprocessor&#34;;
+</span></span><span style="display:flex;"><span>				reg = &lt;0x908000 0x1000&gt;;
+</span></span><span style="display:flex;"><span>				status = &#34;disabled&#34;;
+</span></span><span style="display:flex;"><span>				#address-cells = &lt;1&gt;;
+</span></span><span style="display:flex;"><span>				#size-cells = &lt;1&gt;;
+</span></span><span style="display:flex;"><span>				ranges = &lt;0x0 0x908000 0x1000&gt;;
+</span></span><span style="display:flex;"><span>				power-domains = &lt;&amp;gpd NRF_GPD_SLOW_ACTIVE&gt;;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>				cpuppr_vevif_tx: mailbox@0 {
+</span></span><span style="display:flex;"><span>					compatible = &#34;nordic,nrf-vevif-task-tx&#34;;
+</span></span><span style="display:flex;"><span>					reg = &lt;0x0 0x1000&gt;;
+</span></span><span style="display:flex;"><span>					status = &#34;disabled&#34;;
+</span></span><span style="display:flex;"><span>					#mbox-cells = &lt;1&gt;;
+</span></span><span style="display:flex;"><span>					nordic,tasks = &lt;16&gt;;
+</span></span><span style="display:flex;"><span>					nordic,tasks-mask = &lt;0xfffffff0&gt;;
+</span></span><span style="display:flex;"><span>				};
+</span></span><span style="display:flex;"><span>			};
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>		cpuppr: cpu@d {
+</span></span><span style="display:flex;"><span>			compatible = &#34;nordic,vpr&#34;;
+</span></span><span style="display:flex;"><span>			reg = &lt;13&gt;;
+</span></span><span style="display:flex;"><span>			device_type = &#34;cpu&#34;;
+</span></span><span style="display:flex;"><span>			clocks = &lt;&amp;fll16m&gt;;
+</span></span><span style="display:flex;"><span>			clock-frequency = &lt;DT_FREQ_M(16)&gt;;
+</span></span><span style="display:flex;"><span>			riscv,isa = &#34;rv32emc&#34;;
+</span></span><span style="display:flex;"><span>			nordic,bus-width = &lt;32&gt;;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>			cpuppr_vevif_rx: mailbox {
+</span></span><span style="display:flex;"><span>				compatible = &#34;nordic,nrf-vevif-task-rx&#34;;
+</span></span><span style="display:flex;"><span>				status = &#34;disabled&#34;;
+</span></span><span style="display:flex;"><span>				interrupt-parent = &lt;&amp;cpuppr_clic&gt;;
+</span></span><span style="display:flex;"><span>				interrupts = &lt;0 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;1 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;2 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;3 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;4 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;5 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;6 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;7 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;8 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;9 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;10 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;11 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;12 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;13 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;14 NRF_DEFAULT_IRQ_PRIORITY&gt;,
+</span></span><span style="display:flex;"><span>					     &lt;15 NRF_DEFAULT_IRQ_PRIORITY&gt;;
+</span></span><span style="display:flex;"><span>				#mbox-cells = &lt;1&gt;;
+</span></span><span style="display:flex;"><span>				nordic,tasks = &lt;16&gt;;
+</span></span><span style="display:flex;"><span>				nordic,tasks-mask = &lt;0xfffffff0&gt;;
+</span></span><span style="display:flex;"><span>			};
+</span></span><span style="display:flex;"><span>		};
+</span></span></code></pre></div><p>The generic <code>cpuppr_vevif</code> label is then applied for each processor.</p>
+<p><a href="https://github.com/zephyrproject-rtos/zephyr/blob/1b70bfa14e288d97b44d2446c8ef0b93226514e6/dts/arm/nordic/nrf54h20_cpuapp.dtsi#L12C1-L12C35">Application Processor</a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>cpuppr_vevif: &amp;cpuppr_vevif_tx {};
+</span></span></code></pre></div><p><a href="https://github.com/zephyrproject-rtos/zephyr/blob/1b70bfa14e288d97b44d2446c8ef0b93226514e6/dts/riscv/nordic/nrf54h20_cpuppr.dtsi#L11">PPR</a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>cpuppr_vevif: &amp;cpuppr_vevif_rx {};
+</span></span></code></pre></div><p>Behind the scenes, the Arm Cortex-M33 processors are using the <a href="https://developer.arm.com/documentation/100230/0004/functional-description/nested-vectored-interrupt-controller/nvic-programmers-model">Nested Vector
+Interrupt Controller
+(NVIC)</a>
+and the RISC-V processors are using the <a href="https://github.com/riscv/riscv-fast-interrupt">Core Local Interrupt Controller
+(CLIC)</a>. We&rsquo;ll cover them in
+greater depth in a future post, but for now we can see that the
+<code>cpuppr_vevif_rx</code> mailbox references the <code>cpuppr_clic</code> as its <code>interrupt-parent</code>
+property above, while the <code>cpuapp</code> has a <a href="https://github.com/zephyrproject-rtos/zephyr/blob/1b70bfa14e288d97b44d2446c8ef0b93226514e6/dts/common/nordic/nrf54h20.dtsi#L1487C1-L1505C4">private node for its
+NVIC</a>,
+and it is defined as the parent <a href="https://github.com/zephyrproject-rtos/zephyr/blob/1b70bfa14e288d97b44d2446c8ef0b93226514e6/dts/arm/nordic/nrf54h20_cpuapp.dtsi#L28">at the <code>soc</code> level for the application
+processor</a>.</p>
+<blockquote>
+<p><code>interrupt-parent</code> is an <a href="https://www.kernel.org/doc/Documentation/devicetree/bindings/interrupt-controller/interrupts.txt">inherited
+property</a>,
+so assigning the property on a node will also make it apply to all subnodes
+unless specified otherwise.</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>	cpuapp_ppb: cpuapp-ppb-bus {
+</span></span><span style="display:flex;"><span>		#address-cells = &lt;1&gt;;
+</span></span><span style="display:flex;"><span>		#size-cells = &lt;1&gt;;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		cpuapp_systick: timer@e000e010 {
+</span></span><span style="display:flex;"><span>			compatible = &#34;arm,armv8m-systick&#34;;
+</span></span><span style="display:flex;"><span>			reg = &lt;0xe000e010 0x10&gt;;
+</span></span><span style="display:flex;"><span>			status = &#34;disabled&#34;;
+</span></span><span style="display:flex;"><span>		};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		cpuapp_nvic: interrupt-controller@e000e100 {
+</span></span><span style="display:flex;"><span>			compatible = &#34;arm,v8m-nvic&#34;;
+</span></span><span style="display:flex;"><span>			reg = &lt;0xe000e100 0xc00&gt;;
+</span></span><span style="display:flex;"><span>			arm,num-irq-priority-bits = &lt;3&gt;;
+</span></span><span style="display:flex;"><span>			#interrupt-cells = &lt;2&gt;;
+</span></span><span style="display:flex;"><span>			interrupt-controller;
+</span></span><span style="display:flex;"><span>			#address-cells = &lt;1&gt;;
+</span></span><span style="display:flex;"><span>		};
+</span></span><span style="display:flex;"><span>	};
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>/ {
+</span></span><span style="display:flex;"><span>	soc {
+</span></span><span style="display:flex;"><span>		compatible = &#34;simple-bus&#34;;
+</span></span><span style="display:flex;"><span>		interrupt-parent = &lt;&amp;cpuapp_nvic&gt;;
+</span></span><span style="display:flex;"><span>		ranges;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		stmesp: memory@a2000000 {
+</span></span><span style="display:flex;"><span>			compatible = &#34;arm,stmesp&#34;;
+</span></span><span style="display:flex;"><span>			reg = &lt;0xa2000000 0x1000000&gt;;
+</span></span><span style="display:flex;"><span>		};
+</span></span><span style="display:flex;"><span>	};
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>With an understanding of the hardware configuration, we can use the <a href="https://github.com/zephyrproject-rtos/zephyr/tree/1b70bfa14e288d97b44d2446c8ef0b93226514e6/samples/subsys/ipc/ipc_service/icmsg">Zephyr
+<code>icmsg</code>
+sample</a>
+to demonstrate communication between the application processor and the PPR. I
+recently <a href="https://github.com/zephyrproject-rtos/zephyr/pull/83425">added support for the nRF54H20DK
+board</a> to this sample,
+which effectively consisted of just enabling the previously discussed nodes via
+devictree overlays. For the application processor, it was also necessary to
+reassign the <code>ipc0</code> label.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>/ {
+</span></span><span style="display:flex;"><span>	chosen {
+</span></span><span style="display:flex;"><span>		/delete-property/ zephyr,bt-hci;
+</span></span><span style="display:flex;"><span>	};
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/delete-node/ &amp;ipc0;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ipc0: &amp;cpuapp_cpuppr_ipc {
+</span></span><span style="display:flex;"><span>	status = &#34;okay&#34;;
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>&amp;cpuapp_bellboard {
+</span></span><span style="display:flex;"><span>	status = &#34;okay&#34;;
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>&amp;cpuppr_vevif {
+</span></span><span style="display:flex;"><span>	status = &#34;okay&#34;;
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>For the PPR, <a href="https://developer.arm.com/documentation/ddi0183/g/functional-overview/uart-hardware-flow-control">hardware flow
+control</a>
+needed to be disabled for console ouput over UART.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>ipc0: &amp;cpuapp_cpuppr_ipc {
+</span></span><span style="display:flex;"><span>	status = &#34;okay&#34;;
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>&amp;cpuppr_vevif {
+</span></span><span style="display:flex;"><span>	status = &#34;okay&#34;;
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>&amp;cpuapp_bellboard {
+</span></span><span style="display:flex;"><span>	status = &#34;okay&#34;;
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>&amp;uart135 {
+</span></span><span style="display:flex;"><span>	/delete-property/ hw-flow-control;
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>The sample is comprised of two similar but distinct applications. The
+<a href="https://github.com/zephyrproject-rtos/zephyr/blob/354a47cfcf1e71b57658932ecac2babd4648df12/samples/subsys/ipc/ipc_service/icmsg/src/main.c">first</a>
+runs on the application processor and sends messages using the IPC service where
+the first byte of the data cycles through capital alphabetical ASCII characters
+(<code>A-Z</code>). It concurrently receives data from the <a href="https://github.com/zephyrproject-rtos/zephyr/blob/354a47cfcf1e71b57658932ecac2babd4648df12/samples/subsys/ipc/ipc_service/icmsg/remote/src/main.c">second
+application</a>,
+which runs on the PPR and sends data with first byte cycling through lowercase
+alphabetical ASCII characters (<code>a-z</code>) while receiving from the application
+processor. The callbacks provided by each application verify that the first byte
+of the data matches the expected character.</p>
+<p>Similar to how we observed the application core configure and boot the PPR VPR
+processor in the last post, which will also take place in this sample, the MBOX
+and IPC &ldquo;devices&rdquo; will also be setup during kernel boot on each processor
+according to their <code>compatible</code> properties. For example, the PPR will <a href="https://github.com/zephyrproject-rtos/zephyr/blob/3c420a482854f6649c8b73af4b2bcbaafd30f47f/drivers/mbox/mbox_nrf_vevif_task_rx.c#L114">configure
+an interrupt service routine
+(ISR)</a>
+for each interrupt associated with the <code>vevif_task_rx</code> device.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_GEN_SW_ISR_TABLE)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#define VEVIF_IRQ_CONNECT(idx, _)                                                                  \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">	IRQ_CONNECT(DT_INST_IRQ_BY_IDX(0, idx, irq), DT_INST_IRQ_BY_IDX(0, idx, priority),         \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">		    vevif_task_rx_isr, &amp;vevif_irqs[idx], 0)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#define VEVIF_IRQ_FUN(idx, _)                 \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">ISR_DIRECT_DECLARE(vevif_task_##idx##_rx_isr) \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">{                                             \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">	vevif_task_rx_isr(&amp;vevif_irqs[idx]);  \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">	return 1;                             \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">}
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>LISTIFY(DT_NUM_IRQS(DT_DRV_INST(<span style="color:#ff0;font-weight:bold">0</span>)), VEVIF_IRQ_FUN, ())
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#define VEVIF_IRQ_CONNECT(idx, _)                                                                 \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">	IRQ_DIRECT_CONNECT(DT_INST_IRQ_BY_IDX(0, idx, irq), DT_INST_IRQ_BY_IDX(0, idx, priority), \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">		    vevif_task_##idx##_rx_isr, 0)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">int</span> vevif_task_rx_init(<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">struct</span> device *dev)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	nrf_vpr_csr_vevif_tasks_clear(NRF_VPR_TASK_TRIGGER_ALL_MASK);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	LISTIFY(DT_NUM_IRQS(DT_DRV_INST(<span style="color:#ff0;font-weight:bold">0</span>)), VEVIF_IRQ_CONNECT, (;));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>DEVICE_DT_INST_DEFINE(<span style="color:#ff0;font-weight:bold">0</span>, vevif_task_rx_init, <span style="color:#fff;font-weight:bold">NULL</span>, <span style="color:#fff;font-weight:bold">NULL</span>, <span style="color:#fff;font-weight:bold">NULL</span>, POST_KERNEL,
+</span></span><span style="display:flex;"><span>		      CONFIG_MBOX_INIT_PRIORITY, &amp;vevif_task_rx_driver_api);
+</span></span></code></pre></div><p>Similarly, the <code>ipc_icmsg</code> IPC backend will
+<a href="https://github.com/zephyrproject-rtos/zephyr/blob/1b70bfa14e288d97b44d2446c8ef0b93226514e6/subsys/ipc/ipc_service/backends/ipc_icmsg.c#L57C1-L86C51">configure</a>
+the transmitting and receiving MBOX, as well as the corresponding shared memory
+buffers for the <code>cpuapp_cpuppr_ipc</code> device.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#define DEFINE_BACKEND_DEVICE(i)					\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">	static const struct icmsg_config_t backend_config_##i = {	\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">		.mbox_tx = MBOX_DT_SPEC_INST_GET(i, tx),		\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">		.mbox_rx = MBOX_DT_SPEC_INST_GET(i, rx),		\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">	};								\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">									\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">	PBUF_DEFINE(tx_pb_##i,						\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">			DT_REG_ADDR(DT_INST_PHANDLE(i, tx_region)),	\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">			DT_REG_SIZE(DT_INST_PHANDLE(i, tx_region)),	\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">			DT_INST_PROP_OR(i, dcache_alignment, 0));	\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">	PBUF_DEFINE(rx_pb_##i,						\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">			DT_REG_ADDR(DT_INST_PHANDLE(i, rx_region)),	\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">			DT_REG_SIZE(DT_INST_PHANDLE(i, rx_region)),	\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">			DT_INST_PROP_OR(i, dcache_alignment, 0));	\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">									\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">	static struct icmsg_data_t backend_data_##i = {			\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">		.tx_pb = &amp;tx_pb_##i,					\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">		.rx_pb = &amp;rx_pb_##i,					\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">	};								\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">									\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">	DEVICE_DT_INST_DEFINE(i,					\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">			 &amp;backend_init,					\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">			 NULL,						\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">			 &amp;backend_data_##i,				\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">			 &amp;backend_config_##i,				\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">			 POST_KERNEL,					\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">			 CONFIG_IPC_SERVICE_REG_BACKEND_PRIORITY,	\
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">			 &amp;backend_ops);
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>DT_INST_FOREACH_STATUS_OKAY(DEFINE_BACKEND_DEVICE)
+</span></span></code></pre></div><p>Upon finally reaching <code>main</code>, each application must access the IPC device via
+the assigned <code>ipc0</code> label, then register an endpoint that sets up the channel
+over which to send and receive.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">struct</span> ipc_ept_cfg ep_cfg = {
+</span></span><span style="display:flex;"><span>	.cb = {
+</span></span><span style="display:flex;"><span>		.bound    = ep_bound,
+</span></span><span style="display:flex;"><span>		.received = ep_recv,
+</span></span><span style="display:flex;"><span>	},
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">struct</span> device *ipc0_instance;
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">struct</span> ipc_ept ep;
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">int</span> ret;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	LOG_INF(<span style="color:#0ff;font-weight:bold">&#34;IPC-service REMOTE demo started&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	ipc0_instance = DEVICE_DT_GET(DT_NODELABEL(ipc0));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	ret = ipc_service_open_instance(ipc0_instance);
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> ((ret &lt; <span style="color:#ff0;font-weight:bold">0</span>) &amp;&amp; (ret != -EALREADY)) {
+</span></span><span style="display:flex;"><span>		LOG_ERR(<span style="color:#0ff;font-weight:bold">&#34;ipc_service_open_instance() failure&#34;</span>);
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> ret;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	ret = ipc_service_register_endpoint(ipc0_instance, &amp;ep, &amp;ep_cfg);
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (ret &lt; <span style="color:#ff0;font-weight:bold">0</span>) {
+</span></span><span style="display:flex;"><span>		LOG_ERR(<span style="color:#0ff;font-weight:bold">&#34;ipc_service_register_endpoint() failure&#34;</span>);
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> ret;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">while</span> (bound_sem != <span style="color:#ff0;font-weight:bold">0</span>) {
+</span></span><span style="display:flex;"><span>	};
+</span></span></code></pre></div><p>For the ICMsg backend, <code>ipc_service_register_endpoint</code> ultimately <a href="https://github.com/zephyrproject-rtos/zephyr/blob/1b70bfa14e288d97b44d2446c8ef0b93226514e6/subsys/ipc/ipc_service/lib/icmsg.c#L256C1-L312C2">calls
+<code>icmsg_open</code></a>,
+which executes a bonding process that consists of writing a magic number to
+shared memory, then triggering an interrupt on the other processor.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">int</span> icmsg_open(<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">struct</span> <span style="color:#fff;font-weight:bold">icmsg_config_t</span> *conf,
+</span></span><span style="display:flex;"><span>	       <span style="color:#fff;font-weight:bold">struct</span> <span style="color:#fff;font-weight:bold">icmsg_data_t</span> *dev_data,
+</span></span><span style="display:flex;"><span>	       <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">struct</span> ipc_service_cb *cb, <span style="color:#fff;font-weight:bold">void</span> *ctx)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (!atomic_cas(&amp;dev_data-&gt;state, ICMSG_STATE_OFF, ICMSG_STATE_BUSY)) {
+</span></span><span style="display:flex;"><span>		<span style="color:#007f7f">/* Already opened. */</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> -EALREADY;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	dev_data-&gt;cb = cb;
+</span></span><span style="display:flex;"><span>	dev_data-&gt;ctx = ctx;
+</span></span><span style="display:flex;"><span>	dev_data-&gt;cfg = conf;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_IPC_SERVICE_ICMSG_SHMEM_ACCESS_SYNC
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	k_mutex_init(&amp;dev_data-&gt;tx_lock);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">int</span> ret = pbuf_tx_init(dev_data-&gt;tx_pb);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (ret &lt; <span style="color:#ff0;font-weight:bold">0</span>) {
+</span></span><span style="display:flex;"><span>		__ASSERT(<span style="color:#fff;font-weight:bold">false</span>, <span style="color:#0ff;font-weight:bold">&#34;Incorrect Tx configuration&#34;</span>);
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> ret;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	ret = pbuf_rx_init(dev_data-&gt;rx_pb);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (ret &lt; <span style="color:#ff0;font-weight:bold">0</span>) {
+</span></span><span style="display:flex;"><span>		__ASSERT(<span style="color:#fff;font-weight:bold">false</span>, <span style="color:#0ff;font-weight:bold">&#34;Incorrect Rx configuration&#34;</span>);
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> ret;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	ret = pbuf_write(dev_data-&gt;tx_pb, magic, <span style="color:#fff;font-weight:bold">sizeof</span>(magic));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (ret &lt; <span style="color:#ff0;font-weight:bold">0</span>) {
+</span></span><span style="display:flex;"><span>		__ASSERT_NO_MSG(<span style="color:#fff;font-weight:bold">false</span>);
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> ret;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (ret &lt; (<span style="color:#fff;font-weight:bold">int</span>)<span style="color:#fff;font-weight:bold">sizeof</span>(magic)) {
+</span></span><span style="display:flex;"><span>		__ASSERT_NO_MSG(ret == <span style="color:#fff;font-weight:bold">sizeof</span>(magic));
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> ret;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	ret = mbox_init(conf, dev_data);
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (ret) {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> ret;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_MULTITHREADING
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	ret = k_work_schedule_for_queue(workq, &amp;dev_data-&gt;notify_work, K_NO_WAIT);
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (ret &lt; <span style="color:#ff0;font-weight:bold">0</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> ret;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	notify_process(dev_data);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">return</span> <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>To see this in action, we can build and flash the applications on the
+nRF54H20DK.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>west build -p -b nrf54h20dk/nrf54h20/cpuapp -T sample.ipc.icmsg.nrf54h20 .
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>west flash
+</span></span></code></pre></div><p>The application processor (HOST) console output can be viewed on <code>/dev/ttyACM0</code>,
+while the PPR (REMOTE) will be on <code>/dev/ttyACM1</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[00:00:00.161,970] &lt;inf&gt; host: IPC-service HOST demo started
+</span></span><span style="display:flex;"><span>[00:00:00.162,028] &lt;inf&gt; host: Ep bounded
+</span></span><span style="display:flex;"><span>[00:00:00.162,049] &lt;inf&gt; host: Perform sends for 1000 [ms]
+</span></span><span style="display:flex;"><span>[00:00:01.162,077] &lt;inf&gt; host: Sent 664770 [Bytes] over 1000 [ms]
+</span></span><span style="display:flex;"><span>[00:00:01.162,083] &lt;inf&gt; host: Wait 500ms. Let remote core finish its sends
+</span></span><span style="display:flex;"><span>[00:00:01.662,141] &lt;inf&gt; host: Received 17941 [Bytes] in total
+</span></span><span style="display:flex;"><span>[00:00:01.662,155] &lt;inf&gt; host: IPC-service HOST demo ended
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[00:00:00.138,843] &lt;inf&gt; remote: IPC-service REMOTE demo started
+</span></span><span style="display:flex;"><span>[00:00:00.162,313] &lt;inf&gt; remote: Ep bounded
+</span></span><span style="display:flex;"><span>[00:00:01.163,063] &lt;inf&gt; remote: Perform sends for 1000 [ms]
+</span></span><span style="display:flex;"><span>[00:00:02.163,186] &lt;inf&gt; remote: Sent 36558 [Bytes] over 1000 [ms]
+</span></span><span style="display:flex;"><span>[00:00:02.163,285] &lt;inf&gt; remote: Received 664770 [Bytes] in total
+</span></span><span style="display:flex;"><span>[00:00:02.163,312] &lt;inf&gt; remote: IPC-service REMOTE demo ended
+</span></span></code></pre></div><p>We can also follow <a href="https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/device_guides/nrf54h/ug_nrf54h20_debugging.html">Nordic&rsquo;s debugging
+documentation</a>
+to step through instructions on the application processor. The <a href="https://www.segger.com/products/debug-probes/j-link/models/j-link-ob/">on-board J-Link
+debug
+probe</a>
+allows us to use the <a href="https://www.segger.com/products/debug-probes/j-link/tools/j-link-gdb-server/about-j-link-gdb-server/">J-Link GDB
+Server</a>
+with the GDB included in the Zephyr toolchain. To target the nRF54H20DK, the
+following arguments should be provided.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>JLinkGDBServer -select USB=0 -device Cortex-M33 -if SWD -speed auto -port 2331
+</span></span></code></pre></div><blockquote>
+<p>The application processor will be selected as the debug target by default.</p>
+</blockquote>
+<p><code>west</code> will automatically start GDB and connect to the GDB server with
+the attach command.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>west attach
+</span></span></code></pre></div><p>We can set a breakpoint on <code>main</code>, then continue until execution reaches it.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>(gdb) monitor reset
+</span></span><span style="display:flex;"><span>Resetting target
+</span></span><span style="display:flex;"><span>(gdb) b main
+</span></span><span style="display:flex;"><span>Breakpoint 1 at 0xe0a6b44: file icmsg/build/icmsg/zephyr/include/generated/zephyr/syscalls/log_msg.h, line 37.
+</span></span><span style="display:flex;"><span>(gdb) c
+</span></span><span style="display:flex;"><span>Continuing.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Breakpoint 1, main () at icmsg/build/icmsg/zephyr/include/generated/zephyr/syscalls/log_msg.h:37
+</span></span><span style="display:flex;"><span>37		compiler_barrier();
+</span></span></code></pre></div><p>If we view the PPR console output on <code>/dev/ttyACM1</code> at this point, we can see
+that the processor booted and reached its own <code>main</code>, but has not yet started
+communicating with the application processor. This makes sense as the
+application processor configures and starts the PPR, but the PPR cannot start
+communicating with the application processor until both have established the IPC
+service connection.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[00:00:09.651,883] &lt;inf&gt; remote: IPC-service REMOTE demo started
+</span></span></code></pre></div><p>As previously mentioned, establishing the ICMsg endpoint requires each processor
+<a href="https://github.com/zephyrproject-rtos/zephyr/blob/1b70bfa14e288d97b44d2446c8ef0b93226514e6/subsys/ipc/ipc_service/lib/icmsg.c#L18C1-L19C47">writing a magic
+number</a>
+into the shared memory buffer used for receiving by the other processor.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">uint8_t</span> magic[] = {<span style="color:#ff0;font-weight:bold">0x45</span>, <span style="color:#ff0;font-weight:bold">0x6d</span>, <span style="color:#ff0;font-weight:bold">0x31</span>, <span style="color:#ff0;font-weight:bold">0x6c</span>, <span style="color:#ff0;font-weight:bold">0x31</span>, <span style="color:#ff0;font-weight:bold">0x4b</span>,
+</span></span><span style="display:flex;"><span>				<span style="color:#ff0;font-weight:bold">0x30</span>, <span style="color:#ff0;font-weight:bold">0x72</span>, <span style="color:#ff0;font-weight:bold">0x6e</span>, <span style="color:#ff0;font-weight:bold">0x33</span>, <span style="color:#ff0;font-weight:bold">0x6c</span>, <span style="color:#ff0;font-weight:bold">0x69</span>, <span style="color:#ff0;font-weight:bold">0x34</span>};
+</span></span></code></pre></div><p>If we inspect the memory at <code>cpuppr_cpuapp_ipc_shm</code>, we can see the magic number
+present at (<code>0x2fc0fc28</code>).</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>(gdb) x/100bx 0x2fc0fc00
+</span></span><span style="display:flex;"><span>0x2fc0fc00:	0x00	0x00	0x00	0x00	0x9d	0x57	0xe4	0x10
+</span></span><span style="display:flex;"><span>0x2fc0fc08:	0x05	0x63	0x79	0x42	0x74	0x70	0xb5	0xf3
+</span></span><span style="display:flex;"><span>0x2fc0fc10:	0x03	0x29	0x4e	0x89	0xfd	0xbc	0xc1	0xe0
+</span></span><span style="display:flex;"><span>0x2fc0fc18:	0x90	0xe6	0x19	0xab	0xc3	0xd9	0xdf	0x4e
+</span></span><span style="display:flex;"><span>0x2fc0fc20:	0x14	0x00	0x00	0x00	0x00	0x0d	0x00	0x00
+</span></span><span style="display:flex;"><span>0x2fc0fc28:	0x45	0x6d	0x31	0x6c	0x31	0x4b	0x30	0x72
+</span></span><span style="display:flex;"><span>0x2fc0fc30:	0x6e	0x33	0x6c	0x69	0x34	0x2b	0x00	0x00
+</span></span><span style="display:flex;"><span>0x2fc0fc38:	0x00	0x00	0x00	0x00	0x00	0x00	0x00	0x00
+</span></span><span style="display:flex;"><span>0x2fc0fc40:	0x53	0x00	0x00	0x00	0x00	0x00	0x00	0x00
+</span></span><span style="display:flex;"><span>0x2fc0fc48:	0x00	0x00	0x00	0x00	0x00	0x00	0x00	0x00
+</span></span><span style="display:flex;"><span>0x2fc0fc50:	0x00	0x00	0x00	0x00	0x00	0x00	0x00	0x00
+</span></span><span style="display:flex;"><span>0x2fc0fc58:	0x00	0x00	0x00	0x00	0x00	0x00	0x00	0x00
+</span></span><span style="display:flex;"><span>0x2fc0fc60:	0x00	0x00	0x00	0x00
+</span></span></code></pre></div><p>To observe the establishment of the endpoint on the application processor side,
+we can step through by placing breakpoints at the corresponding function calls.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>(gdb) b ipc_service_register_endpoint
+</span></span><span style="display:flex;"><span>Breakpoint 2 at 0xe0a82f4: file zephyr/subsys/ipc/ipc_service/ipc_service.c, line 71.
+</span></span><span style="display:flex;"><span>(gdb) b register_ept
+</span></span><span style="display:flex;"><span>Breakpoint 3 at 0xe0b0e4e: file zephyr/subsys/ipc/ipc_service/backends/ipc_icmsg.c, line 20.
+</span></span><span style="display:flex;"><span>(gdb) b icmsg_open
+</span></span><span style="display:flex;"><span>Breakpoint 4 at 0xe0a8528: file zephyr/include/zephyr/sys/atomic_builtin.h, line 26.
+</span></span><span style="display:flex;"><span>(gdb) b mbox_init
+</span></span><span style="display:flex;"><span>Breakpoint 5 at 0xe0a85bc: file zephyr/subsys/ipc/ipc_service/lib/icmsg.c, line 244.
+</span></span></code></pre></div><p>After the call to <code>mbox_init</code>, we can now see the magic number in the
+<code>cpuapp_cpuppr_ipc_shm</code> shared memory buffer as well (<code>0x2fc0f828</code>).</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>(gdb) c
+</span></span><span style="display:flex;"><span>Continuing.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Breakpoint 2, ipc_service_register_endpoint (instance=0xe0b1d10 &lt;__device_dts_ord_62&gt;, ept=0x2f013d3c &lt;z_main_stack+804&gt;, cfg=0x2f0110e0 &lt;ep_cfg&gt;) at zephyr/subsys/ipc/ipc_service/ipc_service.c:71
+</span></span><span style="display:flex;"><span>71		if (!instance || !ept || !cfg) {
+</span></span><span style="display:flex;"><span>(gdb) c
+</span></span><span style="display:flex;"><span>Continuing.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Breakpoint 3, register_ept (instance=0xe0b1d10 &lt;__device_dts_ord_62&gt;, token=0x2f013d40 &lt;z_main_stack+808&gt;, cfg=0x2f0110e0 &lt;ep_cfg&gt;) at zephyr/subsys/ipc/ipc_service/backends/ipc_icmsg.c:20
+</span></span><span style="display:flex;"><span>20		const struct icmsg_config_t *conf = instance-&gt;config;
+</span></span><span style="display:flex;"><span>(gdb) c
+</span></span><span style="display:flex;"><span>Continuing.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Breakpoint 4, icmsg_open (conf=0xe0b2d00 &lt;backend_config_1&gt;, dev_data=0x2f011000 &lt;backend_data_1&gt;, cb=0x2f0110e8 &lt;ep_cfg+8&gt;, ctx=0x0) at zephyr/include/zephyr/sys/atomic_builtin.h:26
+</span></span><span style="display:flex;"><span>26		return __atomic_compare_exchange_n(target, &amp;old_value, new_value,
+</span></span><span style="display:flex;"><span>(gdb) c
+</span></span><span style="display:flex;"><span>Continuing.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Breakpoint 5, mbox_init (dev_data=0x2f011000 &lt;backend_data_1&gt;, conf=0xe0b2d00 &lt;backend_config_1&gt;) at zephyr/subsys/ipc/ipc_service/lib/icmsg.c:244
+</span></span><span style="display:flex;"><span>244		k_work_init(&amp;dev_data-&gt;mbox_work, mbox_callback_process);
+</span></span><span style="display:flex;"><span>(gdb) n
+</span></span><span style="display:flex;"><span>245		k_work_init_delayable(&amp;dev_data-&gt;notify_work, notify_process);
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>(gdb) x/100bx 0x2fc0f800
+</span></span><span style="display:flex;"><span>0x2fc0f800:	0x00	0x00	0x00	0x00	0xeb	0x6b	0x58	0x78
+</span></span><span style="display:flex;"><span>0x2fc0f808:	0xad	0x48	0x70	0xdd	0x6d	0x9d	0xc6	0x0f
+</span></span><span style="display:flex;"><span>0x2fc0f810:	0xe9	0x9a	0x62	0xd5	0xd1	0x8d	0x6b	0xe8
+</span></span><span style="display:flex;"><span>0x2fc0f818:	0x44	0x65	0xb0	0x6a	0x60	0x01	0x4f	0x38
+</span></span><span style="display:flex;"><span>0x2fc0f820:	0x14	0x00	0x00	0x00	0x00	0x0d	0x00	0x00
+</span></span><span style="display:flex;"><span>0x2fc0f828:	0x45	0x6d	0x31	0x6c	0x31	0x4b	0x30	0x72
+</span></span><span style="display:flex;"><span>0x2fc0f830:	0x6e	0x33	0x6c	0x69	0x34	0x00	0x00	0x00
+</span></span><span style="display:flex;"><span>0x2fc0f838:	0x00	0x00	0x00	0x00	0x00	0x00	0x00	0x00
+</span></span><span style="display:flex;"><span>0x2fc0f840:	0x00	0x00	0x00	0x00	0x00	0x00	0x00	0x00
+</span></span><span style="display:flex;"><span>0x2fc0f848:	0x00	0x00	0x00	0x00	0x00	0x00	0x00	0x00
+</span></span><span style="display:flex;"><span>0x2fc0f850:	0x00	0x00	0x00	0x00	0x00	0x31	0x00	0x00
+</span></span><span style="display:flex;"><span>0x2fc0f858:	0x00	0x00	0x00	0x00	0x00	0x00	0x00	0x00
+</span></span><span style="display:flex;"><span>0x2fc0f860:	0x6a	0x00	0x00	0x00
+</span></span></code></pre></div><p>With the endpoints bound, continuing will result in the sample running as
+previously observed.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[00:00:09.651,883] &lt;inf&gt; remote: IPC-service REMOTE demo started
+</span></span><span style="display:flex;"><span>[00:24:00.195,396] &lt;inf&gt; remote: Ep bounded
+</span></span><span style="display:flex;"><span>[00:24:01.196,088] &lt;inf&gt; remote: Perform sends for 1000 [ms]
+</span></span><span style="display:flex;"><span>[00:24:02.196,186] &lt;inf&gt; remote: Sent 36558 [Bytes] over 1000 [ms]
+</span></span><span style="display:flex;"><span>[00:24:02.196,285] &lt;inf&gt; remote: Received 664770 [Bytes] in total
+</span></span><span style="display:flex;"><span>[00:24:02.196,312] &lt;inf&gt; remote: IPC-service REMOTE demo ended
+</span></span></code></pre></div>
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2024
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
