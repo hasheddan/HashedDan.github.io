@@ -6,7 +6,17 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Tue, 31 Dec 2024 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 30 Jan 2025 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Accessing the Qualcomm Modem over USB on the RAK5010</title>
+      <link>https://danielmangum.com/posts/modem-usb-rak5010/</link>
+      <pubDate>Thu, 30 Jan 2025 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/modem-usb-rak5010/</guid>
+      <description>I have recently been working with the RAKwireless RAK5010 development board. It includes the popular Nordic nRF52840 MCU for running applications on its Cortex-M4 CPU that can leverage the integrated 2.4 GHz multiprotocol support, as well as the LTE and GNSS support offered by the on-board Quectel BG95-M3 module.
+The micro-USB port on the board is connected to USB on the nRF52840, which allows for viewing serial output, but is not a mechanism for flashing new firmware.</description>
+    </item>
+    
     <item>
       <title>VPR: Arm and RISC-V Inter-Processor Communication</title>
       <link>https://danielmangum.com/posts/vpr-arm-risc-v-inter-processor/</link>
