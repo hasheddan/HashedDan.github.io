@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  Just Barely Fitting a Full Wi-Fi Stack on the nRF9151 · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="In my last post on the Nordic Semiconductor Thingy:91 X IoT prototyping platform, I outlined the features and architecture of the device. The combination of wireless protocols on the Thingy:91 X (Bluetooth LE, LTE-M, Wi-Fi) make it a compelling foundation for a wide variety of applications. However, there are a few intricacies to the protocol support.
+Namely, the primary stated purpose of the Wi-Fi support is for network-based positioning (i.e. scan for local access points, send them to a server, get approximate location back).">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="Just Barely Fitting a Full Wi-Fi Stack on the nRF9151"/>
+<meta name="twitter:description" content="In my last post on the Nordic Semiconductor Thingy:91 X IoT prototyping platform, I outlined the features and architecture of the device. The combination of wireless protocols on the Thingy:91 X (Bluetooth LE, LTE-M, Wi-Fi) make it a compelling foundation for a wide variety of applications. However, there are a few intricacies to the protocol support.
+Namely, the primary stated purpose of the Wi-Fi support is for network-based positioning (i.e. scan for local access points, send them to a server, get approximate location back)."/>
+
+<meta property="og:title" content="Just Barely Fitting a Full Wi-Fi Stack on the nRF9151" />
+<meta property="og:description" content="In my last post on the Nordic Semiconductor Thingy:91 X IoT prototyping platform, I outlined the features and architecture of the device. The combination of wireless protocols on the Thingy:91 X (Bluetooth LE, LTE-M, Wi-Fi) make it a compelling foundation for a wide variety of applications. However, there are a few intricacies to the protocol support.
+Namely, the primary stated purpose of the Wi-Fi support is for network-based positioning (i.e. scan for local access points, send them to a server, get approximate location back)." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/nrf9151-wifi-station/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2025-02-16T01:41:34-06:00" />
+<meta property="article:modified_time" content="2025-02-16T01:41:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/nrf9151-wifi-station/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/nrf9151-wifi-station/">
+              Just Barely Fitting a Full Wi-Fi Stack on the nRF9151
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2025-02-16T01:41:34-06:00">
+                February 16, 2025
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              15-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>In my <a href="https://danielmangum.com/posts/usb-uart-thingy91-x/">last post</a> on the
+<a href="https://www.nordicsemi.com/">Nordic Semiconductor</a> <a href="https://www.nordicsemi.com/Products/Development-hardware/Nordic-Thingy-91-X">Thingy:91
+X</a>
+IoT prototyping platform, I outlined the features and architecture of the
+device. The combination of wireless protocols on the Thingy:91 X (Bluetooth LE,
+LTE-M, Wi-Fi) make it a compelling foundation for a wide variety of
+applications. However, there are a few intricacies to the protocol support.</p>
+<p>Namely, the primary stated purpose of the Wi-Fi support is for <a href="https://en.wikipedia.org/wiki/Wi-Fi_positioning_system">network-based
+positioning</a> (i.e. scan
+for local access points, send them to a server, get approximate location back).
+This leverages the nRF7002&rsquo;s radio, but uses it in <a href="https://docs.nordicsemi.com/bundle/ncs-2.9.0/page/nrf/protocols/wifi/scan_mode/index.html">scan
+mode</a>,
+consuming less resources on the host MCU. This is important, particularly if the
+nRF9151 is acting as the host MCU rather than the nRF5340, as the former has
+constrained RAM (256 KB) and does not support <a href="https://docs.nordicsemi.com/bundle/ncs-2.9.0/page/nrf/app_dev/device_guides/nrf53/qspi_xip_guide_nrf5340.html">external execute-in-place
+(XIP)</a>.
+External XIP allows a device to relocate some of its application code to an
+external flash memory component, then include the external flash in its memory
+map in order to execute the relocated code. The nRF5340 supports external XIP,
+allowing it to accommodate applications with larger code size despite having the
+same amount of internal flash memory (1 MB) as the nRF9151. It also has 512 KB
+of RAM compared to the nRF9151&rsquo;s 256 KB.</p>
+<p>There are two aspects of Wi-Fi support on the nRF70 series companion ICs that
+impact resource consumption on the host MCU: patches and the driver. The
+firmware patches are loaded onto the nRF70 device by the host MCU and add
+functionality to the base ROM. They are included in the host MCUs firmware by
+default as part of the Wi-Fi driver it leverages to communicate with the nRF70
+device. This increases the code size, which, as previously mentioned, can be
+partially mitigated if <a href="https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/device_guides/nrf70/fw_patches_ext_flash.html#using_xip_access">the host supports external
+XIP</a>
+(<code>SB_CONFIG_WIFI_PATCHES_EXT_FLASH_XIP</code>). The nRF70 series also supports
+<a href="https://docs.nordicsemi.com/bundle/ncs-latest/page/nrf/app_dev/device_guides/nrf70/fw_patches_ext_flash.html#using_qspi_transfers_to_ram">loading patches from non-XIP QSPI
+flash</a>
+(<code>SB_CONFIG_WIFI_PATCHES_EXT_FLASH_STORE</code>). In this case the Wi-Fi driver on the
+host loads the patch into RAM, then transfers it to the nRF70 device. As one
+might expect, the
+<a href="https://github.com/nrfconnect/sdk-nrfxlib/blob/6f23a22baf67819f3baac99f5004e766cfb7c6d9/nrf_wifi/bin/ncs/scan_only/nrf70.bin">patch</a>
+that only enables scan mode is significantly smaller (32 KB) than the
+<a href="https://github.com/nrfconnect/sdk-nrfxlib/blob/6f23a22baf67819f3baac99f5004e766cfb7c6d9/nrf_wifi/bin/ncs/default/nrf70.bin">patch</a>
+that enables full functionality (77.8 KB).</p>
+<p>The second, and potentially more impactful, contributor to resource consumption
+on the host MCU is the flash and RAM consumption of the driver itself.
+Specifically, to use an nRF70 device in <a href="https://docs.nordicsemi.com/bundle/ncs-2.9.0/page/nrf/protocols/wifi/station_mode/index.html">station
+mode</a>,
+<a href="https://en.wikipedia.org/wiki/Wpa_supplicant">WPA supplicant</a> is required,
+which can add anywhere from 180 KB to 250 KB to code size (flash). The total
+driver RAM consumption also increases from around 30 KB to around 130 KB.
+Attempting to fit anything of consequence alongside it into 256 KB of RAM on the
+nRF9151 would be challenging, which is likely why the current documentation does
+not indicate station mode support for nRF91 series devices (all of which have
+256 KB of RAM).</p>
+<p>However, from a raw resource perspective, the simplest station mode application
+<em>should</em> be able to run on the nRF9151. I noticed that the
+<a href="https://github.com/nrfconnect/sdk-nrf/tree/69c67d2f7f6fbcd52eb3e432115772571109ca3b/samples/wifi/sta">example</a>
+included support for the <a href="https://www.nordicsemi.com/Products/Development-hardware/nRF52840-DK">nRF52840
+DK</a> (with
+the <a href="https://www.nordicsemi.com/Products/Development-hardware/nRF7002-ek">nRF7002 EK
+shield</a>),
+and the <a href="https://www.nordicsemi.com/Products/nRF52840">nRF52840 SoC</a> matches the
+nRF9151 in RAM (256 KB) and flash size (1 MB). Surely we could get it working on
+the nRF9151 as well.</p>
+<p>To enable Wi-Fi on the nRF9151, an overlay file that includes the
+<code>thingy91x_wifi.dtsi</code> devictree file is necessary.</p>
+<p><code>thingy91x_nrf9151_ns.overlay</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>#include &lt;thingy91x_wifi.dtsi&gt;
+</span></span></code></pre></div><p>This serves to enable the nRF7002 and its dedicated power management IC (PMIC)
+(<a href="https://www.nordicsemi.com/Products/nPM6001">nPM6001</a>), as well as the short
+range (Bluetooth, Wi-Fi) capabilities of the RF front end.</p>
+<p><code>thingy91x_wifi.dtsi</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>/*
+</span></span><span style="display:flex;"><span> * Copyright (c) 2024 Nordic Semiconductor
+</span></span><span style="display:flex;"><span> * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+</span></span><span style="display:flex;"><span> */
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/* Enable short range RF */
+</span></span><span style="display:flex;"><span>&amp;ldsw_rf_fe_sr_en {
+</span></span><span style="display:flex;"><span>	/delete-property/ output-low;
+</span></span><span style="display:flex;"><span>	output-high;
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/* Set pmic_wifi enable signal */
+</span></span><span style="display:flex;"><span>&amp;ldsw_nPM6001_en {
+</span></span><span style="display:flex;"><span>	/delete-property/ regulator-boot-off;
+</span></span><span style="display:flex;"><span>	regulator-boot-on;
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/* Enable pmic_wifi */
+</span></span><span style="display:flex;"><span>&amp;pmic_wifi {
+</span></span><span style="display:flex;"><span>	status = &#34;okay&#34;;
+</span></span><span style="display:flex;"><span>	regulators {
+</span></span><span style="display:flex;"><span>		status = &#34;okay&#34;;
+</span></span><span style="display:flex;"><span>	};
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>/* enable nRF70 */
+</span></span><span style="display:flex;"><span>&amp;nrf70 {
+</span></span><span style="display:flex;"><span>	status = &#34;okay&#34;;
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>If we look at the schematic, both the Wi-Fi PMIC (<code>ldsw_nPM6001_en</code>) and the RF
+front end (<code>ldsw_rf_fe_sr_en</code>) enable signals are connected to the main PMIC
+(<a href="https://www.nordicsemi.com/Products/nPM1300">nPM1300</a>).</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/nrf9151_wifi_host_0.png"
+    alt="nrf9151-wifi-host-0"
+  />
+</div>
+<p><code>ldsw_nPM6001_en</code> is enabled via the <code>regulator-boot-on</code> label in the included
+devicetree file, which will cause it to be turned on when the nPM1300 driver is
+initialized.</p>
+<p>The RF frontend is not enabled until later alongside the nPM6001 regulators.
+When <code>CONFIG_WIFI_NRF70=y</code>, the <a href="https://github.com/nrfconnect/sdk-nrf/blob/62256979f5f5dde7567b7fcff91b77c40684e3b2/boards/nordic/thingy91x/nrf70_support.c"><code>nrf70_support.c</code>
+&ldquo;library&rdquo;</a>
+is included in the build via the Thingy:91 X <a href="https://github.com/nrfconnect/sdk-nrf/blob/62256979f5f5dde7567b7fcff91b77c40684e3b2/boards/nordic/thingy91x/CMakeLists.txt">board
+<code>CMakeLists.txt</code></a>.</p>
+<p><code>CMakeLists.txt</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>if(CONFIG_WIFI_NRF70)
+</span></span><span style="display:flex;"><span>  if(CONFIG_BOARD_THINGY91X_NRF9151 OR CONFIG_BOARD_THINGY91X_NRF9151_NS)
+</span></span><span style="display:flex;"><span>    zephyr_library()
+</span></span><span style="display:flex;"><span>    zephyr_library_sources(nrf70_support.c)
+</span></span><span style="display:flex;"><span>  endif()
+</span></span><span style="display:flex;"><span>endif()
+</span></span></code></pre></div><p>When the Wi-Fi interface is brought up, the <code>nrf_wifi_if_zep_start_board</code>
+function is invoked.</p>
+<p><code>nrf70_support.c</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">struct</span> device *wifi_regulator = DEVICE_DT_GET(DT_NODELABEL(reg_wifi));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">struct</span> gpio_dt_spec ldsw_rf_fe_sr_en = {
+</span></span><span style="display:flex;"><span>	.port = DEVICE_DT_GET(DT_PARENT(DT_NODELABEL(ldsw_rf_fe_sr_en))),
+</span></span><span style="display:flex;"><span>	.pin = <span style="color:#ff0;font-weight:bold">1</span>,
+</span></span><span style="display:flex;"><span>	.dt_flags = GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN | GPIO_PULL_UP,
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007f7f">/* Enable the regulator and set the GPIO pin to enable the RF frontend */</span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">int</span> nrf_wifi_if_zep_start_board(<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">struct</span> device *dev)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	ARG_UNUSED(dev);
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">int</span> ret;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	ret = regulator_enable(wifi_regulator);
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (ret) {
+</span></span><span style="display:flex;"><span>		LOG_ERR(<span style="color:#0ff;font-weight:bold">&#34;Cannot turn on regulator %s (%d)&#34;</span>, wifi_regulator-&gt;name, ret);
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> ret;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	ret = regulator_set_mode(wifi_regulator, NPM6001_MODE_PWM);
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (ret) {
+</span></span><span style="display:flex;"><span>		LOG_ERR(<span style="color:#0ff;font-weight:bold">&#34;Cannot set mode for regulator %s (%d)&#34;</span>, wifi_regulator-&gt;name, ret);
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> ret;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	ret = gpio_pin_set_dt(&amp;ldsw_rf_fe_sr_en, <span style="color:#ff0;font-weight:bold">1</span>);
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (ret) {
+</span></span><span style="display:flex;"><span>		LOG_ERR(<span style="color:#0ff;font-weight:bold">&#34;Cannot set GPIO %s (%d)&#34;</span>, ldsw_rf_fe_sr_en.port-&gt;name, ret);
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> ret;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Wait for the load switch to settle on operating voltage. */</span>
+</span></span><span style="display:flex;"><span>	k_sleep(K_USEC(<span style="color:#ff0;font-weight:bold">300</span>));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The <code>regulator_enable</code> and <code>regulator_set_mode</code> calls utilitze the nPM6001
+driver to configure the <code>reg_wifi</code> regulator via the I2C connection to the
+nPM6001. Then the RF front end short range capabilities are enabled via the
+<code>gpio_pin_set_dt</code> call. Because the <code>port</code> of <code>ldsw_rf_fe_sr_en</code> is set to the
+parent of the devicetree node label, the GPIO is pulled high by talking to the
+nPM1300 over I2C. The generated devicetree file makes these relationships plain.</p>
+<p><code>zephyr.dts</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>			i2c2: i2c@a000 {
+</span></span><span style="display:flex;"><span>				compatible = &#34;nordic,nrf-twim&#34;;
+</span></span><span style="display:flex;"><span>				#address-cells = &lt; 0x1 &gt;;
+</span></span><span style="display:flex;"><span>				#size-cells = &lt; 0x0 &gt;;
+</span></span><span style="display:flex;"><span>				reg = &lt; 0xa000 0x1000 &gt;;
+</span></span><span style="display:flex;"><span>				interrupts = &lt; 0xa 0x1 &gt;;
+</span></span><span style="display:flex;"><span>				easydma-maxcnt-bits = &lt; 0xd &gt;;
+</span></span><span style="display:flex;"><span>				status = &#34;okay&#34;;
+</span></span><span style="display:flex;"><span>				zephyr,pm-device-runtime-auto;
+</span></span><span style="display:flex;"><span>				clock-frequency = &lt; 0x186a0 &gt;;
+</span></span><span style="display:flex;"><span>				pinctrl-0 = &lt; &amp;i2c2_default &gt;;
+</span></span><span style="display:flex;"><span>				pinctrl-1 = &lt; &amp;i2c2_sleep &gt;;
+</span></span><span style="display:flex;"><span>				pinctrl-names = &#34;default&#34;, &#34;sleep&#34;;
+</span></span><span style="display:flex;"><span>				bme680: bme680@76 {
+</span></span><span style="display:flex;"><span>					status = &#34;disabled&#34;;
+</span></span><span style="display:flex;"><span>					compatible = &#34;bosch,bme680&#34;;
+</span></span><span style="display:flex;"><span>					reg = &lt; 0x76 &gt;;
+</span></span><span style="display:flex;"><span>				};
+</span></span><span style="display:flex;"><span>				pmic_main: npm1300@6b {
+</span></span><span style="display:flex;"><span>					compatible = &#34;nordic,npm1300&#34;;
+</span></span><span style="display:flex;"><span>					status = &#34;okay&#34;;
+</span></span><span style="display:flex;"><span>					pmic-int-pin = &lt; 0x3 &gt;;
+</span></span><span style="display:flex;"><span>					reg = &lt; 0x6b &gt;;
+</span></span><span style="display:flex;"><span>					host-int-gpios = &lt; &amp;gpio0 0x2 0x0 &gt;;
+</span></span><span style="display:flex;"><span>					gpios_pmic: npm1300_gpios {
+</span></span><span style="display:flex;"><span>						compatible = &#34;nordic,npm1300-gpio&#34;;
+</span></span><span style="display:flex;"><span>						status = &#34;okay&#34;;
+</span></span><span style="display:flex;"><span>						gpio-controller;
+</span></span><span style="display:flex;"><span>						#gpio-cells = &lt; 0x2 &gt;;
+</span></span><span style="display:flex;"><span>						ngpios = &lt; 0x5 &gt;;
+</span></span><span style="display:flex;"><span>						phandle = &lt; 0x9 &gt;;
+</span></span><span style="display:flex;"><span>						npm13_button: GPIO0 {
+</span></span><span style="display:flex;"><span>							gpio-hog;
+</span></span><span style="display:flex;"><span>							gpios = &lt; 0x0 0x0 &gt;;
+</span></span><span style="display:flex;"><span>						};
+</span></span><span style="display:flex;"><span>						ldsw_rf_fe_sr_en: GPIO1 {
+</span></span><span style="display:flex;"><span>							gpio-hog;
+</span></span><span style="display:flex;"><span>							gpios = &lt; 0x1 0x17 &gt;;
+</span></span><span style="display:flex;"><span>							output-high;
+</span></span><span style="display:flex;"><span>						};
+</span></span><span style="display:flex;"><span>						power_switch: GPIO2 {
+</span></span><span style="display:flex;"><span>							gpio-hog;
+</span></span><span style="display:flex;"><span>							gpios = &lt; 0x2 0x0 &gt;;
+</span></span><span style="display:flex;"><span>						};
+</span></span><span style="display:flex;"><span>						npm6001_ready: GPIO4 {
+</span></span><span style="display:flex;"><span>							gpio-hog;
+</span></span><span style="display:flex;"><span>							gpios = &lt; 0x4 0x0 &gt;;
+</span></span><span style="display:flex;"><span>						};
+</span></span><span style="display:flex;"><span>					};
+</span></span><span style="display:flex;"><span>					regulators {
+</span></span><span style="display:flex;"><span>						compatible = &#34;nordic,npm1300-regulator&#34;;
+</span></span><span style="display:flex;"><span>						status = &#34;okay&#34;;
+</span></span><span style="display:flex;"><span>						reg_3v3: BUCK2 {
+</span></span><span style="display:flex;"><span>							regulator-min-microvolt = &lt; 0x325aa0 &gt;;
+</span></span><span style="display:flex;"><span>							regulator-max-microvolt = &lt; 0x325aa0 &gt;;
+</span></span><span style="display:flex;"><span>							enable-gpios = &lt; &amp;gpios_pmic 0x2 0x0 &gt;;
+</span></span><span style="display:flex;"><span>						};
+</span></span><span style="display:flex;"><span>						ldsw_nPM6001_en: LDO1 {
+</span></span><span style="display:flex;"><span>							regulator-initial-mode = &lt; 0x3 &gt;;
+</span></span><span style="display:flex;"><span>							regulator-allowed-modes = &lt; 0x3 &gt;;
+</span></span><span style="display:flex;"><span>							regulator-boot-on;
+</span></span><span style="display:flex;"><span>						};
+</span></span><span style="display:flex;"><span>						ldsw_sensors: LDO2 {
+</span></span><span style="display:flex;"><span>							regulator-initial-mode = &lt; 0x3 &gt;;
+</span></span><span style="display:flex;"><span>							regulator-allowed-modes = &lt; 0x3 &gt;;
+</span></span><span style="display:flex;"><span>							regulator-boot-on;
+</span></span><span style="display:flex;"><span>						};
+</span></span><span style="display:flex;"><span>					};
+</span></span><span style="display:flex;"><span>					npm1300_charger: charger {
+</span></span><span style="display:flex;"><span>						compatible = &#34;nordic,npm1300-charger&#34;;
+</span></span><span style="display:flex;"><span>						status = &#34;okay&#34;;
+</span></span><span style="display:flex;"><span>						vbus-limit-microamp = &lt; 0x7a120 &gt;;
+</span></span><span style="display:flex;"><span>						term-microvolt = &lt; 0x401640 &gt;;
+</span></span><span style="display:flex;"><span>						current-microamp = &lt; 0xa4cb8 &gt;;
+</span></span><span style="display:flex;"><span>						dischg-limit-microamp = &lt; 0x147260 &gt;;
+</span></span><span style="display:flex;"><span>						thermistor-cold-millidegrees = &lt; 0x0 &gt;;
+</span></span><span style="display:flex;"><span>						thermistor-cool-millidegrees = &lt; 0x0 &gt;;
+</span></span><span style="display:flex;"><span>						thermistor-warm-millidegrees = &lt; 0xafc8 &gt;;
+</span></span><span style="display:flex;"><span>						thermistor-hot-millidegrees = &lt; 0xafc8 &gt;;
+</span></span><span style="display:flex;"><span>						thermistor-ohms = &lt; 0x2710 &gt;;
+</span></span><span style="display:flex;"><span>						thermistor-beta = &lt; 0xd6b &gt;;
+</span></span><span style="display:flex;"><span>						charging-enable;
+</span></span><span style="display:flex;"><span>					};
+</span></span><span style="display:flex;"><span>				};
+</span></span><span style="display:flex;"><span>				pmic_wifi: npm6001@70 {
+</span></span><span style="display:flex;"><span>					status = &#34;okay&#34;;
+</span></span><span style="display:flex;"><span>					compatible = &#34;nordic,npm6001&#34;;
+</span></span><span style="display:flex;"><span>					reg = &lt; 0x70 &gt;;
+</span></span><span style="display:flex;"><span>					regulators {
+</span></span><span style="display:flex;"><span>						compatible = &#34;nordic,npm6001-regulator&#34;;
+</span></span><span style="display:flex;"><span>						status = &#34;okay&#34;;
+</span></span><span style="display:flex;"><span>						pmic_wifi_buck0: BUCK0 {
+</span></span><span style="display:flex;"><span>							regulator-boot-off;
+</span></span><span style="display:flex;"><span>						};
+</span></span><span style="display:flex;"><span>						pmic_wifi_buck1: BUCK1 {
+</span></span><span style="display:flex;"><span>							regulator-boot-off;
+</span></span><span style="display:flex;"><span>						};
+</span></span><span style="display:flex;"><span>						pmic_wifi_buck2: BUCK2 {
+</span></span><span style="display:flex;"><span>							regulator-boot-off;
+</span></span><span style="display:flex;"><span>						};
+</span></span><span style="display:flex;"><span>						reg_wifi: BUCK3 {
+</span></span><span style="display:flex;"><span>							regulator-min-microvolt = &lt; 0x325aa0 &gt;;
+</span></span><span style="display:flex;"><span>							regulator-max-microvolt = &lt; 0x325aa0 &gt;;
+</span></span><span style="display:flex;"><span>							regulator-initial-mode = &lt; 0x0 &gt;;
+</span></span><span style="display:flex;"><span>							regulator-boot-on;
+</span></span><span style="display:flex;"><span>						};
+</span></span><span style="display:flex;"><span>					};
+</span></span><span style="display:flex;"><span>				};
+</span></span><span style="display:flex;"><span>				accel: accelerometer_lp: adxl367@1d {
+</span></span><span style="display:flex;"><span>					status = &#34;disabled&#34;;
+</span></span><span style="display:flex;"><span>					compatible = &#34;adi,adxl367&#34;;
+</span></span><span style="display:flex;"><span>					odr = &lt; 0x3 &gt;;
+</span></span><span style="display:flex;"><span>					reg = &lt; 0x1d &gt;;
+</span></span><span style="display:flex;"><span>					int1-gpios = &lt; &amp;gpio0 0xb 0x0 &gt;;
+</span></span><span style="display:flex;"><span>				};
+</span></span><span style="display:flex;"><span>				magnetometer: bmm350@14 {
+</span></span><span style="display:flex;"><span>					status = &#34;disabled&#34;;
+</span></span><span style="display:flex;"><span>					compatible = &#34;bosch,bmm350&#34;;
+</span></span><span style="display:flex;"><span>					reg = &lt; 0x14 &gt;;
+</span></span><span style="display:flex;"><span>					drdy-gpios = &lt; &amp;gpio0 0x7 0x1 &gt;;
+</span></span><span style="display:flex;"><span>				};
+</span></span><span style="display:flex;"><span>			};
+</span></span></code></pre></div><p>Because this setup is just enabling the hardware necessary to use Wi-Fi
+capabilities, it is the same whether using the nRF7002 in scan or station mode.
+Kconfig is used to determine the firmware support, including what patch is
+included and loaded. By default, <code>CONFIG_NRF70_SYSTEM_MODE=y</code> is selected when
+using the nRF7002, which results in the <code>default</code> patch being included via the
+<a href="https://github.com/nrfconnect/sdk-zephyr/blob/b83eabe0b2cb9b461a6c2e43ce8fc91f5fe4f1fa/drivers/wifi/nrf_wifi/CMakeLists.txt">nrf_wifi</a>
+driver.</p>
+<p><code>CMakeLists.txt</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>if (CONFIG_NRF_WIFI_PATCHES_BUILTIN)
+</span></span><span style="display:flex;"><span>  zephyr_blobs_verify(MODULE nrf_wifi REQUIRED)
+</span></span><span style="display:flex;"><span>  # RPU FW patch binaries based on the selected configuration
+</span></span><span style="display:flex;"><span>  if(CONFIG_NRF70_SYSTEM_MODE)
+</span></span><span style="display:flex;"><span>    set(NRF70_PATCH ${FW_BINS_BASE}/default/nrf70.bin)
+</span></span><span style="display:flex;"><span>  elseif(CONFIG_NRF70_RADIO_TEST)
+</span></span><span style="display:flex;"><span>    set(NRF70_PATCH ${FW_BINS_BASE}/radio_test/nrf70.bin)
+</span></span><span style="display:flex;"><span>  elseif(CONFIG_NRF70_SCAN_ONLY)
+</span></span><span style="display:flex;"><span>    set(NRF70_PATCH ${FW_BINS_BASE}/scan_only/nrf70.bin)
+</span></span><span style="display:flex;"><span>  elseif (CONFIG_NRF70_SYSTEM_WITH_RAW_MODES)
+</span></span><span style="display:flex;"><span>    set(NRF70_PATCH ${FW_BINS_BASE}/system_with_raw/nrf70.bin)
+</span></span><span style="display:flex;"><span>  elseif(CONFIG_NRF70_OFFLOADED_RAW_TX)
+</span></span><span style="display:flex;"><span>    set(NRF70_PATCH ${FW_BINS_BASE}/offloaded_raw_tx/nrf70.bin)
+</span></span><span style="display:flex;"><span>  else()
+</span></span><span style="display:flex;"><span>    # Error
+</span></span><span style="display:flex;"><span>    message(FATAL_ERROR &#34;Unsupported nRF70 patch configuration&#34;)
+</span></span><span style="display:flex;"><span>  endif()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  set(gen_inc_dir ${ZEPHYR_BINARY_DIR}/misc/generated)
+</span></span><span style="display:flex;"><span>  zephyr_include_directories(${gen_inc_dir})
+</span></span><span style="display:flex;"><span>  set(gen_dir ${gen_inc_dir}/nrf70_fw_patch)
+</span></span><span style="display:flex;"><span>  generate_inc_file_for_target(
+</span></span><span style="display:flex;"><span>    nrf_wifi
+</span></span><span style="display:flex;"><span>    ${NRF70_PATCH}
+</span></span><span style="display:flex;"><span>    ${gen_dir}/nrf70.bin.inc
+</span></span><span style="display:flex;"><span>  )
+</span></span><span style="display:flex;"><span>endif()
+</span></span></code></pre></div><p>The station example provides the configuration for this setup in <a href="https://github.com/nrfconnect/sdk-nrf/blob/91ce90f992570664ed50ebbcfd23d3cf496a6d3a/samples/wifi/sta/prj.conf">the
+<code>prj.conf</code></a>.
+The application can be built for the nRF9151 on the Thingy:91 X with the
+following command.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>west build -p -b thingy91x/nrf9151/ns .
+</span></span></code></pre></div><p>&ldquo;Barely&rdquo; in the title of this post might be an understatement. The build is
+successful, but utilies <code>99.11%</code> of available RAM.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[501/501] Linking C executable zephyr/zephyr.elf
+</span></span><span style="display:flex;"><span>Memory region         Used Size  Region Size  %age Used
+</span></span><span style="display:flex;"><span>           FLASH:      542612 B       800 KB     66.24%
+</span></span><span style="display:flex;"><span>             RAM:      201600 B     203416 B     99.11%
+</span></span><span style="display:flex;"><span>        IDT_LIST:          0 GB        32 KB      0.00%
+</span></span></code></pre></div><p>I had set my Wi-Fi SSID (<code>CONFIG_WIFI_CREDENTIALS_STATIC_SSID</code>) and password
+(<code>CONFIG_WIFI_CREDENTIALS_STATIC_PASSWORD</code>) in the <code>prj.conf</code>, but on my first
+attempt of programming the Thingy:91 X with <code>west flash --recover</code>, I observed
+the following output.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>*** Booting nRF Connect SDK v2.9.0-7787b2649840 ***
+</span></span><span style="display:flex;"><span>*** Using Zephyr OS v3.7.99-1f8f3dc29142 ***
+</span></span><span style="display:flex;"><span>[00:00:00.565,917] &lt;inf&gt; net_config: Initializing network
+</span></span><span style="display:flex;"><span>[00:00:00.565,948] &lt;inf&gt; net_config: Waiting interface 1 (0x2000f5a0) to be up...
+</span></span><span style="display:flex;"><span>[00:00:00.566,131] &lt;inf&gt; net_config: IPv4 address: 192.168.1.99
+</span></span><span style="display:flex;"><span>[00:00:00.566,192] &lt;inf&gt; net_config: Running dhcpv4 client...
+</span></span><span style="display:flex;"><span>[00:00:00.566,833] &lt;inf&gt; sta: Starting thingy91x with CPU frequency: 64 MHz
+</span></span><span style="display:flex;"><span>[00:00:00.568,542] &lt;inf&gt; wifi_supplicant: wpa_supplicant initialized
+</span></span><span style="display:flex;"><span>[00:00:01.566,986] &lt;inf&gt; sta: Static IP address (overridable): 192.168.1.99/255.255.255.0 -&gt; 192.168.1.1
+</span></span><span style="display:flex;"><span>[00:00:01.567,138] &lt;err&gt; wifi_mgmt_ext: Connection request failed
+</span></span><span style="display:flex;"><span>[00:00:01.567,138] &lt;err&gt; sta: Connection request failed
+</span></span><span style="display:flex;"><span>[00:00:01.567,169] &lt;inf&gt; sta: Status request failed
+</span></span><span style="display:flex;"><span>[00:00:01.620,666] &lt;err&gt; wifi_supplicant: Failed to add iface wlan0
+</span></span></code></pre></div><p>The error was orginating from the following line in the application.</p>
+<p><code>main.c</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (net_mgmt(NET_REQUEST_WIFI_CONNECT_STORED, iface, <span style="color:#fff;font-weight:bold">NULL</span>, <span style="color:#ff0;font-weight:bold">0</span>)) {
+</span></span><span style="display:flex;"><span>		LOG_ERR(<span style="color:#0ff;font-weight:bold">&#34;Connection request failed&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> -ENOEXEC;
+</span></span><span style="display:flex;"><span>	}
+</span></span></code></pre></div><p>The log line from <code>wifi_mgmt_ext</code> provided a hint that this <a href="https://docs.zephyrproject.org/latest/connectivity/networking/api/net_mgmt.html">network
+management</a>
+command was being handled by Nordic&rsquo;s <a href="https://github.com/nrfconnect/sdk-nrf/blob/f8857a6c6c1d30fc1c599fca63528068aeb97ca9/subsys/net/lib/wifi_mgmt_ext/wifi_mgmt_ext.c#L318">extended Wi-Fi command
+library</a>.</p>
+<p><code>wifi_mgmt_ext.c</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">int</span> wifi_ext_command(<span style="color:#fff;font-weight:bold">uint32_t</span> mgmt_request, <span style="color:#fff;font-weight:bold">struct</span> net_if *iface, <span style="color:#fff;font-weight:bold">void</span> *data, <span style="color:#fff;font-weight:bold">size_t</span> len)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">int</span> ret = <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	ret = add_static_network_config(iface);
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (ret) {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> ret;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	wifi_credentials_for_each_ssid(add_stored_network, iface);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> ret;
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>NET_MGMT_REGISTER_REQUEST_HANDLER(NET_REQUEST_WIFI_CONNECT_STORED, wifi_ext_command);
+</span></span></code></pre></div><p>To quickly diagnose the problem, I used <code>west attach</code> to connect with GDB and
+step through the call stack. I started by setting a breakpoint on
+<code>wifi_ext_command</code> and resetting the target.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>(gdb) b wifi_ext_command
+</span></span><span style="display:flex;"><span>Breakpoint 1 at 0x6c8e0
+</span></span><span style="display:flex;"><span>(gdb) monitor reset
+</span></span><span style="display:flex;"><span>Resetting target
+</span></span></code></pre></div><p>Shortly after boot, the application hit the breakpoint.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Breakpoint 1, wifi_ext_command (mgmt_request=mgmt_request@entry=1364590702, iface=0x2000f5a0 &lt;__net_if_dts_ord_126_0&gt;, data=data@entry=0x0, len=len@entry=0)
+</span></span></code></pre></div><p>The <code>iface</code> being passed matches the devicetree number of the <code>wlan0</code> interface
+accessed via SPI on the nRF7002.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span> *   126 /soc/peripheral@40000000/spi@b000/wifi@1/wlan0
+</span></span></code></pre></div><p>Stepping through <code>add_static_network_config</code>, it returns with a <a href="https://github.com/nrfconnect/sdk-nrf/blob/f8857a6c6c1d30fc1c599fca63528068aeb97ca9/subsys/net/lib/wifi_mgmt_ext/wifi_mgmt_ext.c#L215">call to
+<code>add_network_from_credentials_struct_personal</code></a>,
+which invokes the <code>NET_REQUEST_WIFI_CONNECT</code> command.</p>
+<p><code>wifi_mgmt_ext.c</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (net_mgmt(NET_REQUEST_WIFI_CONNECT, iface, &amp;cnx_params,
+</span></span><span style="display:flex;"><span>		     <span style="color:#fff;font-weight:bold">sizeof</span>(<span style="color:#fff;font-weight:bold">struct</span> wifi_connect_req_params))) {
+</span></span><span style="display:flex;"><span>		LOG_ERR(<span style="color:#0ff;font-weight:bold">&#34;Connection request failed</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> -ENOEXEC;
+</span></span><span style="display:flex;"><span>	}
+</span></span></code></pre></div><p>The connect command is handled by Zephyr&rsquo;s L2 <a href="https://docs.zephyrproject.org/latest/connectivity/networking/api/net_mgmt.html">network management
+library</a>.</p>
+<p><code>wifi_mgmt.c</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">int</span> wifi_connect(<span style="color:#fff;font-weight:bold">uint32_t</span> mgmt_request, <span style="color:#fff;font-weight:bold">struct</span> net_if *iface,
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">void</span> *data, <span style="color:#fff;font-weight:bold">size_t</span> len)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">struct</span> wifi_connect_req_params *params =
+</span></span><span style="display:flex;"><span>		(<span style="color:#fff;font-weight:bold">struct</span> wifi_connect_req_params *)data;
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">struct</span> device *dev = net_if_get_device(iface);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">struct</span> wifi_mgmt_ops *<span style="color:#fff;font-weight:bold">const</span> wifi_mgmt_api = get_wifi_api(iface);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (wifi_mgmt_api == <span style="color:#fff;font-weight:bold">NULL</span> || wifi_mgmt_api-&gt;connect == <span style="color:#fff;font-weight:bold">NULL</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> -ENOTSUP;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (!net_if_is_admin_up(iface)) {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> -ENETDOWN;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	LOG_HEXDUMP_DBG(params-&gt;ssid, params-&gt;ssid_length, <span style="color:#0ff;font-weight:bold">&#34;ssid&#34;</span>);
+</span></span><span style="display:flex;"><span>	LOG_HEXDUMP_DBG(params-&gt;psk, params-&gt;psk_length, <span style="color:#0ff;font-weight:bold">&#34;psk&#34;</span>);
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (params-&gt;sae_password) {
+</span></span><span style="display:flex;"><span>		LOG_HEXDUMP_DBG(params-&gt;sae_password, params-&gt;sae_password_length, <span style="color:#0ff;font-weight:bold">&#34;sae&#34;</span>);
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	NET_DBG(<span style="color:#0ff;font-weight:bold">&#34;ch %u sec %u&#34;</span>, params-&gt;channel, params-&gt;security);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> ((params-&gt;security &gt; WIFI_SECURITY_TYPE_MAX) ||
+</span></span><span style="display:flex;"><span>	    (params-&gt;ssid_length &gt; WIFI_SSID_MAX_LEN) ||
+</span></span><span style="display:flex;"><span>	    (params-&gt;ssid_length == <span style="color:#ff0;font-weight:bold">0U</span>) ||
+</span></span><span style="display:flex;"><span>	    ((params-&gt;security == WIFI_SECURITY_TYPE_PSK ||
+</span></span><span style="display:flex;"><span>		  params-&gt;security == WIFI_SECURITY_TYPE_WPA_PSK ||
+</span></span><span style="display:flex;"><span>		  params-&gt;security == WIFI_SECURITY_TYPE_PSK_SHA256 ||
+</span></span><span style="display:flex;"><span>		  params-&gt;security == WIFI_SECURITY_TYPE_WPA_AUTO_PERSONAL) &amp;&amp;
+</span></span><span style="display:flex;"><span>	     ((params-&gt;psk_length &lt; <span style="color:#ff0;font-weight:bold">8</span>) || (params-&gt;psk_length &gt; <span style="color:#ff0;font-weight:bold">64</span>) ||
+</span></span><span style="display:flex;"><span>	      (params-&gt;psk_length == <span style="color:#ff0;font-weight:bold">0U</span>) || !params-&gt;psk)) ||
+</span></span><span style="display:flex;"><span>	    ((params-&gt;security == WIFI_SECURITY_TYPE_SAE_HNP ||
+</span></span><span style="display:flex;"><span>		  params-&gt;security == WIFI_SECURITY_TYPE_SAE_H2E ||
+</span></span><span style="display:flex;"><span>		  params-&gt;security == WIFI_SECURITY_TYPE_SAE_AUTO) &amp;&amp;
+</span></span><span style="display:flex;"><span>	      ((params-&gt;psk_length == <span style="color:#ff0;font-weight:bold">0U</span>) || !params-&gt;psk) &amp;&amp;
+</span></span><span style="display:flex;"><span>		  ((params-&gt;sae_password_length == <span style="color:#ff0;font-weight:bold">0U</span>) || !params-&gt;sae_password)) ||
+</span></span><span style="display:flex;"><span>	    ((params-&gt;channel != WIFI_CHANNEL_ANY) &amp;&amp;
+</span></span><span style="display:flex;"><span>	     (params-&gt;channel &gt; WIFI_CHANNEL_MAX)) ||
+</span></span><span style="display:flex;"><span>	    !params-&gt;ssid) {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> -EINVAL;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_WIFI_NM_WPA_SUPPLICANT_ROAMING
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	memset(&amp;roaming_params, <span style="color:#ff0;font-weight:bold">0x0</span>, <span style="color:#fff;font-weight:bold">sizeof</span>(roaming_params));
+</span></span><span style="display:flex;"><span>	roaming_params.is_11r_used = params-&gt;ft_used;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> wifi_mgmt_api-&gt;connect(dev, params);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>NET_MGMT_REGISTER_REQUEST_HANDLER(NET_REQUEST_WIFI_CONNECT, wifi_connect);
+</span></span></code></pre></div><p>The failure was occurring at <code>get_wifi_api</code>, which returned a <code>wifi_mgmt_api</code>,
+but the <code>connect</code> callback was <code>NULL</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>(gdb) p *wifi_mgmt_api
+</span></span><span style="display:flex;"><span>$15 = {scan = 0x68a75 &lt;nrf_wifi_disp_scan_zep&gt;, connect = 0x0, disconnect = 0x0, ap_enable = 0x0, ap_disable = 0x0, ap_sta_disconnect = 0x0, iface_status = 0x0, 
+</span></span><span style="display:flex;"><span>  set_power_save = 0x68f91 &lt;nrf_wifi_set_power_save&gt;, set_twt = 0x6934d &lt;nrf_wifi_set_twt&gt;, get_power_save_config = 0x69119 &lt;nrf_wifi_get_power_save_config&gt;, reg_domain = 0x67ab5 &lt;nrf_wifi_reg_domain&gt;, 
+</span></span><span style="display:flex;"><span>  filter = 0x0, mode = 0x0, channel = 0x0, btm_query = 0x0, get_version = 0x0, get_conn_params = 0x0, set_rts_threshold = 0x69831 &lt;nrf_wifi_set_rts_threshold&gt;, ap_config_params = 0x0, pmksa_flush = 0x0, 
+</span></span><span style="display:flex;"><span>  get_rts_threshold = 0x69959 &lt;nrf_wifi_get_rts_threshold&gt;, wps_config = 0x0}
+</span></span></code></pre></div><p>The <code>connect</code> callback should be provided by the <a href="https://github.com/zephyrproject-rtos/zephyr/blob/1280f432f4aa5e423ba5ef89038efbecfd9cd222/modules/hostap/src/supp_main.c#L55">&ldquo;glue
+code&rdquo;</a>
+that ties <code>wpa_supplicant</code> into Zephyr&rsquo;s networking stack.</p>
+<p><code>supp_main.c</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">struct</span> wifi_mgmt_ops mgmt_ops = {
+</span></span><span style="display:flex;"><span>	.get_version = supplicant_get_version,
+</span></span><span style="display:flex;"><span>	.scan = supplicant_scan,
+</span></span><span style="display:flex;"><span>	.connect = supplicant_connect,
+</span></span><span style="display:flex;"><span>	.disconnect = supplicant_disconnect,
+</span></span><span style="display:flex;"><span>...
+</span></span></code></pre></div><p>The <code>wpa_supplicant</code> error log was a good hint as to why that may not be
+happening.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>[00:00:01.620,666] &lt;err&gt; wifi_supplicant: Failed to add iface wlan0
+</span></span></code></pre></div><p>The log <a href="https://github.com/zephyrproject-rtos/hostap/blob/6855231ec7ecc13de2c8c756d35a9a5da45f9f26/wpa_supplicant/wpa_supplicant.c#L7570">originates in the
+<code>wpa_supplicant_add_iface</code></a>
+function when attempting to initialize the interface.</p>
+<p><code>wpa_supplicant.c</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (wpa_supplicant_init_iface(wpa_s, &amp;t_iface)) {
+</span></span><span style="display:flex;"><span>		wpa_printf(MSG_DEBUG, <span style="color:#0ff;font-weight:bold">&#34;Failed to add interface %s&#34;</span>,
+</span></span><span style="display:flex;"><span>			   iface-&gt;ifname);
+</span></span><span style="display:flex;"><span>		wpa_supplicant_deinit_iface(wpa_s, <span style="color:#ff0;font-weight:bold">0</span>, <span style="color:#ff0;font-weight:bold">0</span>);
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">NULL</span>;
+</span></span><span style="display:flex;"><span>	}
+</span></span></code></pre></div><p>I went further down the rabbit hole of the steps required for initialization
+than I have space to enumerate here, but the issue became obvious after setting
+a breakpoint and stepping through the call stack.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>(gdb) where
+</span></span><span style="display:flex;"><span>#0  l2_packet_init (ifname=ifname@entry=0x2002ca78 &lt;kheap.system_heap+48680&gt; &#34;wlan0&#34;, own_addr=&lt;optimized out&gt;, protocol=protocol@entry=34958, rx_callback=0x4a781 &lt;wpa_supplicant_rx_eapol&gt;, 
+</span></span><span style="display:flex;"><span>    rx_callback_ctx=rx_callback_ctx@entry=0x2002ca28 &lt;kheap.system_heap+48600&gt;, l2_hdr=l2_hdr@entry=0)
+</span></span><span style="display:flex;"><span>#1  0x0004ae3a in wpa_supplicant_update_mac_addr (wpa_s=wpa_s@entry=0x2002ca28 &lt;kheap.system_heap+48600&gt;)
+</span></span><span style="display:flex;"><span>#2  0x0004b358 in wpa_supplicant_driver_init (wpa_s=wpa_s@entry=0x2002ca28 &lt;kheap.system_heap+48600&gt;)
+</span></span><span style="display:flex;"><span>#3  0x0004bdf0 in wpa_supplicant_init_iface (iface=&lt;synthetic pointer&gt;, wpa_s=0x2002ca28 &lt;kheap.system_heap+48600&gt;)
+</span></span><span style="display:flex;"><span>#4  wpa_supplicant_add_iface (global=global@entry=0x20028668 &lt;kheap.system_heap+31256&gt;, iface=iface@entry=0x20017af0 &lt;supplicant_thread_stack+6808&gt;, parent=parent@entry=0x0)
+</span></span></code></pre></div><p><code>l2_packet_init</code> is where we <a href="https://github.com/zephyrproject-rtos/hostap/blob/6855231ec7ecc13de2c8c756d35a9a5da45f9f26/src/l2_packet/l2_packet_zephyr.c#L146">return back to Zephyr
+land</a>,
+<a href="https://github.com/zephyrproject-rtos/hostap/blob/6855231ec7ecc13de2c8c756d35a9a5da45f9f26/src/l2_packet/l2_packet_zephyr.c#L146">eventually
+attempting</a>
+to create a <code>socket</code>.</p>
+<p><code>l2_packet_zephyr.c</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>	l2-&gt;fd = socket(AF_PACKET, l2_hdr ? SOCK_RAW : SOCK_DGRAM,
+</span></span><span style="display:flex;"><span>			htons(protocol));
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (l2-&gt;fd &lt; <span style="color:#ff0;font-weight:bold">0</span>) {
+</span></span><span style="display:flex;"><span>		wpa_printf(MSG_ERROR,
+</span></span><span style="display:flex;"><span>			   <span style="color:#0ff;font-weight:bold">&#34;Failed to open socket: %s, proto: %d, af: %d&#34;</span>,
+</span></span><span style="display:flex;"><span>			   strerror(errno), htons(protocol), AF_PACKET);
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">goto</span> fail;
+</span></span><span style="display:flex;"><span>	}
+</span></span></code></pre></div><p>Stepping through the socket call, we can see that the creation handler is being
+provided by the <code>nrf_modem_lib</code>. In other words, we are attempting to create an
+offloaded socket on the nRF9151 modem, then use it for Wi-Fi via the nRF7002.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Breakpoint 10, socket (family=3, type=2, proto=36488)
+</span></span><span style="display:flex;"><span>394		return zsock_socket(family, type, proto);
+</span></span><span style="display:flex;"><span>(gdb) s
+</span></span><span style="display:flex;"><span>zsock_socket (proto=36488, type=2, family=3)
+</span></span><span style="display:flex;"><span>60		return z_impl_zsock_socket(family, type, proto);
+</span></span><span style="display:flex;"><span>(gdb) s
+</span></span><span style="display:flex;"><span>z_impl_zsock_socket (family=3, type=2, proto=36488)
+</span></span><span style="display:flex;"><span>109		STRUCT_SECTION_FOREACH(net_socket_register, sock_family) {
+</span></span><span style="display:flex;"><span>(gdb) s
+</span></span><span style="display:flex;"><span>112			if (sock_family-&gt;family != family &amp;&amp;
+</span></span><span style="display:flex;"><span>(gdb) 
+</span></span><span style="display:flex;"><span>119			if (!sock_family-&gt;is_supported(family, type, proto)) {
+</span></span><span style="display:flex;"><span>(gdb) 
+</span></span><span style="display:flex;"><span>nrf9x_socket_is_supported (family=3, type=2, proto=36488)
+</span></span><span style="display:flex;"><span>1045		if (offload_disabled) {
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>0x00057afe in z_impl_zsock_socket (family=3, type=2, proto=36488)
+</span></span><span style="display:flex;"><span>123			errno = 0;
+</span></span><span style="display:flex;"><span>(gdb) s
+</span></span><span style="display:flex;"><span>124			ret = sock_family-&gt;handler(family, type, proto);
+</span></span><span style="display:flex;"><span>(gdb) 
+</span></span><span style="display:flex;"><span>nrf9x_socket_create (family=3, type=2, proto=36488)
+</span></span><span style="display:flex;"><span>1079		if (type &amp; SOCK_NATIVE) {
+</span></span><span style="display:flex;"><span>(gdb) s
+</span></span><span style="display:flex;"><span>1090		sd = nrf9x_socket_offload_socket(family, type, proto);
+</span></span><span style="display:flex;"><span>(gdb) s
+</span></span><span style="display:flex;"><span>nrf9x_socket_offload_socket (proto=36488, type=2, family=3)
+</span></span><span style="display:flex;"><span>336		retval = nrf_socket(family, type, proto);
+</span></span><span style="display:flex;"><span>(gdb) s
+</span></span><span style="display:flex;"><span>nrf9x_socket_create (proto=36488, type=2, family=3)
+</span></span><span style="display:flex;"><span>1091		if (sd &lt; 0) {
+</span></span><span style="display:flex;"><span>nrf9x_socket_create (proto=36488, type=&lt;optimized out&gt;, family=3)
+</span></span><span style="display:flex;"><span>1093			return -1;
+</span></span></code></pre></div><p>The small fix here is to disable the <code>nrf_modem_lib</code>, which is enabled by
+default on the nRF9151. This can be accomplished by adding a board-specific
+<code>.conf</code> file for the Thingy:91 X.</p>
+<p><code>thingy91x_nrf9151_ns.conf</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>CONFIG_NRF_MODEM_LIB=n
+</span></span></code></pre></div><p>Building and flashing again results in the expected output, and successful
+connection to the local Wi-Fi network.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>*** Booting nRF Connect SDK v2.9.0-7787b2649840 ***
+</span></span><span style="display:flex;"><span>*** Using Zephyr OS v3.7.99-1f8f3dc29142 ***
+</span></span><span style="display:flex;"><span>[00:00:00.562,683] &lt;inf&gt; net_config: Initializing network
+</span></span><span style="display:flex;"><span>[00:00:00.562,713] &lt;inf&gt; net_config: Waiting interface 1 (0x2000aff0) to be up...
+</span></span><span style="display:flex;"><span>[00:00:00.562,896] &lt;inf&gt; net_config: IPv4 address: 192.168.1.99
+</span></span><span style="display:flex;"><span>[00:00:00.562,957] &lt;inf&gt; net_config: Running dhcpv4 client...
+</span></span><span style="display:flex;"><span>[00:00:00.564,208] &lt;inf&gt; sta: Starting thingy91x with CPU frequency: 64 MHz
+</span></span><span style="display:flex;"><span>[00:00:00.566,162] &lt;inf&gt; wifi_supplicant: wpa_supplicant initialized
+</span></span><span style="display:flex;"><span>[00:00:01.564,483] &lt;inf&gt; sta: Static IP address (overridable): 1��.168.1.99/255.255.255.0 -&gt; 192.168.1.1
+</span></span><span style="display:flex;"><span>[00:00:01.564,514] &lt;inf&gt; sta: Waiting for Wi-Fi to be ready
+</span></span><span style="display:flex;"><span>[00:00:03.163,818] &lt;inf&gt; wifi_mgmt_ext: Connection requested
+</span></span><span style="display:flex;"><span>[00:00:03.163,848] &lt;inf&gt; sta: Connection requested
+</span></span><span style="display:flex;"><span>[00:00:03.163,940] &lt;inf&gt; sta: ==================
+</span></span><span style="display:flex;"><span>[00:00:03.163,970] &lt;inf&gt; sta: State: SCANNING
+</span></span><span style="display:flex;"><span>[00:00:03.464,111] &lt;inf&gt; sta: ==================
+</span></span><span style="display:flex;"><span>[00:00:03.464,141] &lt;inf&gt; sta: State: SCANNING
+</span></span><span style="display:flex;"><span>[00:00:03.764,312] &lt;inf&gt; sta: ==================
+</span></span><span style="display:flex;"><span>[00:00:03.764,343] &lt;inf&gt; sta: State: SCANNING
+</span></span><span style="display:flex;"><span>[00:00:04.064,514] &lt;inf&gt; sta: ==================
+</span></span><span style="display:flex;"><span>[00:00:04.064,544] &lt;inf&gt; sta: State: SCANNING
+</span></span><span style="display:flex;"><span>[00:00:04.364,715] &lt;inf&gt; sta: ==================
+</span></span><span style="display:flex;"><span>[00:00:04.364,746] &lt;inf&gt; sta: State: SCANNING
+</span></span><span style="display:flex;"><span>[00:00:04.664,916] &lt;inf&gt; sta: ==================
+</span></span><span style="display:flex;"><span>[00:00:04.664,947] &lt;inf&gt; sta: State: SCANNING
+</span></span><span style="display:flex;"><span>[00:00:04.965,118] &lt;inf&gt; sta: ==================
+</span></span><span style="display:flex;"><span>[00:00:04.965,148] &lt;inf&gt; sta: State: SCANNING
+</span></span><span style="display:flex;"><span>[00:00:05.265,319] &lt;inf&gt; sta: ==================
+</span></span><span style="display:flex;"><span>[00:00:05.265,350] &lt;inf&gt; sta: State: SCANNING
+</span></span><span style="display:flex;"><span>[00:00:05.565,521] &lt;inf&gt; sta: ==================
+</span></span><span style="display:flex;"><span>[00:00:05.565,551] &lt;inf&gt; sta: State: SCANNING
+</span></span><span style="display:flex;"><span>[00:00:05.865,722] &lt;inf&gt; sta: ==================
+</span></span><span style="display:flex;"><span>[00:00:05.865,753] &lt;inf&gt; sta: State: SCANNING
+</span></span><span style="display:flex;"><span>[00:00:06.165,924] &lt;inf&gt; sta: ==================
+</span></span><span style="display:flex;"><span>[00:00:06.165,954] &lt;inf&gt; sta: State: SCANNING
+</span></span><span style="display:flex;"><span>[00:00:06.466,125] &lt;inf&gt; sta: ==================
+</span></span><span style="display:flex;"><span>[00:00:06.466,156] &lt;inf&gt; sta: State: SCANNING
+</span></span><span style="display:flex;"><span>[00:00:06.766,326] &lt;inf&gt; sta: ==================
+</span></span><span style="display:flex;"><span>[00:00:06.766,357] &lt;inf&gt; sta: State: SCANNING
+</span></span><span style="display:flex;"><span>[00:00:07.066,528] &lt;inf&gt; sta: ==================
+</span></span><span style="display:flex;"><span>[00:00:07.066,558] &lt;inf&gt; sta: State: SCANNING
+</span></span><span style="display:flex;"><span>[00:00:07.366,729] &lt;inf&gt; sta: ==================
+</span></span><span style="display:flex;"><span>[00:00:07.366,760] &lt;inf&gt; sta: State: SCANNING
+</span></span><span style="display:flex;"><span>[00:00:07.666,931] &lt;inf&gt; sta: ==================
+</span></span><span style="display:flex;"><span>[00:00:07.666,961] &lt;inf&gt; sta: State: SCANNING
+</span></span><span style="display:flex;"><span>[00:00:07.967,132] &lt;inf&gt; sta: ==================
+</span></span><span style="display:flex;"><span>[00:00:07.967,163] &lt;inf&gt; sta: State: AUTHENTICATING
+</span></span><span style="display:flex;"><span>[00:00:08.242,462] &lt;inf&gt; sta: Connected
+</span></span><span style="display:flex;"><span>[00:00:08.262,725] &lt;inf&gt; net_dhcpv4: Received: 192.168.1.238
+</span></span><span style="display:flex;"><span>[00:00:08.263,000] &lt;inf&gt; net_config: IPv4 address: 192.168.1.238
+</span></span><span style="display:flex;"><span>[00:00:08.263,000] &lt;inf&gt; net_config: Lease time: 43200 seconds
+</span></span><span style="display:flex;"><span>[00:00:08.263,061] &lt;inf&gt; net_config: Subnet: 255.255.255.0
+</span></span><span style="display:flex;"><span>[00:00:08.263,092] &lt;inf&gt; net_config: Router: 192.168.1.1
+</span></span><span style="display:flex;"><span>[00:00:08.263,214] &lt;inf&gt; sta: DHCP IP address: 192.168.1.238
+</span></span><span style="display:flex;"><span>[00:00:08.275,146] &lt;inf&gt; sta: ==================
+</span></span><span style="display:flex;"><span>[00:00:08.275,177] &lt;inf&gt; sta: State: COMPLETED
+</span></span><span style="display:flex;"><span>[00:00:08.275,207] &lt;inf&gt; sta: Interface Mode: STATION
+</span></span><span style="display:flex;"><span>[00:00:08.275,238] &lt;inf&gt; sta: Link Mode: WIFI 6 (802.11ax/HE)
+</span></span><span style="display:flex;"><span>[00:00:08.275,268] &lt;inf&gt; sta: SSID: &lt;REDACTED&gt;
+</span></span><span style="display:flex;"><span>[00:00:08.275,329] &lt;inf&gt; sta: BSSID: &lt;REDACTED&gt;
+</span></span><span style="display:flex;"><span>[00:00:08.275,329] &lt;inf&gt; sta: Band: 5GHz
+</span></span><span style="display:flex;"><span>[00:00:08.275,360] &lt;inf&gt; sta: Channel: 44
+</span></span><span style="display:flex;"><span>[00:00:08.275,360] &lt;inf&gt; sta: Security: WPA2-PSK
+</span></span><span style="display:flex;"><span>[00:00:08.275,390] &lt;inf&gt; sta: MFP: Optional
+</span></span><span style="display:flex;"><span>[00:00:08.275,390] &lt;inf&gt; sta: RSSI: -52
+</span></span></code></pre></div><p>We also free up some RAM, though we&rsquo;re stll operating on the margin.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Memory region         Used Size  Region Size  %age Used
+</span></span><span style="display:flex;"><span>           FLASH:      530044 B       800 KB     64.70%
+</span></span><span style="display:flex;"><span>             RAM:      205120 B       216 KB     92.74%
+</span></span><span style="display:flex;"><span>        IDT_LIST:          0 GB        32 KB      0.00%
+</span></span></code></pre></div><p>Stepping through again, we can now see that the <code>socket</code> implementation is
+<a href="https://github.com/zephyrproject-rtos/zephyr/blob/1280f432f4aa5e423ba5ef89038efbecfd9cd222/subsys/net/lib/sockets/sockets_packet.c#L43">provided
+by</a>
+<code>zpacket_socket</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>0x00057bfe in z_impl_zsock_socket (family=3, type=2, proto=36488)
+</span></span><span style="display:flex;"><span>123			errno = 0;
+</span></span><span style="display:flex;"><span>(gdb) s
+</span></span><span style="display:flex;"><span>124			ret = sock_family-&gt;handler(family, type, proto);
+</span></span><span style="display:flex;"><span>(gdb) s
+</span></span><span style="display:flex;"><span>zpacket_socket (family=3, type=2, proto=36488)
+</span></span><span style="display:flex;"><span>49		fd = zvfs_reserve_fd();
+</span></span></code></pre></div><p>There is still more to explore to determine the capabilities and limitations of
+using a resource constrained MCU host with nRF70 series devices, but knowing
+that it is possible opens up the door for some interesting multi-protocol
+designs. If interested in trying it out for yourself, I <a href="https://github.com/nrfconnect/sdk-nrf/pull/20303">opened a
+PR</a> to the nRF Connect SDK add
+ing support for using the nRF9151 on the Thingy:91 X as Wi-Fi host.</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2025
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>

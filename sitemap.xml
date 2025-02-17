@@ -2,13 +2,16 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://danielmangum.com/posts/modem-usb-rak5010/</loc>
-    <lastmod>2025-01-30T01:41:34-06:00</lastmod>
-  </url><url>
     <loc>https://danielmangum.com/</loc>
-    <lastmod>2025-01-30T01:41:34-06:00</lastmod>
+    <lastmod>2025-02-16T01:41:34-06:00</lastmod>
+  </url><url>
+    <loc>https://danielmangum.com/posts/nrf9151-wifi-station/</loc>
+    <lastmod>2025-02-16T01:41:34-06:00</lastmod>
   </url><url>
     <loc>https://danielmangum.com/posts/</loc>
+    <lastmod>2025-02-16T01:41:34-06:00</lastmod>
+  </url><url>
+    <loc>https://danielmangum.com/posts/modem-usb-rak5010/</loc>
     <lastmod>2025-01-30T01:41:34-06:00</lastmod>
   </url><url>
     <loc>https://danielmangum.com/posts/vpr-arm-risc-v-inter-processor/</loc>

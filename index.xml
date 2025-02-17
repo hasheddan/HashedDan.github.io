@@ -6,7 +6,17 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Thu, 30 Jan 2025 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 16 Feb 2025 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Just Barely Fitting a Full Wi-Fi Stack on the nRF9151</title>
+      <link>https://danielmangum.com/posts/nrf9151-wifi-station/</link>
+      <pubDate>Sun, 16 Feb 2025 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/nrf9151-wifi-station/</guid>
+      <description>In my last post on the Nordic Semiconductor Thingy:91 X IoT prototyping platform, I outlined the features and architecture of the device. The combination of wireless protocols on the Thingy:91 X (Bluetooth LE, LTE-M, Wi-Fi) make it a compelling foundation for a wide variety of applications. However, there are a few intricacies to the protocol support.
+Namely, the primary stated purpose of the Wi-Fi support is for network-based positioning (i.e. scan for local access points, send them to a server, get approximate location back).</description>
+    </item>
+    
     <item>
       <title>Accessing the Qualcomm Modem over USB on the RAK5010</title>
       <link>https://danielmangum.com/posts/modem-usb-rak5010/</link>
