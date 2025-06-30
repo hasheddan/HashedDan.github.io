@@ -6,7 +6,17 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 17 Feb 2025 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 30 Jun 2025 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>How AI on Microcontrollers Actually Works: Operators and Kernels</title>
+      <link>https://danielmangum.com/posts/ai-microcontrollers-operators-kernels/</link>
+      <pubDate>Mon, 30 Jun 2025 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/ai-microcontrollers-operators-kernels/</guid>
+      <description>The buzz around “edge AI”, which means something slightly different to almost everyone you talk to, is well past reaching a fever pitch. Regardless of what edge AI means to you, the one commonality is typically that the hardware on which inference is being performed is constrained in one or more dimensions, whether it be compute, memory, or network bandwidth. Perhaps the most constrained of these platforms are microcontrollers.
+I have found that, while there is much discourse around &amp;ldquo;running AI&amp;rdquo; (i.</description>
+    </item>
+    
     <item>
       <title>Just Barely Fitting a Full Wi-Fi Stack on the nRF9151</title>
       <link>https://danielmangum.com/posts/nrf9151-wifi-station/</link>
