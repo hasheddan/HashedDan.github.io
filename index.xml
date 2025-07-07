@@ -6,7 +6,17 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 30 Jun 2025 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 07 Jul 2025 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>How AI on Microcontrollers Actually Works: The Computation Graph</title>
+      <link>https://danielmangum.com/posts/ai-microcontrollers-computation-graph/</link>
+      <pubDate>Mon, 07 Jul 2025 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/ai-microcontrollers-computation-graph/</guid>
+      <description>In our last post we explored operators and kernels in Tensorflow Lite, and how the ability to swap out kernels depending on the hardware capabilities available can lead to dramatic performance improvements when performing inference. We made an analogy of operators to instruction set architectures (ISAs), and kernels to the hardware implementation of instructions in a processor.
+Just like in traditional computer programs, the sequence of instructions in a model needs to be encoded and distributed in some type of file, such as an Executable and Linkable Format (ELF) on Unix-based systems or Portable Executable (PE) on Windows.</description>
+    </item>
+    
     <item>
       <title>How AI on Microcontrollers Actually Works: Operators and Kernels</title>
       <link>https://danielmangum.com/posts/ai-microcontrollers-operators-kernels/</link>

@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  How AI on Microcontrollers Actually Works: The Computation Graph · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="In our last post we explored operators and kernels in Tensorflow Lite, and how the ability to swap out kernels depending on the hardware capabilities available can lead to dramatic performance improvements when performing inference. We made an analogy of operators to instruction set architectures (ISAs), and kernels to the hardware implementation of instructions in a processor.
+Just like in traditional computer programs, the sequence of instructions in a model needs to be encoded and distributed in some type of file, such as an Executable and Linkable Format (ELF) on Unix-based systems or Portable Executable (PE) on Windows.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="How AI on Microcontrollers Actually Works: The Computation Graph"/>
+<meta name="twitter:description" content="In our last post we explored operators and kernels in Tensorflow Lite, and how the ability to swap out kernels depending on the hardware capabilities available can lead to dramatic performance improvements when performing inference. We made an analogy of operators to instruction set architectures (ISAs), and kernels to the hardware implementation of instructions in a processor.
+Just like in traditional computer programs, the sequence of instructions in a model needs to be encoded and distributed in some type of file, such as an Executable and Linkable Format (ELF) on Unix-based systems or Portable Executable (PE) on Windows."/>
+
+<meta property="og:title" content="How AI on Microcontrollers Actually Works: The Computation Graph" />
+<meta property="og:description" content="In our last post we explored operators and kernels in Tensorflow Lite, and how the ability to swap out kernels depending on the hardware capabilities available can lead to dramatic performance improvements when performing inference. We made an analogy of operators to instruction set architectures (ISAs), and kernels to the hardware implementation of instructions in a processor.
+Just like in traditional computer programs, the sequence of instructions in a model needs to be encoded and distributed in some type of file, such as an Executable and Linkable Format (ELF) on Unix-based systems or Portable Executable (PE) on Windows." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/ai-microcontrollers-computation-graph/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2025-07-07T01:41:34-06:00" />
+<meta property="article:modified_time" content="2025-07-07T01:41:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/ai-microcontrollers-computation-graph/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/ai-microcontrollers-computation-graph/">
+              How AI on Microcontrollers Actually Works: The Computation Graph
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2025-07-07T01:41:34-06:00">
+                July 7, 2025
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              12-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>In our <a href="https://danielmangum.com/posts/ai-microcontrollers-operators-kernels/">last
+post</a> we
+explored operators and kernels in <a href="https://ai.google.dev/edge/litert">Tensorflow
+Lite</a>, and how the ability to swap out
+kernels depending on the hardware capabilities available can lead to dramatic
+performance improvements when performing inference. We made an analogy of
+operators to instruction set architectures (ISAs), and kernels to the hardware
+implementation of instructions in a processor.</p>
+<p>Just like in traditional computer programs, the sequence of instructions in a
+model needs to be encoded and distributed in some type of file, such as an
+<a href="https://en.wikipedia.org/wiki/Executable_and_Linkable_Format">Executable and Linkable Format
+(ELF)</a> on
+Unix-based systems or <a href="https://en.wikipedia.org/wiki/Portable_Executable">Portable Executable
+(PE)</a> on Windows. As
+mentioned in the last post, there are multiple file formats used for
+distributing models, each of which has different trade-offs. Perhaps the most
+significant bifurcation of model file formats is between those which include the
+computation graph, and those that don’t.</p>
+<p>The <code>.tflite</code> file format used by
+<a href="https://github.com/tensorflow/tflite-micro"><code>tflite-micro</code></a>, the most popular
+framework for performing inference on microcontrollers, falls into the former
+category, along with the popular <a href="https://onnx.ai/">ONNX</a> format. Encoding the
+computation graph means that models can be distributed as a single file, and any
+runtime that supports the operators used in the compute graph can perform
+inference with the model. Alternatively, file formats such as
+<a href="https://github.com/ggml-org/ggml/blob/84ec81d769bbddb5c26200716080061550315008/docs/gguf.md#computation-graph">GGUF</a>,
+<a href="https://github.com/huggingface/safetensors">Safetensors</a>, and
+<a href="https://pytorch.org/">PyTorch</a>’s <a href="https://docs.python.org/3/library/pickle.html">pickle
+format</a>, require accompanying
+code to be distributed to perform inference with each type of model
+architecture.</p>
+<blockquote>
+<p><a href="https://github.com/Mozilla-Ocho/llamafile"><code>llamafile</code></a> is another
+interesting project, which distributes models as cross-platform executables by
+combining <code>llama.cpp</code> and <a href="https://github.com/jart">Justine Tunney&rsquo;s</a>
+<a href="https://github.com/jart/cosmopolitan">Cosmopolitan Libc</a>.</p>
+</blockquote>
+<p>To illustrate this point, we can take a look at an example of using a GGUF model
+<a href="https://github.com/ggml-org/ggml">with <code>ggml</code></a>, the tensor library that powers
+<a href="https://github.com/ggml-org/llama.cpp"><code>llama.cpp</code></a> and
+<a href="https://github.com/ggml-org/whisper.cpp"><code>whisper.cpp</code></a>. <a href="https://pjreddie.com/darknet/yolo/">YOLO (&ldquo;You Only Look
+Once&rdquo;)</a> models are a popular choice for
+real-time object detection. <code>ggml</code> shows how you can <a href="https://github.com/ggml-org/ggml/tree/master/examples/yolo">perform object detection
+using
+<code>YOLOv3-tiny</code></a>,
+which requires converting the model to GGUF, loading it, then building the
+computation graph, before performing inference. The part that we are interested
+in for this post is the construction of the computation graph (<code>gmml_cgraph</code>).</p>
+<p><a href="https://github.com/ggml-org/ggml/blob/84ec81d769bbddb5c26200716080061550315008/examples/yolo/yolov3-tiny.cpp#L393"><code>examples/yolo/yolov3-tiny.cpp</code></a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">struct</span> ggml_cgraph * build_graph(<span style="color:#fff;font-weight:bold">struct</span> ggml_context * ctx_cgraph, <span style="color:#fff;font-weight:bold">const</span> yolo_model &amp; model) {
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">struct</span> ggml_cgraph * gf = ggml_new_graph(ctx_cgraph);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">struct</span> ggml_tensor * input = ggml_new_tensor_4d(ctx_cgraph, GGML_TYPE_F32, model.width, model.height, <span style="color:#ff0;font-weight:bold">3</span>, <span style="color:#ff0;font-weight:bold">1</span>);
+</span></span><span style="display:flex;"><span>    ggml_set_name(input, <span style="color:#0ff;font-weight:bold">&#34;input&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">struct</span> ggml_tensor * result = apply_conv2d(ctx_cgraph, input, model.conv2d_layers[<span style="color:#ff0;font-weight:bold">0</span>]);
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">0</span>, result);
+</span></span><span style="display:flex;"><span>    result = ggml_pool_2d(ctx_cgraph, result, GGML_OP_POOL_MAX, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">0</span>, <span style="color:#ff0;font-weight:bold">0</span>);
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">1</span>, result);
+</span></span><span style="display:flex;"><span>    result = apply_conv2d(ctx_cgraph, result, model.conv2d_layers[<span style="color:#ff0;font-weight:bold">1</span>]);
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">2</span>, result);
+</span></span><span style="display:flex;"><span>    result = ggml_pool_2d(ctx_cgraph, result, GGML_OP_POOL_MAX, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">0</span>, <span style="color:#ff0;font-weight:bold">0</span>);
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">3</span>, result);
+</span></span><span style="display:flex;"><span>    result = apply_conv2d(ctx_cgraph, result, model.conv2d_layers[<span style="color:#ff0;font-weight:bold">2</span>]);
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">4</span>, result);
+</span></span><span style="display:flex;"><span>    result = ggml_pool_2d(ctx_cgraph, result, GGML_OP_POOL_MAX, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">0</span>, <span style="color:#ff0;font-weight:bold">0</span>);
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">5</span>, result);
+</span></span><span style="display:flex;"><span>    result = apply_conv2d(ctx_cgraph, result, model.conv2d_layers[<span style="color:#ff0;font-weight:bold">3</span>]);
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">6</span>, result);
+</span></span><span style="display:flex;"><span>    result = ggml_pool_2d(ctx_cgraph, result, GGML_OP_POOL_MAX, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">0</span>, <span style="color:#ff0;font-weight:bold">0</span>);
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">7</span>, result);
+</span></span><span style="display:flex;"><span>    result = apply_conv2d(ctx_cgraph, result, model.conv2d_layers[<span style="color:#ff0;font-weight:bold">4</span>]);
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">struct</span> ggml_tensor * layer_8 = result;
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">8</span>, result);
+</span></span><span style="display:flex;"><span>    result = ggml_pool_2d(ctx_cgraph, result, GGML_OP_POOL_MAX, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">0</span>, <span style="color:#ff0;font-weight:bold">0</span>);
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">9</span>, result);
+</span></span><span style="display:flex;"><span>    result = apply_conv2d(ctx_cgraph, result, model.conv2d_layers[<span style="color:#ff0;font-weight:bold">5</span>]);
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">10</span>, result);
+</span></span><span style="display:flex;"><span>    result = ggml_pool_2d(ctx_cgraph, result, GGML_OP_POOL_MAX, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">2</span>, <span style="color:#ff0;font-weight:bold">1</span>, <span style="color:#ff0;font-weight:bold">1</span>, <span style="color:#ff0;font-weight:bold">0.5</span>, <span style="color:#ff0;font-weight:bold">0.5</span>);
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">11</span>, result);
+</span></span><span style="display:flex;"><span>    result = apply_conv2d(ctx_cgraph, result, model.conv2d_layers[<span style="color:#ff0;font-weight:bold">6</span>]);
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">12</span>, result);
+</span></span><span style="display:flex;"><span>    result = apply_conv2d(ctx_cgraph, result, model.conv2d_layers[<span style="color:#ff0;font-weight:bold">7</span>]);
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">struct</span> ggml_tensor * layer_13 = result;
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">13</span>, result);
+</span></span><span style="display:flex;"><span>    result = apply_conv2d(ctx_cgraph, result, model.conv2d_layers[<span style="color:#ff0;font-weight:bold">8</span>]);
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">14</span>, result);
+</span></span><span style="display:flex;"><span>    result = apply_conv2d(ctx_cgraph, result, model.conv2d_layers[<span style="color:#ff0;font-weight:bold">9</span>]);
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">struct</span> ggml_tensor * layer_15 = result;
+</span></span><span style="display:flex;"><span>    ggml_set_output(layer_15);
+</span></span><span style="display:flex;"><span>    ggml_set_name(layer_15, <span style="color:#0ff;font-weight:bold">&#34;layer_15&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">15</span>, result);
+</span></span><span style="display:flex;"><span>    result = apply_conv2d(ctx_cgraph, layer_13, model.conv2d_layers[<span style="color:#ff0;font-weight:bold">10</span>]);
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">18</span>, result);
+</span></span><span style="display:flex;"><span>    result = ggml_upscale(ctx_cgraph, result, <span style="color:#ff0;font-weight:bold">2</span>, GGML_SCALE_MODE_NEAREST);
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">19</span>, result);
+</span></span><span style="display:flex;"><span>    result = ggml_concat(ctx_cgraph, result, layer_8, <span style="color:#ff0;font-weight:bold">2</span>);
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">20</span>, result);
+</span></span><span style="display:flex;"><span>    result = apply_conv2d(ctx_cgraph, result, model.conv2d_layers[<span style="color:#ff0;font-weight:bold">11</span>]);
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">21</span>, result);
+</span></span><span style="display:flex;"><span>    result = apply_conv2d(ctx_cgraph, result, model.conv2d_layers[<span style="color:#ff0;font-weight:bold">12</span>]);
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">struct</span> ggml_tensor * layer_22 = result;
+</span></span><span style="display:flex;"><span>    ggml_set_output(layer_22);
+</span></span><span style="display:flex;"><span>    ggml_set_name(layer_22, <span style="color:#0ff;font-weight:bold">&#34;layer_22&#34;</span>);
+</span></span><span style="display:flex;"><span>    print_shape(<span style="color:#ff0;font-weight:bold">22</span>, result);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ggml_build_forward_expand(gf, layer_15);
+</span></span><span style="display:flex;"><span>    ggml_build_forward_expand(gf, layer_22);
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> gf;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>We can see how each node in the graph has to be defined, passing the relevant
+wieghts from the model, prior to performing inference. We can compare this to
+the <a href="https://github.com/tensorflow/tflite-micro"><code>tflite-micro</code></a> <a href="https://github.com/tensorflow/tflite-micro/tree/3200ccd18268346d0ea965720c5599a3d051e853/tensorflow/lite/micro/examples/person_detection">person
+detection
+example</a>.
+The example uses a different  computer vision model,
+<a href="https://en.wikipedia.org/wiki/MobileNet">MobileNetV1</a>, which is better suited
+to constrained environments than YOLO models. However, with both models being
+<a href="https://en.wikipedia.org/wiki/Convolutional_neural_network">Convolutional Nueral Networks
+(CNN)</a>, the
+operations used will be familiar even if the architectures differ. The <code>setup()</code>
+function performs steps needed to load the model prior to performing inference.</p>
+<p><a href="https://github.com/tensorflow/tflite-micro/blob/3200ccd18268346d0ea965720c5599a3d051e853/tensorflow/lite/micro/examples/person_detection/main_functions.cc#L47"><code>tensorflow/lite/micro/examples/person_detection/main_functions.cc</code></a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">void</span> setup() {
+</span></span><span style="display:flex;"><span>  tflite::InitializeTarget();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">// Map the model into a usable data structure. This doesn&#39;t involve any
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">// copying or parsing, it&#39;s a very lightweight operation.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  model = tflite::GetModel(g_person_detect_model_data);
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">if</span> (model-&gt;version() != TFLITE_SCHEMA_VERSION) {
+</span></span><span style="display:flex;"><span>    MicroPrintf(
+</span></span><span style="display:flex;"><span>        <span style="color:#0ff;font-weight:bold">&#34;Model provided is schema version %d not equal &#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0ff;font-weight:bold">&#34;to supported version %d.&#34;</span>,
+</span></span><span style="display:flex;"><span>        model-&gt;version(), TFLITE_SCHEMA_VERSION);
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span>;
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">// Pull in only the operation implementations we need.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">// This relies on a complete list of all the ops needed by this graph.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">// NOLINTNEXTLINE(runtime-global-variables)
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#fff;font-weight:bold">static</span> tflite::MicroMutableOpResolver&lt;<span style="color:#ff0;font-weight:bold">5</span>&gt; micro_op_resolver;
+</span></span><span style="display:flex;"><span>  micro_op_resolver.AddAveragePool2D(tflite::Register_AVERAGE_POOL_2D_INT8());
+</span></span><span style="display:flex;"><span>  micro_op_resolver.AddConv2D(tflite::Register_CONV_2D_INT8());
+</span></span><span style="display:flex;"><span>  micro_op_resolver.AddDepthwiseConv2D(
+</span></span><span style="display:flex;"><span>      tflite::Register_DEPTHWISE_CONV_2D_INT8());
+</span></span><span style="display:flex;"><span>  micro_op_resolver.AddReshape();
+</span></span><span style="display:flex;"><span>  micro_op_resolver.AddSoftmax(tflite::Register_SOFTMAX_INT8());
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">// Build an interpreter to run the model with.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">// NOLINTNEXTLINE(runtime-global-variables)
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#fff;font-weight:bold">static</span> tflite::MicroInterpreter static_interpreter(
+</span></span><span style="display:flex;"><span>      model, micro_op_resolver, tensor_arena, kTensorArenaSize);
+</span></span><span style="display:flex;"><span>  interpreter = &amp;static_interpreter;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">// Allocate memory from the tensor_arena for the model&#39;s tensors.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  TfLiteStatus allocate_status = interpreter-&gt;AllocateTensors();
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">if</span> (allocate_status != kTfLiteOk) {
+</span></span><span style="display:flex;"><span>    MicroPrintf(<span style="color:#0ff;font-weight:bold">&#34;AllocateTensors() failed&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span>;
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">// Get information about the memory area to use for the model&#39;s input.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  input = interpreter-&gt;input(<span style="color:#ff0;font-weight:bold">0</span>);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Rather than defining each node in the model, we only need to register the
+operators that the model uses (i.e. <code>AveragePool2D</code>, <code>Conv2D</code>, etc.). The
+sequence of these operators, and their parameters, are defined in the model
+itself, which is <a href="https://github.com/tensorflow/tflite-micro/blob/3200ccd18268346d0ea965720c5599a3d051e853/tensorflow/lite/micro/models/person_detect.tflite">provided as a <code>.tflite</code>
+file</a>
+and converted to a C array for inclusion in the compiled program. This is
+necessary as many firmware applications targeting microcontrollers will not
+include a filesystem.</p>
+<p>In the last post, we mentioned that the <code>.tflite</code> format is based on
+<a href="https://flatbuffers.dev/">FlatBuffers</a>, an efficient binary encoding format
+commonly used as an alternative to formats such as Protobuf and JSON.
+FlatBuffers supports an <a href="https://flatbuffers.dev/schema/">Interface Definition Language
+(IDL)</a> used for defining a schema. Looking at
+the <code>.tflite</code> schema gives us an idea of the information encoded in the files.
+FlatBuffers objects are defined as
+<a href="https://flatbuffers.dev/schema/#tables">tables</a> with fields, and the <code>.tflite</code>
+schema expectedly defines <code>Model</code> as the <a href="https://flatbuffers.dev/schema/#root-type">root
+type</a>.</p>
+<p><a href="https://github.com/tensorflow/tflite-micro/blob/3200ccd18268346d0ea965720c5599a3d051e853/tensorflow/compiler/mlir/lite/schema/schema.fbs#L1651"><code>tensorflow/compiler/mlir/lite/schema/schema.fbs</code></a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>table Model {
+</span></span><span style="display:flex;"><span>  // Version of the schema.
+</span></span><span style="display:flex;"><span>  version:uint;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  // A list of all operator codes used in this model. This is
+</span></span><span style="display:flex;"><span>  // kept in order because operators carry an index into this
+</span></span><span style="display:flex;"><span>  // vector.
+</span></span><span style="display:flex;"><span>  operator_codes:[OperatorCode];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  // All the subgraphs of the model. The 0th is assumed to be the main
+</span></span><span style="display:flex;"><span>  // model.
+</span></span><span style="display:flex;"><span>  subgraphs:[SubGraph];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  // A description of the model.
+</span></span><span style="display:flex;"><span>  description:string;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  // Buffers of the model.
+</span></span><span style="display:flex;"><span>  // Note the 0th entry of this array must be an empty buffer (sentinel).
+</span></span><span style="display:flex;"><span>  // This is a convention so that tensors without a buffer can provide 0 as
+</span></span><span style="display:flex;"><span>  // their buffer.
+</span></span><span style="display:flex;"><span>  buffers:[Buffer];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  // Metadata about the model. Indirects into the existings buffers list.
+</span></span><span style="display:flex;"><span>  // Deprecated, prefer to use metadata field.
+</span></span><span style="display:flex;"><span>  metadata_buffer:[int];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  // Metadata about the model.
+</span></span><span style="display:flex;"><span>  metadata:[Metadata];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  // Optional SignatureDefs for the model.
+</span></span><span style="display:flex;"><span>  signature_defs:[SignatureDef];
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>root_type Model;
+</span></span></code></pre></div><p>The <code>operator_codes</code> define the operators that must be registered to perform
+inference with this model. In the <code>setup()</code> code we saw earlier, we registered
+five operators, so we should expect to see the same count in the
+<code>person_detect.tflite</code> file. The <code>OperatorCode</code> format is also defined in the
+schema.</p>
+<p><a href="https://github.com/tensorflow/tflite-micro/blob/3200ccd18268346d0ea965720c5599a3d051e853/tensorflow/compiler/mlir/lite/schema/schema.fbs#L1492"><code>tensorflow/compiler/mlir/lite/schema/schema.fbs</code></a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>// An OperatorCode can be an enum value (BuiltinOperator) if the operator is a
+</span></span><span style="display:flex;"><span>// builtin, or a string if the operator is custom.
+</span></span><span style="display:flex;"><span>table OperatorCode {
+</span></span><span style="display:flex;"><span>  // This field is for backward compatibility. This field will be used when
+</span></span><span style="display:flex;"><span>  // the value of the extended builtin_code field has less than
+</span></span><span style="display:flex;"><span>  // BulitinOperator_PLACEHOLDER_FOR_GREATER_OP_CODES.
+</span></span><span style="display:flex;"><span>  deprecated_builtin_code:byte;
+</span></span><span style="display:flex;"><span>  custom_code:string;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  // The version of the operator. The version need to be bumped whenever new
+</span></span><span style="display:flex;"><span>  // parameters are introduced into an op.
+</span></span><span style="display:flex;"><span>  version:int = 1;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  // This field is introduced for resolving op builtin code shortage problem
+</span></span><span style="display:flex;"><span>  // (the original BuiltinOperator enum field was represented as a byte).
+</span></span><span style="display:flex;"><span>  // This field will be used when the value of the extended builtin_code field
+</span></span><span style="display:flex;"><span>  // has greater than BulitinOperator_PLACEHOLDER_FOR_GREATER_OP_CODES.
+</span></span><span style="display:flex;"><span>  builtin_code:BuiltinOperator;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>To more easily extract information from the model file, we can use
+<a href="https://flatbuffers.dev/flatc/"><code>flatc</code></a>, the FlatBuffers compiler, to convert
+the file into JSON.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>flatc --json --raw-binary schema.fbs -- person_detect.tflite
+</span></span></code></pre></div><p>At the top of the file, we can see the list of the operator codes, which
+correspond to entries in the <code>BuiltinOperator</code> <code>enum</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  version: 3,
+</span></span><span style="display:flex;"><span>  operator_codes: [
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      deprecated_builtin_code: 1,
+</span></span><span style="display:flex;"><span>      version: 2
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      deprecated_builtin_code: 3,
+</span></span><span style="display:flex;"><span>      version: 2
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      deprecated_builtin_code: 4,
+</span></span><span style="display:flex;"><span>      version: 3
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      deprecated_builtin_code: 22
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      deprecated_builtin_code: 25,
+</span></span><span style="display:flex;"><span>      version: 2
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  ],
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Sure enough, <code>AVERAGE_POOL_2D</code> (<code>1</code>), <code>CONV_2D</code> (<code>3</code>), <code>DEPTHWISE_CONV_2D</code>
+(<code>4</code>), <code>RESHAPE</code> (<code>22</code>), and <code>SOFTMAX</code> (<code>25</code>) are all listed.</p>
+<p><a href="https://github.com/tensorflow/tflite-micro/blob/3200ccd18268346d0ea965720c5599a3d051e853/tensorflow/compiler/mlir/lite/schema/schema.fbs#L272"><code>tensorflow/compiler/mlir/lite/schema/schema.fbs</code></a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>// A list of builtin operators. Builtin operators are slightly faster than custom
+</span></span><span style="display:flex;"><span>// ones, but not by much. Moreover, while custom operators accept an opaque
+</span></span><span style="display:flex;"><span>// object containing configuration parameters, builtins have a predetermined
+</span></span><span style="display:flex;"><span>// set of acceptable options.
+</span></span><span style="display:flex;"><span>// LINT.IfChange
+</span></span><span style="display:flex;"><span>enum BuiltinOperator : int32 {
+</span></span><span style="display:flex;"><span>  ADD = 0,
+</span></span><span style="display:flex;"><span>  AVERAGE_POOL_2D = 1,
+</span></span><span style="display:flex;"><span>  CONCATENATION = 2,
+</span></span><span style="display:flex;"><span>  CONV_2D = 3,
+</span></span><span style="display:flex;"><span>  DEPTHWISE_CONV_2D = 4,
+</span></span><span style="display:flex;"><span>  ...
+</span></span><span style="display:flex;"><span>  RESHAPE = 22,
+</span></span><span style="display:flex;"><span>  RESIZE_BILINEAR = 23,
+</span></span><span style="display:flex;"><span>  RNN = 24,
+</span></span><span style="display:flex;"><span>  SOFTMAX = 25,
+</span></span><span style="display:flex;"><span>  ...
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The nodes that use these operators are defined in the <code>subgraphs</code>. For
+MobileNetV1, there is only a single subgraph.</p>
+<p><a href="https://github.com/tensorflow/tflite-micro/blob/3200ccd18268346d0ea965720c5599a3d051e853/tensorflow/compiler/mlir/lite/schema/schema.fbs#L1579"><code>tensorflow/compiler/mlir/lite/schema/schema.fbs</code></a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>// The root type, defining a subgraph, which typically represents an entire
+</span></span><span style="display:flex;"><span>// model.
+</span></span><span style="display:flex;"><span>table SubGraph {
+</span></span><span style="display:flex;"><span>  // A list of all tensors used in this subgraph.
+</span></span><span style="display:flex;"><span>  tensors:[Tensor];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  // Indices of the tensors that are inputs into this subgraph. Note this is
+</span></span><span style="display:flex;"><span>  // the list of non-static tensors that feed into the subgraph for inference.
+</span></span><span style="display:flex;"><span>  inputs:[int];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  // Indices of the tensors that are outputs out of this subgraph. Note this is
+</span></span><span style="display:flex;"><span>  // the list of output tensors that are considered the product of the
+</span></span><span style="display:flex;"><span>  // subgraph&#39;s inference.
+</span></span><span style="display:flex;"><span>  outputs:[int];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  // All operators, in execution order.
+</span></span><span style="display:flex;"><span>  operators:[Operator];
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  // Name of this subgraph (used for debugging).
+</span></span><span style="display:flex;"><span>  name:string;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  // Index into subgraphs_debug_metadata list.
+</span></span><span style="display:flex;"><span>  debug_metadata_index: int = -1;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The vast majority of the <code>.tflite</code> file is dedicated to the weights (<code>tensors</code>),
+but given that there is only a single subgraph for MobileNetV1, the array of
+<code>operators</code> defines all of the nodes in the compute graph for the model. The
+<code>inputs</code> and <code>outputs</code> for each operator correspond to tensors in the <code>tensors</code>
+array. All nodes are executed sequentially, as evidenced by the fact that the
+index of the output tensor from the previous operator is always supplied as one
+of the inputs to the next operator.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>      operators: [
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>          opcode_index: 2,
+</span></span><span style="display:flex;"><span>          inputs: [
+</span></span><span style="display:flex;"><span>            88,
+</span></span><span style="display:flex;"><span>            0,
+</span></span><span style="display:flex;"><span>            33
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          outputs: [
+</span></span><span style="display:flex;"><span>            34
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          builtin_options_type: &#34;DepthwiseConv2DOptions&#34;,
+</span></span><span style="display:flex;"><span>          builtin_options: {
+</span></span><span style="display:flex;"><span>            stride_w: 2,
+</span></span><span style="display:flex;"><span>            stride_h: 2,
+</span></span><span style="display:flex;"><span>            depth_multiplier: 8,
+</span></span><span style="display:flex;"><span>            fused_activation_function: &#34;RELU6&#34;
+</span></span><span style="display:flex;"><span>          }
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>          opcode_index: 2,
+</span></span><span style="display:flex;"><span>          inputs: [
+</span></span><span style="display:flex;"><span>            34,
+</span></span><span style="display:flex;"><span>            9,
+</span></span><span style="display:flex;"><span>            52
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          outputs: [
+</span></span><span style="display:flex;"><span>            51
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          builtin_options_type: &#34;DepthwiseConv2DOptions&#34;,
+</span></span><span style="display:flex;"><span>          builtin_options: {
+</span></span><span style="display:flex;"><span>            stride_w: 1,
+</span></span><span style="display:flex;"><span>            stride_h: 1,
+</span></span><span style="display:flex;"><span>            depth_multiplier: 1,
+</span></span><span style="display:flex;"><span>            fused_activation_function: &#34;RELU6&#34;
+</span></span><span style="display:flex;"><span>          }
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>          opcode_index: 1,
+</span></span><span style="display:flex;"><span>          inputs: [
+</span></span><span style="display:flex;"><span>            51,
+</span></span><span style="display:flex;"><span>            10,
+</span></span><span style="display:flex;"><span>            53
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          outputs: [
+</span></span><span style="display:flex;"><span>            54
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          builtin_options_type: &#34;Conv2DOptions&#34;,
+</span></span><span style="display:flex;"><span>          builtin_options: {
+</span></span><span style="display:flex;"><span>            stride_w: 1,
+</span></span><span style="display:flex;"><span>            stride_h: 1,
+</span></span><span style="display:flex;"><span>            fused_activation_function: &#34;RELU6&#34;
+</span></span><span style="display:flex;"><span>          }
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        ...
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>          opcode_index: 3,
+</span></span><span style="display:flex;"><span>          inputs: [
+</span></span><span style="display:flex;"><span>            28,
+</span></span><span style="display:flex;"><span>            32
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          outputs: [
+</span></span><span style="display:flex;"><span>            31
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          builtin_options_type: &#34;ReshapeOptions&#34;,
+</span></span><span style="display:flex;"><span>          builtin_options: {
+</span></span><span style="display:flex;"><span>            new_shape: [
+</span></span><span style="display:flex;"><span>              1,
+</span></span><span style="display:flex;"><span>              2
+</span></span><span style="display:flex;"><span>            ]
+</span></span><span style="display:flex;"><span>          }
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>          opcode_index: 4,
+</span></span><span style="display:flex;"><span>          inputs: [
+</span></span><span style="display:flex;"><span>            31
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          outputs: [
+</span></span><span style="display:flex;"><span>            87
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          builtin_options_type: &#34;SoftmaxOptions&#34;,
+</span></span><span style="display:flex;"><span>          builtin_options: {
+</span></span><span style="display:flex;"><span>            beta: 1.0
+</span></span><span style="display:flex;"><span>          }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>      ]
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  ]
+</span></span></code></pre></div><p>If we look at the third operator, the <code>opcode_index</code> is <code>1</code>, which corresponds
+to the <code>CONV_2D</code> operator. This node is effectively the same as one of the
+<code>apply_conv2d()</code> calls in the <code>ggml</code> example. In that case, the input weights
+were being loaded from the GGUF file and passed directly to the <code>apply_conv2d()</code>
+function in the form of <code>model.conv2d_layers[1]</code>.</p>
+<p>At the end of last post we took a look at a custom operator
+(<a href="https://github.com/tensorflow/tflite-micro/blob/3200ccd18268346d0ea965720c5599a3d051e853/tensorflow/lite/micro/micro_mutable_op_resolver.h#L258"><code>ETHOSU</code></a>),
+which is used on microcontrollers with <a href="https://developer.arm.com/documentation/109267/0102/Arm-Ethos-U-NPU">Arm&rsquo;s Ethos-U Nueral Processing Units
+(NPUs)</a>. We
+also mentioned that making use of the performance improvements offered by the
+NPU required passing a <code>.tflite</code> model through the <a href="https://developer.arm.com/documentation/109267/0102/Tool-support-for-the-Arm-Ethos-U-NPU/Ethos-U-Vela-compiler">Vela
+compiler</a>,
+but stopped short of exploring the result of doing so.</p>
+<p>The <a href="https://github.com/tensorflow/tflite-micro/tree/3200ccd18268346d0ea965720c5599a3d051e853/tensorflow/lite/micro/examples/network_tester">network tester
+example</a>
+uses
+<a href="https://github.com/tensorflow/tflite-micro/blob/3200ccd18268346d0ea965720c5599a3d051e853/tensorflow/lite/micro/models/person_detect_vela.tflite"><code>person_detect_vela.tflite</code></a>,
+which is the same MobileNetV1 model used in the person detection model, but
+passed through the Vela compiler. When the NPU is available, the single <code>ETHOSU</code>
+operator is registered.</p>
+<p><a href="https://github.com/tensorflow/tflite-micro/blob/3200ccd18268346d0ea965720c5599a3d051e853/tensorflow/lite/micro/examples/network_tester/network_tester_test.cc"><code>tensorflow/lite/micro/examples/network_tester/network_tester_test.cc</code></a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef ETHOS_U
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>  <span style="color:#fff;font-weight:bold">const</span> tflite::Model* model = ::tflite::GetModel(g_person_detect_model_data);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>  <span style="color:#fff;font-weight:bold">const</span> tflite::Model* model = ::tflite::GetModel(network_model);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>  <span style="color:#fff;font-weight:bold">if</span> (model-&gt;version() != TFLITE_SCHEMA_VERSION) {
+</span></span><span style="display:flex;"><span>    MicroPrintf(
+</span></span><span style="display:flex;"><span>        <span style="color:#0ff;font-weight:bold">&#34;Model provided is schema version %d not equal &#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0ff;font-weight:bold">&#34;to supported version %d.</span><span style="color:#0ff;font-weight:bold">\n</span><span style="color:#0ff;font-weight:bold">&#34;</span>,
+</span></span><span style="display:flex;"><span>        model-&gt;version(), TFLITE_SCHEMA_VERSION);
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> kTfLiteError;
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef ETHOS_U
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>  tflite::MicroMutableOpResolver&lt;<span style="color:#ff0;font-weight:bold">1</span>&gt; resolver;
+</span></span><span style="display:flex;"><span>  resolver.AddEthosU();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>  tflite::MicroMutableOpResolver&lt;<span style="color:#ff0;font-weight:bold">5</span>&gt; resolver;
+</span></span><span style="display:flex;"><span>  resolver.AddAveragePool2D(tflite::Register_AVERAGE_POOL_2D_INT8());
+</span></span><span style="display:flex;"><span>  resolver.AddConv2D(tflite::Register_CONV_2D_INT8());
+</span></span><span style="display:flex;"><span>  resolver.AddDepthwiseConv2D(tflite::Register_DEPTHWISE_CONV_2D_INT8());
+</span></span><span style="display:flex;"><span>  resolver.AddReshape();
+</span></span><span style="display:flex;"><span>  resolver.AddSoftmax(tflite::Register_SOFTMAX_INT8());
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span></code></pre></div><p>The remainder of the application looks the same for the most part, regardless of
+whether using the NPU or not. To see how this manifests in the model, we can
+once again use <code>flatc</code> to convert to JSON.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>flatc --json --raw-binary schema.fbs -- person_detect_vela.tflite
+</span></span></code></pre></div><p>The first thing to notice is that there is, expectedly, a single operator listed
+in the <code>operator_codes</code> array.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  version: 3,
+</span></span><span style="display:flex;"><span>  operator_codes: [
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>      deprecated_builtin_code: 32,
+</span></span><span style="display:flex;"><span>      custom_code: &#34;ethos-u&#34;,
+</span></span><span style="display:flex;"><span>      builtin_code: &#34;CUSTOM&#34;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  ],
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Perhaps slightly more surprising is that there is also just a single node in the
+model.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>      operators: [
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>          inputs: [
+</span></span><span style="display:flex;"><span>            1,
+</span></span><span style="display:flex;"><span>            2,
+</span></span><span style="display:flex;"><span>            3,
+</span></span><span style="display:flex;"><span>            4,
+</span></span><span style="display:flex;"><span>            5
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          outputs: [
+</span></span><span style="display:flex;"><span>            0
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          custom_options: [
+</span></span><span style="display:flex;"><span>            1,
+</span></span><span style="display:flex;"><span>            4,
+</span></span><span style="display:flex;"><span>            1
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          mutating_variable_inputs: [
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          intermediates: [
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>          ]
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>      ]
+</span></span></code></pre></div><p>How could the same model be reduced to such a simplified form? When we consider
+that the <code>ETHOSU</code> kernel effectively just points the NPU at the location of
+commands and data in memory, it makes sense that the work done by the
+<code>tflite-micro</code> runtime directly would be quite minimal. However, all of the data
+that is passed to the NPU needs to also be available. The top-level <code>buffers</code>
+array in the <code>Model</code> table contains the all of the relevant data, and the
+<code>tensors</code> that are passed as <code>inputs</code> to the <code>ETHOSU</code> operator reference the
+appropriate buffer by index.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>      tensors: [
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>          shape: [
+</span></span><span style="display:flex;"><span>            1,
+</span></span><span style="display:flex;"><span>            2
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          type: &#34;INT8&#34;,
+</span></span><span style="display:flex;"><span>          name: &#34;MobilenetV1/Predictions/Reshape_1&#34;,
+</span></span><span style="display:flex;"><span>          quantization: {
+</span></span><span style="display:flex;"><span>            scale: [
+</span></span><span style="display:flex;"><span>              0.003906
+</span></span><span style="display:flex;"><span>            ],
+</span></span><span style="display:flex;"><span>            zero_point: [
+</span></span><span style="display:flex;"><span>              -128
+</span></span><span style="display:flex;"><span>            ]
+</span></span><span style="display:flex;"><span>          }
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>          shape: [
+</span></span><span style="display:flex;"><span>            8168
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          type: &#34;UINT8&#34;,
+</span></span><span style="display:flex;"><span>          buffer: 1,
+</span></span><span style="display:flex;"><span>          name: &#34;_split_1_command_stream&#34;
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>          shape: [
+</span></span><span style="display:flex;"><span>            260480
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          type: &#34;UINT8&#34;,
+</span></span><span style="display:flex;"><span>          buffer: 2,
+</span></span><span style="display:flex;"><span>          name: &#34;_split_1_flash&#34;
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>          shape: [
+</span></span><span style="display:flex;"><span>            74464
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          type: &#34;UINT8&#34;,
+</span></span><span style="display:flex;"><span>          name: &#34;_split_1_scratch&#34;
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>          shape: [
+</span></span><span style="display:flex;"><span>            74464
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          type: &#34;UINT8&#34;,
+</span></span><span style="display:flex;"><span>          name: &#34;_split_1_scratch_fast&#34;
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>          shape: [
+</span></span><span style="display:flex;"><span>            1,
+</span></span><span style="display:flex;"><span>            96,
+</span></span><span style="display:flex;"><span>            96,
+</span></span><span style="display:flex;"><span>            1
+</span></span><span style="display:flex;"><span>          ],
+</span></span><span style="display:flex;"><span>          type: &#34;INT8&#34;,
+</span></span><span style="display:flex;"><span>          name: &#34;input&#34;,
+</span></span><span style="display:flex;"><span>          quantization: {
+</span></span><span style="display:flex;"><span>            min: [
+</span></span><span style="display:flex;"><span>              -1.0
+</span></span><span style="display:flex;"><span>            ],
+</span></span><span style="display:flex;"><span>            max: [
+</span></span><span style="display:flex;"><span>              1.0
+</span></span><span style="display:flex;"><span>            ],
+</span></span><span style="display:flex;"><span>            scale: [
+</span></span><span style="display:flex;"><span>              0.007843
+</span></span><span style="display:flex;"><span>            ],
+</span></span><span style="display:flex;"><span>            zero_point: [
+</span></span><span style="display:flex;"><span>              -1
+</span></span><span style="display:flex;"><span>            ]
+</span></span><span style="display:flex;"><span>          }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>      ]
+</span></span></code></pre></div><p>This example demonstrates the flexibility of the <code>.tflite</code> model format, as well
+as the general portability offered by formats that include the compute graph in
+the model file. We&rsquo;ll continue exploring trade-offs offered by formats and
+runtimes, and dive deeper into how operator registration and kernel execution
+works, in future posts.</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2025
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
