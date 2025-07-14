@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  How AI on Microcontrollers Actually Works: Registering Operators · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="We started this series with a look at operators and kernels, the &ldquo;instructions&rdquo; used by models and the implementation of those instructions on the available hardware. We then explored the computation graph, which defines the sequence of operators for a given model, and explored how different model formats opt to include the explicit computation graph in the distributed file, or defer it to the inference application. With tflite-micro and the .">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="How AI on Microcontrollers Actually Works: Registering Operators"/>
+<meta name="twitter:description" content="We started this series with a look at operators and kernels, the &ldquo;instructions&rdquo; used by models and the implementation of those instructions on the available hardware. We then explored the computation graph, which defines the sequence of operators for a given model, and explored how different model formats opt to include the explicit computation graph in the distributed file, or defer it to the inference application. With tflite-micro and the ."/>
+
+<meta property="og:title" content="How AI on Microcontrollers Actually Works: Registering Operators" />
+<meta property="og:description" content="We started this series with a look at operators and kernels, the &ldquo;instructions&rdquo; used by models and the implementation of those instructions on the available hardware. We then explored the computation graph, which defines the sequence of operators for a given model, and explored how different model formats opt to include the explicit computation graph in the distributed file, or defer it to the inference application. With tflite-micro and the ." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/ai-microcontrollers-registering-operators/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2025-07-14T01:41:34-06:00" />
+<meta property="article:modified_time" content="2025-07-14T01:41:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/ai-microcontrollers-registering-operators/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/ai-microcontrollers-registering-operators/">
+              How AI on Microcontrollers Actually Works: Registering Operators
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2025-07-14T01:41:34-06:00">
+                July 14, 2025
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              20-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>We started this series with a look at <a href="https://danielmangum.com/posts/ai-microcontrollers-operators-kernels/">operators and
+kernels</a>,
+the &ldquo;instructions&rdquo; used by models and the implementation of those instructions
+on the available hardware. We then explored the <a href="https://danielmangum.com/posts/ai-microcontrollers-computation-graph/">computation
+graph</a>,
+which defines the sequence of operators for a given model, and explored how
+different model formats opt to include the explicit computation graph in the
+distributed file, or defer it to the inference application. With
+<a href="https://github.com/tensorflow/tflite-micro"><code>tflite-micro</code></a> and the <code>.tflite</code>
+<a href="https://flatbuffers.dev/">FlatBuffers</a> file format sitting in the former
+category, the computation graph does not have to be defined in the inference
+application, but the operators utilized in the computation graph have to be made
+available to the Tensorflow Lite interpreter that performs inference.</p>
+<p>When running in less constrained environments where the literal code size of an
+application is not a primary concern, ensuring that all supported operators are
+always available can be a simpler approach. For example, the default in
+<a href="https://github.com/tensorflow/tensorflow">Tensorflow</a> is to include all
+operators in the compiled library. However, <a href="https://github.com/tensorflow/tensorflow/blob/a1300a0d39523da936d2cb1ac782c6231c2e46e0/tensorflow/core/framework/registration/registration.h#L44">the
+<code>SELECTIVE_REGISTRATION</code></a>
+feature can be leveraged to only include necessary operators if you are aware of
+the models and their required operators at compile time. Likewise, <a href="https://ai.google.dev/edge/litert">Tensorflow
+Lite</a> applications, which are designed to run
+on &ldquo;edge&rdquo; devices, but not necessarily microcontrollers, will typically use the
+<code>BuiltinOpResolver</code> for simple models.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>tflite::ops::builtin::BuiltinOpResolver resolver;
+</span></span></code></pre></div><p>When <a href="https://ai.google.dev/edge/litert/models/ops_custom">custom operators are
+required</a>, they can be
+added to the builtins by constructing a <code>MutableOpResolver</code>, registering the
+builtins, then registering any custom operators.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>tflite::ops::builtin::MutableOpResolver resolver;
+</span></span><span style="display:flex;"><span>resolver.AddAll(tflite::ops::builtin::BuiltinOpResolver());
+</span></span><span style="display:flex;"><span>resolver.AddCustom(<span style="color:#0ff;font-weight:bold">&#34;Atan&#34;</span>, AtanOpRegistration());
+</span></span></code></pre></div><p>If only a subset of builtin operators are desired, they can be added one-by-one
+by calling <code>AddBuiltin()</code>, or a custom <code>OpResolver</code> can be generated using
+<a href="https://github.com/tensorflow/tensorflow/blob/a1300a0d39523da936d2cb1ac782c6231c2e46e0/tensorflow/python/tools/selective_registration_header_lib.py">tooling provided in the
+repository</a>.
+<a href="https://github.com/tensorflow/tensorflow/blob/a1300a0d39523da936d2cb1ac782c6231c2e46e0/tensorflow/lite/mutable_op_resolver.h#L63">The
+<code>MutableOpResolver</code></a>
+is a derived class of the <a href="https://github.com/tensorflow/tensorflow/blob/a1300a0d39523da936d2cb1ac782c6231c2e46e0/tensorflow/lite/core/api/op_resolver.h#L53"><code>OpResolver</code> interface
+class</a>.
+Any generated custom <code>OpResolver</code> would be similarly derived, though would
+likely not allow for mutating the registered operators. The primary role of an
+<code>OpResolver</code> is to allow the interpreter, which we&rsquo;ll cover in a future post, to
+lookup the registered operator implementations (i.e. kernels), if any exist.
+This is evidenced by the two public virtual <code>FindOp()</code> member functions on the
+interface class.</p>
+<p><a href="https://github.com/tensorflow/tensorflow/blob/a1300a0d39523da936d2cb1ac782c6231c2e46e0/tensorflow/lite/core/api/op_resolver.h#L53"><code>tensorflow/lite/core/api/op_resolver.h</code></a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#007f7f">/// Abstract interface that returns TfLiteRegistrations given op codes or custom
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">/// op names. This is the mechanism that ops being referenced in the flatbuffer
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">/// model are mapped to executable function pointers (TfLiteRegistrations).
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">///
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">/// The lifetime of the TfLiteRegistration object whose address is
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">/// returned by FindOp must exceed the lifetime of any InterpreterBuilder or
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">/// Interpreter created with this OpResolver.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">/// Likewise the lifetime of the TfLiteOperator object referenced
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">/// from the TfLiteRegistration object, if any, must exceed the lifetime of
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">/// any InterpreterBuilder or Interpreter created with this OpResolver.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">class</span> OpResolver {
+</span></span><span style="display:flex;"><span> <span style="color:#fff;font-weight:bold">public</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">/// Finds the op registration for a builtin operator by enum code.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#fff;font-weight:bold">virtual</span> <span style="color:#fff;font-weight:bold">const</span> TfLiteRegistration* FindOp(tflite::BuiltinOperator op,
+</span></span><span style="display:flex;"><span>                                           <span style="color:#fff;font-weight:bold">int</span> version) <span style="color:#fff;font-weight:bold">const</span> = <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">/// Finds the op registration of a custom operator by op name.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#fff;font-weight:bold">virtual</span> <span style="color:#fff;font-weight:bold">const</span> TfLiteRegistration* FindOp(<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">char</span>* op,
+</span></span><span style="display:flex;"><span>                                           <span style="color:#fff;font-weight:bold">int</span> version) <span style="color:#fff;font-weight:bold">const</span> = <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span></code></pre></div><p>&hellip;</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>In the <code>MutableOpResolver</code> derived class,  the <code>FindOp</code> member functions are
+declared, along with the additional member functions to register operators. The
+registered operators are stored in the member <code>std::unordered_map</code> for
+<code>builtins_</code> or <code>custom_ops_</code> respectively.</p>
+<p><a href="https://github.com/tensorflow/tensorflow/blob/a1300a0d39523da936d2cb1ac782c6231c2e46e0/tensorflow/lite/mutable_op_resolver.h#L63"><code>tensorflow/lite/mutable_op_resolver.h</code></a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#007f7f">/// An OpResolver that is mutable, also used as the op in gen_op_registration.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">/// A typical usage:
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">///   MutableOpResolver resolver;
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">///   resolver.AddBuiltin(BuiltinOperator_ADD, Register_ADD());
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">///   resolver.AddCustom(&#34;CustomOp&#34;, Register_CUSTOM_OP());
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">///   InterpreterBuilder(model, resolver)(&amp;interpreter);
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">class</span> MutableOpResolver : <span style="color:#fff;font-weight:bold">public</span> OpResolver {
+</span></span><span style="display:flex;"><span> <span style="color:#fff;font-weight:bold">public</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">const</span> TfLiteRegistration* FindOp(tflite::BuiltinOperator op,
+</span></span><span style="display:flex;"><span>                                   <span style="color:#fff;font-weight:bold">int</span> version) <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">override</span>;
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">const</span> TfLiteRegistration* FindOp(<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">char</span>* op, <span style="color:#fff;font-weight:bold">int</span> version) <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">override</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">/// Registers the specified `version` of the specified builtin operator `op`.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// Replaces any previous registration for the same operator version.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#fff;font-weight:bold">void</span> AddBuiltin(tflite::BuiltinOperator op,
+</span></span><span style="display:flex;"><span>                  <span style="color:#fff;font-weight:bold">const</span> TfLiteRegistration* registration, <span style="color:#fff;font-weight:bold">int</span> version = <span style="color:#ff0;font-weight:bold">1</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">/// Registers the specified version range (versions `min_version` to
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// `max_version`, inclusive) of the specified builtin operator `op`.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// Replaces any previous registration for the same operator version.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#fff;font-weight:bold">void</span> AddBuiltin(tflite::BuiltinOperator op,
+</span></span><span style="display:flex;"><span>                  <span style="color:#fff;font-weight:bold">const</span> TfLiteRegistration* registration, <span style="color:#fff;font-weight:bold">int</span> min_version,
+</span></span><span style="display:flex;"><span>                  <span style="color:#fff;font-weight:bold">int</span> max_version);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">/// Registers the specified `version` of the specified builtin operator `op`.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// Replaces any previous registration for the same operator version.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// Warning: use of this method in new code is discouraged: for new code,
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// we recommend using tflite::AddOp (from mutable_op_resolver_utils.h)
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// rather than tflite::MutableOpResolver::AddCustom.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#fff;font-weight:bold">void</span> AddCustom(<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">char</span>* name, <span style="color:#fff;font-weight:bold">const</span> TfLiteRegistration* registration,
+</span></span><span style="display:flex;"><span>                 <span style="color:#fff;font-weight:bold">int</span> version = <span style="color:#ff0;font-weight:bold">1</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">/// Registers the specified version range (versions `min_version` to
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// `max_version`, inclusive) of the specified custom operator `name`.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// Replaces any previous registration for the same operator version.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// Warning: use of this method in new code is discouraged: for new code,
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// we recommend using tflite::AddOp (from mutable_op_resolver_utils.h)
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// rather than tflite::MutableOpResolver::AddCustom.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#fff;font-weight:bold">void</span> AddCustom(<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">char</span>* name, <span style="color:#fff;font-weight:bold">const</span> TfLiteRegistration* registration,
+</span></span><span style="display:flex;"><span>                 <span style="color:#fff;font-weight:bold">int</span> min_version, <span style="color:#fff;font-weight:bold">int</span> max_version);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">/// Registers all operator versions supported by another MutableOpResolver.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// Replaces any previous registrations for the same operator versions,
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// except that registrations made with `AddOp`, `AddBuiltin` or `AddCustom`
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// always take precedence over registrations made with `ChainOpResolver`.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#fff;font-weight:bold">void</span> AddAll(<span style="color:#fff;font-weight:bold">const</span> MutableOpResolver&amp; other);
+</span></span></code></pre></div><p>&hellip;</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span> <span style="color:#fff;font-weight:bold">private</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">bool</span> MayContainUserDefinedOps() <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">override</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">typedef</span> std::pair&lt;tflite::BuiltinOperator, <span style="color:#fff;font-weight:bold">int</span>&gt; BuiltinOperatorKey;
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">typedef</span> std::pair&lt;std::string, <span style="color:#fff;font-weight:bold">int</span>&gt; CustomOperatorKey;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  std::unordered_map&lt;BuiltinOperatorKey, TfLiteRegistration,
+</span></span><span style="display:flex;"><span>                     op_resolver_hasher::OperatorKeyHasher&lt;BuiltinOperatorKey&gt; &gt;
+</span></span><span style="display:flex;"><span>      builtins_;
+</span></span><span style="display:flex;"><span>  std::unordered_map&lt;CustomOperatorKey, TfLiteRegistration,
+</span></span><span style="display:flex;"><span>                     op_resolver_hasher::OperatorKeyHasher&lt;CustomOperatorKey&gt; &gt;
+</span></span><span style="display:flex;"><span>      custom_ops_;
+</span></span><span style="display:flex;"><span>  std::vector&lt;<span style="color:#fff;font-weight:bold">const</span> OpResolver*&gt; other_op_resolvers_;
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>The <code>BuiltinOpResolver</code> is actually derived from the <code>MutableOpResolver</code>, and
+automatically adds all builtin operators.</p>
+<p><a href="https://github.com/tensorflow/tensorflow/blob/a1300a0d39523da936d2cb1ac782c6231c2e46e0/tensorflow/lite/core/kernels/register.h#L31"><code>tensorflow/lite/core/kernels/register.h</code></a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#007f7f">// This built-in op resolver provides a list of TfLite delegates that could be
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">// applied by TfLite interpreter by default.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">class</span> BuiltinOpResolver : <span style="color:#fff;font-weight:bold">public</span> MutableOpResolver {
+</span></span><span style="display:flex;"><span> <span style="color:#fff;font-weight:bold">public</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">// NOTE: we *deliberately* don&#39;t define any virtual functions here to avoid
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">// behavior changes when users pass a derived instance by value or assign a
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">// derived instance to a variable of this class. See &#34;object slicing&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">// (https://en.wikipedia.org/wiki/Object_slicing)) for details.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  BuiltinOpResolver();
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>When the interpreter looks up an operation using <code>FindOp()</code>, it is ultimately
+returned a <code>*TfLiteRegistration</code>. The registration is what allows the actual
+kernel to eventually be invoked. The members of the <code>struct</code> define the point(s)
+at which each function pointer is accessed and called.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#007f7f">/// `TfLiteRegistration` defines the implementation of an operation
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">/// (a built-in op, custom op, or custom delegate kernel).
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">///
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">/// It is a struct containing &#34;methods&#34; (C function pointers) that will be
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">/// invoked by the TF Lite runtime to evaluate instances of the operation.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">///
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">/// See also `TfLiteOperator` which is a more ABI-stable equivalent.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">typedef</span> <span style="color:#fff;font-weight:bold">struct</span> TfLiteRegistration {
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">/// Initializes the op from serialized data.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// Called only *once* for the lifetime of the op, so any one-time allocations
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// should be made here (unless they depend on tensor sizes).
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">///
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// * If a built-in op:
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">///       * `buffer` is the op&#39;s params data (TfLiteLSTMParams*).
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">///       * `length` is zero.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// * If custom op:
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">///       * `buffer` is the op&#39;s `custom_options`.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">///       * `length` is the size of the buffer.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">///
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// Returns a type-punned (i.e. void*) opaque data (e.g. a primitive pointer
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// or an instance of a struct).
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">///
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// The returned pointer will be stored with the node in the `user_data`
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// field, accessible within prepare and invoke functions below.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">///
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// NOTE: if the data is already in the desired format, simply implement this
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// function to return `nullptr` and implement the free function to be a
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// no-op.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#fff;font-weight:bold">void</span>* (*init)(TfLiteContext* context, <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">char</span>* buffer, size_t length);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">/// The pointer `buffer` is the data previously returned by an init
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// invocation.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#fff;font-weight:bold">void</span> (*free)(TfLiteContext* context, <span style="color:#fff;font-weight:bold">void</span>* buffer);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">/// prepare is called when the inputs this node depends on have been resized.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// `context-&gt;ResizeTensor()` can be called to request output tensors to be
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// resized.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// Can be called multiple times for the lifetime of the op.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">///
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// Returns `kTfLiteOk` on success.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  TfLiteStatus (*prepare)(TfLiteContext* context, TfLiteNode* node);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">/// Execute the node (should read `node-&gt;inputs` and output to
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// `node-&gt;outputs`).
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">///
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// Returns `kTfLiteOk` on success.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  TfLiteStatus (*invoke)(TfLiteContext* context, TfLiteNode* node);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">/// `profiling_string` is called during summarization of profiling information
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// in order to group executions together. Providing a value here will cause a
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// given op to appear multiple times is the profiling report. This is
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// particularly useful for custom ops that can perform significantly
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// different calculations depending on their `user-data`.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">char</span>* (*profiling_string)(<span style="color:#fff;font-weight:bold">const</span> TfLiteContext* context,
+</span></span><span style="display:flex;"><span>                                  <span style="color:#fff;font-weight:bold">const</span> TfLiteNode* node);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">/// Builtin codes. If this kernel refers to a builtin this is the code
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// of the builtin. This is so we can do marshaling to other frameworks like
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// NN API.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">///
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// Note: It is the responsibility of the registration binder to set this
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// properly.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#fff;font-weight:bold">int32_t</span> builtin_code;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">/// Custom op name. If the op is a builtin, this will be `null`.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">///
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// Note: It is the responsibility of the registration binder to set this
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// properly.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">///
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// WARNING: This is an experimental interface that is subject to change.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">char</span>* custom_name;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">/// The version of the op.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// Note: It is the responsibility of the registration binder to set this
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// properly.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#fff;font-weight:bold">int</span> version;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">/// The external (i.e. ABI-stable) version of `TfLiteRegistration`.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// Since we can&#39;t use internal types (such as `TfLiteContext`) for C API to
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// maintain ABI stability.  C API user will provide `TfLiteOperator` to
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// implement custom ops.  We keep it inside of `TfLiteRegistration` and use
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// it to route callbacks properly.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  TfLiteOperator* registration_external;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">/// Retrieves asynchronous kernel.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">///
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// If the `async_kernel` field is nullptr, it means the operation described
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// by this TfLiteRegistration object does not support asynchronous execution.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// Otherwise, the function that the field points to should only be called for
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// delegate kernel nodes, i.e. `node` should be a delegate kernel node
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// created by applying a delegate. If the function returns nullptr, that
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// means that the underlying delegate does not support asynchronous execution
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// for this `node`.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#fff;font-weight:bold">struct</span> TfLiteAsyncKernel* (*async_kernel)(TfLiteContext* context,
+</span></span><span style="display:flex;"><span>                                            TfLiteNode* node);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">/// Indicates if an operator&#39;s output may safely overwrite its inputs.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">/// See the comments in `TfLiteInPlaceOp`.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#fff;font-weight:bold">uint64_t</span> inplace_operator;
+</span></span><span style="display:flex;"><span>} TfLiteRegistration;
+</span></span></code></pre></div><p>On microcontrollers, resources, especially flash memory (ROM) and RAM, are at a
+premium. While <code>tflite-micro</code> shares many similarities with Tensorflow Lite,
+there are some key differences that stand out.</p>
+<p>Tracing the history of <code>tflite-micro</code> is somewhat tricky, as it has been moved
+across locations in the <code>tensorflow/tensorflow</code> repository, before eventually
+being moved to the <code>tensorflow/tflite-micro</code> repository where it resides today.
+The original commit
+(<a href="https://github.com/tensorflow/tensorflow/commit/a7e8ad18a61b251ef42c0260dd80a12cea8f268c"><code>a7e8ad</code></a>)
+was from <a href="https://github.com/petewarden">Pete Warden</a> in 2018, and it included
+an <a href="https://github.com/tensorflow/tensorflow/blob/a7e8ad18a61b251ef42c0260dd80a12cea8f268c/tensorflow/contrib/lite/experimental/micro/README.md">excellent
+document</a>
+describing the motivations, trade-offs, and future improvements.</p>
+<p>These motivations, such as avoiding the use of dynamic memory allocation, are
+manifested in the differences between <code>tflite-micro</code> and Tensorflow Lite. For
+example, <code>tflite-micro</code> now implements its own stripped down version of the
+<code>OpResolver</code> interface class named <a href="https://github.com/tensorflow/tflite-micro/blob/3200ccd18268346d0ea965720c5599a3d051e853/tensorflow/lite/micro/micro_op_resolver.h#L34">the
+<code>MicroOpResolver</code></a>,
+and <a href="https://github.com/tensorflow/tflite-micro/blob/3200ccd18268346d0ea965720c5599a3d051e853/tensorflow/lite/micro/micro_mutable_op_resolver.h#L49">a derived
+<code>MicroMutableOpResolver</code></a>
+template class. While the overuse of
+<a href="https://en.wikipedia.org/wiki/Template_(C%2B%2B)">templates</a> can lead to
+increased code size, in this case a non-type parameter (<code>tOpCount</code>) is helpfully
+used to assign the size of the array of registered operators at compile time
+rather than using a dynamically allocated <code>std::unordered_map</code>.</p>
+<p><a href="https://github.com/tensorflow/tflite-micro/blob/3200ccd18268346d0ea965720c5599a3d051e853/tensorflow/lite/micro/micro_mutable_op_resolver.h"><code>tensorflow/lite/micro/micro_mutable_op_resolver.h</code></a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">namespace</span> tflite {
+</span></span><span style="display:flex;"><span>TFLMRegistration* Register_DETECTION_POSTPROCESS();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">template</span> &lt;<span style="color:#fff;font-weight:bold">unsigned</span> <span style="color:#fff;font-weight:bold">int</span> tOpCount&gt;
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">class</span> MicroMutableOpResolver : <span style="color:#fff;font-weight:bold">public</span> MicroOpResolver {
+</span></span><span style="display:flex;"><span> <span style="color:#fff;font-weight:bold">public</span>:
+</span></span><span style="display:flex;"><span>  TF_LITE_REMOVE_VIRTUAL_DELETE
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">explicit</span> MicroMutableOpResolver() {}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">const</span> TFLMRegistration* FindOp(tflite::BuiltinOperator op) <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">override</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> (op == BuiltinOperator_CUSTOM) <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nullptr</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">for</span> (<span style="color:#fff;font-weight:bold">unsigned</span> <span style="color:#fff;font-weight:bold">int</span> i = <span style="color:#ff0;font-weight:bold">0</span>; i &lt; registrations_len_; ++i) {
+</span></span><span style="display:flex;"><span>      <span style="color:#fff;font-weight:bold">const</span> TFLMRegistration&amp; registration = registrations_[i];
+</span></span><span style="display:flex;"><span>      <span style="color:#fff;font-weight:bold">if</span> (registration.builtin_code == op) {
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span> &amp;registration;
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nullptr</span>;
+</span></span><span style="display:flex;"><span>  }
+</span></span></code></pre></div><p>&hellip;</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>  <span style="color:#007f7f">// Registers a Custom Operator with the MicroOpResolver.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">//
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">// Only the first call for a given name will be successful. i.e. if this
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">// function is called again for a previously added Custom Operator, the
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">// MicroOpResolver will be unchanged and this function will return
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">// kTfLiteError.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  TfLiteStatus AddCustom(<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">char</span>* name,
+</span></span><span style="display:flex;"><span>                         <span style="color:#fff;font-weight:bold">const</span> TFLMRegistration* registration) {
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> (registrations_len_ &gt;= tOpCount) {
+</span></span><span style="display:flex;"><span>      MicroPrintf(
+</span></span><span style="display:flex;"><span>          <span style="color:#0ff;font-weight:bold">&#34;Couldn&#39;t register custom op &#39;%s&#39;, resolver size is too&#34;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#0ff;font-weight:bold">&#34;small (%d)&#34;</span>,
+</span></span><span style="display:flex;"><span>          name, tOpCount);
+</span></span><span style="display:flex;"><span>      <span style="color:#fff;font-weight:bold">return</span> kTfLiteError;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> (FindOp(name) != <span style="color:#fff;font-weight:bold">nullptr</span>) {
+</span></span><span style="display:flex;"><span>      MicroPrintf(<span style="color:#0ff;font-weight:bold">&#34;Calling AddCustom for the same op more than once &#34;</span>);
+</span></span><span style="display:flex;"><span>      MicroPrintf(<span style="color:#0ff;font-weight:bold">&#34;is not supported (Op: %s).&#34;</span>, name);
+</span></span><span style="display:flex;"><span>      <span style="color:#fff;font-weight:bold">return</span> kTfLiteError;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    TFLMRegistration* new_registration = &amp;registrations_[registrations_len_];
+</span></span><span style="display:flex;"><span>    registrations_len_ += <span style="color:#ff0;font-weight:bold">1</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    *new_registration = *registration;
+</span></span><span style="display:flex;"><span>    new_registration-&gt;builtin_code = BuiltinOperator_CUSTOM;
+</span></span><span style="display:flex;"><span>    new_registration-&gt;custom_name = name;
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> kTfLiteOk;
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">// The Add* functions below add the various Builtin operators to the
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">// MicroMutableOpResolver object.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>
+</span></span><span style="display:flex;"><span>  TfLiteStatus AddAbs() {
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> AddBuiltin(BuiltinOperator_ABS, Register_ABS(), ParseAbs);
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  TfLiteStatus AddAdd(<span style="color:#fff;font-weight:bold">const</span> TFLMRegistration&amp; registration = Register_ADD()) {
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> AddBuiltin(BuiltinOperator_ADD, registration, ParseAdd);
+</span></span><span style="display:flex;"><span>  }
+</span></span></code></pre></div><p>&hellip;</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  TfLiteStatus AddWindow() {
+</span></span><span style="display:flex;"><span>    <span style="color:#007f7f">// TODO(b/286250473): change back name to &#34;Window&#34; and remove namespace
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    <span style="color:#fff;font-weight:bold">return</span> AddCustom(<span style="color:#0ff;font-weight:bold">&#34;SignalWindow&#34;</span>, tflite::tflm_signal::Register_WINDOW());
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  TfLiteStatus AddZerosLike() {
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> AddBuiltin(BuiltinOperator_ZEROS_LIKE, Register_ZEROS_LIKE(),
+</span></span><span style="display:flex;"><span>                      ParseZerosLike);
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">unsigned</span> <span style="color:#fff;font-weight:bold">int</span> GetRegistrationLength() { <span style="color:#fff;font-weight:bold">return</span> registrations_len_; }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span> <span style="color:#fff;font-weight:bold">private</span>:
+</span></span><span style="display:flex;"><span>  TfLiteStatus AddBuiltin(tflite::BuiltinOperator op,
+</span></span><span style="display:flex;"><span>                          <span style="color:#fff;font-weight:bold">const</span> TFLMRegistration&amp; registration,
+</span></span><span style="display:flex;"><span>                          TfLiteBridgeBuiltinParseFunction parser) {
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> (op == BuiltinOperator_CUSTOM) {
+</span></span><span style="display:flex;"><span>      MicroPrintf(<span style="color:#0ff;font-weight:bold">&#34;Invalid parameter BuiltinOperator_CUSTOM to the &#34;</span>);
+</span></span><span style="display:flex;"><span>      MicroPrintf(<span style="color:#0ff;font-weight:bold">&#34;AddBuiltin function.&#34;</span>);
+</span></span><span style="display:flex;"><span>      <span style="color:#fff;font-weight:bold">return</span> kTfLiteError;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> (FindOp(op) != <span style="color:#fff;font-weight:bold">nullptr</span>) {
+</span></span><span style="display:flex;"><span>      MicroPrintf(<span style="color:#0ff;font-weight:bold">&#34;Calling AddBuiltin with the same op more than &#34;</span>);
+</span></span><span style="display:flex;"><span>      MicroPrintf(<span style="color:#0ff;font-weight:bold">&#34;once is not supported (Op: #%d).&#34;</span>, op);
+</span></span><span style="display:flex;"><span>      <span style="color:#fff;font-weight:bold">return</span> kTfLiteError;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> (registrations_len_ &gt;= tOpCount) {
+</span></span><span style="display:flex;"><span>      MicroPrintf(<span style="color:#0ff;font-weight:bold">&#34;Couldn&#39;t register builtin op #%d, resolver size &#34;</span>, op);
+</span></span><span style="display:flex;"><span>      MicroPrintf(<span style="color:#0ff;font-weight:bold">&#34;is too small (%d).&#34;</span>, tOpCount);
+</span></span><span style="display:flex;"><span>      <span style="color:#fff;font-weight:bold">return</span> kTfLiteError;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    registrations_[registrations_len_] = registration;
+</span></span><span style="display:flex;"><span>    <span style="color:#007f7f">// Strictly speaking, the builtin_code is not necessary for TFLM but
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    <span style="color:#007f7f">// filling it in regardless.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>    registrations_[registrations_len_].builtin_code = op;
+</span></span><span style="display:flex;"><span>    registrations_len_++;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    builtin_codes_[num_buitin_ops_] = op;
+</span></span><span style="display:flex;"><span>    builtin_parsers_[num_buitin_ops_] = parser;
+</span></span><span style="display:flex;"><span>    num_buitin_ops_++;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> kTfLiteOk;
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  TFLMRegistration registrations_[tOpCount];
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">unsigned</span> <span style="color:#fff;font-weight:bold">int</span> registrations_len_ = <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f">// Arrays (and counter) to store the builtin codes and their corresponding
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  <span style="color:#007f7f">// parse functions as these are registered with the Op Resolver.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>  BuiltinOperator builtin_codes_[tOpCount];
+</span></span><span style="display:flex;"><span>  TfLiteBridgeBuiltinParseFunction builtin_parsers_[tOpCount];
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">unsigned</span> <span style="color:#fff;font-weight:bold">int</span> num_buitin_ops_ = <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>};  <span style="color:#007f7f">// namespace tflite
+</span></span></span></code></pre></div><p>We&rsquo;ve seen the <code>MicroMutableOpResolver</code> in action in previous posts when looking
+at registering operators in examples, such as <a href="https://github.com/tensorflow/tflite-micro/blob/3200ccd18268346d0ea965720c5599a3d051e853/tensorflow/lite/micro/examples/person_detection">the <code>person_detection</code>
+application</a>.
+Let&rsquo;s take a look at the even simpler <code>hello_world</code> example, which registers a
+<a href="https://www.tensorflow.org/mlir/tfl_ops#tflfully_connected_tflfullyconnectedop">single operator
+(<code>FULLY_CONNECTED</code>)</a>.
+Because we actually want to (finally!) build an application that targets a real
+microcontroller, we&rsquo;ll use the <a href="https://github.com/zephyrproject-rtos/zephyr/tree/322da1d1a5a22912184ac73341cc948fc18fea25/samples/modules/tflite-micro/hello_world">Zephyr RTOS
+variant</a>
+of the example. The instantiation of the <code>MicroMutableOpResolver</code> takes place in
+the <code>setup()</code> function.</p>
+<p><a href="https://github.com/zephyrproject-rtos/zephyr/blob/322da1d1a5a22912184ac73341cc948fc18fea25/samples/modules/tflite-micro/hello_world/src/main_functions.cpp"><code>samples/modules/tflite-micro/hello_world/src/main_functions.cpp</code></a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">void</span> setup(<span style="color:#fff;font-weight:bold">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Map the model into a usable data structure. This doesn&#39;t involve any
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * copying or parsing, it&#39;s a very lightweight operation.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span>	model = tflite::GetModel(g_model);
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (model-&gt;version() != TFLITE_SCHEMA_VERSION) {
+</span></span><span style="display:flex;"><span>		MicroPrintf(<span style="color:#0ff;font-weight:bold">&#34;Model provided is schema version %d not equal &#34;</span>
+</span></span><span style="display:flex;"><span>					<span style="color:#0ff;font-weight:bold">&#34;to supported version %d.&#34;</span>,
+</span></span><span style="display:flex;"><span>					model-&gt;version(), TFLITE_SCHEMA_VERSION);
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span>;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* This pulls in the operation implementations we need.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * NOLINTNEXTLINE(runtime-global-variables)
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">static</span> tflite::MicroMutableOpResolver &lt;<span style="color:#ff0;font-weight:bold">1</span>&gt; resolver;
+</span></span><span style="display:flex;"><span>	resolver.AddFullyConnected();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Build an interpreter to run the model with. */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">static</span> tflite::MicroInterpreter static_interpreter(
+</span></span><span style="display:flex;"><span>		model, resolver, tensor_arena, kTensorArenaSize);
+</span></span><span style="display:flex;"><span>	interpreter = &amp;static_interpreter;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Allocate memory from the tensor_arena for the model&#39;s tensors. */</span>
+</span></span><span style="display:flex;"><span>	TfLiteStatus allocate_status = interpreter-&gt;AllocateTensors();
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (allocate_status != kTfLiteOk) {
+</span></span><span style="display:flex;"><span>		MicroPrintf(<span style="color:#0ff;font-weight:bold">&#34;AllocateTensors() failed&#34;</span>);
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span>;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Obtain pointers to the model&#39;s input and output tensors. */</span>
+</span></span><span style="display:flex;"><span>	input = interpreter-&gt;input(<span style="color:#ff0;font-weight:bold">0</span>);
+</span></span><span style="display:flex;"><span>	output = interpreter-&gt;output(<span style="color:#ff0;font-weight:bold">0</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Keep track of how many inferences we have performed. */</span>
+</span></span><span style="display:flex;"><span>	inference_count = <span style="color:#ff0;font-weight:bold">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>We&rsquo;ll build the example for an <a href="https://developer.arm.com/Processors/Cortex-M33">Arm Cortex-M33
+microcontroller</a>, namely the
+Nordic Semiconductor <a href="https://www.nordicsemi.com/Products/nRF9160">nRF9160</a> on
+the <a href="https://www.nordicsemi.com/Products/Development-hardware/nRF9160-DK">nRF9160 Development Kit
+(DK)</a>.
+After following the <a href="https://docs.zephyrproject.org/latest/develop/getting_started/index.html">Zephyr setup
+instructions</a>,
+the sample can be built for our target with the following command.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>west build -p -b nrf9160dk/nrf9160/ns samples/modules/tflite-micro/hello_world
+</span></span></code></pre></div><p>While this is an extremely minimal use case, we can see that the application ROM
+footprint, which includes both the <code>tflite-micro</code> components and the Zephyr
+kernel, is <em>fairly</em> small (56 KB).</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Memory region         Used Size  Region Size  %age Used
+</span></span><span style="display:flex;"><span>           FLASH:       56604 B       192 KB     28.79%
+</span></span><span style="display:flex;"><span>             RAM:        7608 B       168 KB      4.42%
+</span></span><span style="display:flex;"><span>        IDT_LIST:          0 GB        32 KB      0.00%
+</span></span></code></pre></div><p>We can use Zephyr&rsquo;s <code>rom_report</code> target (<code>-t rom_report</code>) to see how much
+<code>tflite-micro</code>, and specifically operator resolution, is contributing to the
+code size.</p>
+<blockquote>
+<p>Scroll right to see size and % of ROM used.</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>    ├── optional                                                                                14948  26.42%  - 
+</span></span><span style="display:flex;"><span>    │   └── modules                                                                             14948  26.42%  - 
+</span></span><span style="display:flex;"><span>    │       └── lib                                                                             14948  26.42%  - 
+</span></span><span style="display:flex;"><span>    │           └── tflite-micro                                                                14948  26.42%  - 
+</span></span><span style="display:flex;"><span>    │               ├── tensorflow                                                              14788  26.14%  - 
+</span></span><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>    │               │   └── lite                                                                14678  25.94%  - 
+</span></span><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>    │               │       ├── kernels                                                          1422   2.51%  - 
+</span></span><span style="display:flex;"><span>    │               │       │   ├── internal                                                      782   1.38%  - 
+</span></span><span style="display:flex;"><span>    │               │       │   │   ├── common.cc                                                 260   0.46%  - 
+</span></span><span style="display:flex;"><span>    │               │       │   │   │   ├── _ZN6tflite29MultiplyByQuantizedMultiplierEiii         132   0.23%  0x00054acd text
+</span></span><span style="display:flex;"><span>    │               │       │   │   │   └── _ZN6tflite29MultiplyByQuantizedMultiplierExii         128   0.23%  0x00054b51 text
+</span></span><span style="display:flex;"><span>    │               │       │   │   ├── portable_tensor_utils.cc                                   54   0.10%  - 
+</span></span><span style="display:flex;"><span>    │               │       │   │   │   └── _ZN6tflite12tensor_utils23UnpackDenseInt4IntoInt8EPKaiPa 54   0.10%  0x0005a313 text
+</span></span><span style="display:flex;"><span>    │               │       │   │   ├── quantization_util.cc                                      116   0.21%  - 
+</span></span><span style="display:flex;"><span>    │               │       │   │   │   └── _ZN6tflite18QuantizeMultiplierEdPiS0_                 116   0.21%  0x00054bd1 text
+</span></span><span style="display:flex;"><span>    │               │       │   │   ├── reference                                                 256   0.45%  - 
+</span></span><span style="display:flex;"><span>    │               │       │   │   │   └── integer_ops                                           256   0.45%  - 
+</span></span><span style="display:flex;"><span>    │               │       │   │   │       └── fully_connected.h                                 256   0.45%  - 
+</span></span><span style="display:flex;"><span>    │               │       │   │   │           └── _ZN6tflite21reference_integer_ops14FullyConnectedIaaaiEEvRKNS_20FullyConnectedParamsERKNS_12RuntimeShapeEPKT_S7_PKT0_S7_PKT2_S7_PT1_.isra.0 256   0.45%  0x0005a3d5 text
+</span></span><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>    │               │       ├── micro                                                           12652  22.36%  - 
+</span></span><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>    │               │       │   ├── kernels                                                      2524   4.46%  - 
+</span></span><span style="display:flex;"><span>    │               │       │   │   ├── fully_connected.cc                                       1858   3.28%  - 
+</span></span><span style="display:flex;"><span>    │               │       │   │   │   ├── _ZN6tflite12_GLOBAL__N_118FullyConnectedEvalEP13TfLiteContextP10TfLiteNode 1380   2.44%  0x0005514d text
+</span></span><span style="display:flex;"><span>    │               │       │   │   │   ├── _ZN6tflite12_GLOBAL__N_118FullyConnectedInitEP13TfLiteContextPKcj 18   0.03%  0x0005a395 text
+</span></span><span style="display:flex;"><span>    │               │       │   │   │   ├── _ZN6tflite12_GLOBAL__N_121FullyConnectedPrepareEP13TfLiteContextP10TfLiteNode 420   0.74%  0x00054f81 text
+</span></span><span style="display:flex;"><span>    │               │       │   │   │   └── _ZN6tflite24Register_FULLY_CONNECTEDEv                 40   0.07%  0x00055125 text
+</span></span><span style="display:flex;"><span>    │               │       │   │   ├── fully_connected_common.cc                                 502   0.89%  - 
+</span></span><span style="display:flex;"><span>    │               │       │   │   │   ├── _ZN6tflite25FullyConnectedParamsFloatE21TfLiteFusedActivation 56   0.10%  0x000556b1 text
+</span></span><span style="display:flex;"><span>    │               │       │   │   │   ├── _ZN6tflite29CalculateOpDataFullyConnectedEP13TfLiteContext21TfLiteFusedActivation10TfLiteTypePK12TfLiteTensorS6_S6_PS4_PNS_20OpDataFullyConnectedE 412   0.73%  0x000556e9 text
+</span></span><span style="display:flex;"><span>    │               │       │   │   │   └── _ZN6tflite29FullyConnectedParamsQuantizedERKNS_20OpDataFullyConnectedE 34   0.06%  0x0005a4d5 text
+</span></span><span style="display:flex;"><span>    │               │       │   │   ├── kernel_util.cc                                            152   0.27%  - 
+</span></span><span style="display:flex;"><span>    │               │       │   │   │   ├── _ZN6tflite5micro10RegisterOpEPFPvP13TfLiteContextPKcjEPF12TfLiteStatusS3_P10TfLiteNodeESC_PFvS3_S1_ESE_ 24   0.04%  0x0005a4f7 text
+</span></span><span style="display:flex;"><span>    │               │       │   │   │   ├── _ZN6tflite5micro12GetEvalInputEPK13TfLiteContextPK10TfLiteNodei 4   0.01%  0x0005a545 text
+</span></span><span style="display:flex;"><span>    │               │       │   │   │   ├── _ZN6tflite5micro13GetEvalOutputEPK13TfLiteContextPK10TfLiteNodei 28   0.05%  0x0005a549 text
+</span></span><span style="display:flex;"><span>    │               │       │   │   │   ├── _ZN6tflite5micro14GetTensorShapeEPK16TfLiteEvalTensor  42   0.07%  0x0005a565 text
+</span></span><span style="display:flex;"><span>    │               │       │   │   │   └── _ZN6tflite5micro19GetMutableEvalInputEPK13TfLiteContextPK10TfLiteNodei 54   0.10%  0x0005a50f text
+</span></span><span style="display:flex;"><span>    │               │       │   │   └── kernel_util.h                                              12   0.02%  - 
+</span></span><span style="display:flex;"><span>    │               │       │   │       └── _ZN6tflite5micro13GetTensorDataIaEEPKT_PK16TfLiteEvalTensor 12   0.02%  0x0005a389 text
+</span></span><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>    │               │       │   ├── micro_mutable_op_resolver.h                                   128   0.23%  - 
+</span></span><span style="display:flex;"><span>    │               │       │   │   ├── _ZN6tflite22MicroMutableOpResolverILj1EED0Ev               14   0.02%  0x00058541 text
+</span></span><span style="display:flex;"><span>    │               │       │   │   ├── _ZN6tflite22MicroMutableOpResolverILj1EED2Ev                2   0.00%  0x000584e7 text
+</span></span><span style="display:flex;"><span>    │               │       │   │   ├── _ZNK6tflite22MicroMutableOpResolverILj1EE15GetOpDataParserENS_15BuiltinOperatorE 30   0.05%  0x000584e9 text
+</span></span><span style="display:flex;"><span>    │               │       │   │   ├── _ZNK6tflite22MicroMutableOpResolverILj1EE6FindOpENS_15BuiltinOperatorE 24   0.04%  0x0005854f text
+</span></span><span style="display:flex;"><span>    │               │       │   │   └── _ZNK6tflite22MicroMutableOpResolverILj1EE6FindOpEPKc       58   0.10%  0x00058507 text
+</span></span><span style="display:flex;"><span>    │               │       │   ├── micro_op_resolver.cc                                          148   0.26%  - 
+</span></span><span style="display:flex;"><span>    │               │       │   │   └── _ZN6tflite25GetRegistrationFromOpCodeEPKNS_12OperatorCodeERKNS_15MicroOpResolverEPPK16TFLMRegistration 148   0.26%  0x0005466d text
+</span></span><span style="display:flex;"><span>    │               │       │   ├── micro_profiler.h                                               20   0.04%  - 
+</span></span><span style="display:flex;"><span>    │               │       │   │   └── _ZN6tflite19ScopedMicroProfilerD1Ev                        20   0.04%  0x00059835 text
+</span></span><span style="display:flex;"><span>    ...
+</span></span></code></pre></div><p>The <code>MicroMutableOpResolver</code> member function for registering the
+<code>FULLY_CONNECTED</code> operator is structured as follows.</p>
+<p><a href="https://github.com/tensorflow/tflite-micro/blob/3200ccd18268346d0ea965720c5599a3d051e853/tensorflow/lite/micro/micro_mutable_op_resolver.h#L328"><code>tensorflow/lite/micro/micro_mutable_op_resolver.h</code></a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>  TfLiteStatus AddFullyConnected(
+</span></span><span style="display:flex;"><span>      <span style="color:#fff;font-weight:bold">const</span> TFLMRegistration&amp; registration = Register_FULLY_CONNECTED()) {
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> AddBuiltin(BuiltinOperator_FULLY_CONNECTED, registration,
+</span></span><span style="display:flex;"><span>                      ParseFullyConnected);
+</span></span><span style="display:flex;"><span>  }
+</span></span></code></pre></div><p>If we dump the body of the <code>setup()</code> function, we can see that, as expected due
+to being defined in the header file, <code>AddFullyConnected</code> and <code>AddBuiltin</code> are
+inlined and we end up calling <code>Register_FULLY_CONNECTED</code> directly.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>~/.local/zephyr-sdk-0.17.0/arm-zephyr-eabi/bin/arm-zephyr-eabi-objdump -D build/zephyr/zephyr.elf
+</span></span></code></pre></div><blockquote>
+<p>Portions of the <code>&lt;setup&gt;</code> dump are removed for brevity.</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>0005191c &lt;setup&gt;:
+</span></span><span style="display:flex;"><span>   5191c:	b5f0      	push	{r4, r5, r6, r7, lr}
+</span></span><span style="display:flex;"><span>   5191e:	4b47      	ldr	r3, [pc, #284]	; (51a3c &lt;setup+0x120&gt;)
+</span></span><span style="display:flex;"><span>   51920:	4f47      	ldr	r7, [pc, #284]	; (51a40 &lt;setup+0x124&gt;)
+</span></span><span style="display:flex;"><span>   51922:	6819      	ldr	r1, [r3, #0]
+</span></span><span style="display:flex;"><span>   51924:	b08d      	sub	sp, #52	; 0x34
+</span></span><span style="display:flex;"><span>   ...
+</span></span><span style="display:flex;"><span>   51972:	a805      	add	r0, sp, #20
+</span></span><span style="display:flex;"><span>   51974:	f003 fbd6 	bl	55124 &lt;_ZN6tflite24Register_FULLY_CONNECTEDEv&gt;
+</span></span><span style="display:flex;"><span>   51978:	2109      	movs	r1, #9
+</span></span><span style="display:flex;"><span>   5197a:	4834      	ldr	r0, [pc, #208]	; (51a4c &lt;setup+0x130&gt;)
+</span></span><span style="display:flex;"><span>   5197c:	f006 fde7 	bl	5854e &lt;_ZNK6tflite22MicroMutableOpResolverILj1EE6FindOpENS_15BuiltinOperatorE&gt;
+</span></span><span style="display:flex;"><span>   51980:	b358      	cbz	r0, 519da &lt;setup+0xbe&gt;
+</span></span><span style="display:flex;"><span>   ...
+</span></span><span style="display:flex;"><span>   519da:	6a2b      	ldr	r3, [r5, #32]
+</span></span><span style="display:flex;"><span>   519dc:	b133      	cbz	r3, 519ec &lt;setup+0xd0&gt;
+</span></span><span style="display:flex;"><span>   519de:	2109      	movs	r1, #9
+</span></span><span style="display:flex;"><span>   519e0:	4826      	ldr	r0, [pc, #152]	; (51a7c &lt;setup+0x160&gt;)
+</span></span><span style="display:flex;"><span>   519e2:	f008 fa4e 	bl	59e82 &lt;_Z11MicroPrintfPKcz&gt;
+</span></span><span style="display:flex;"><span>   519e6:	2101      	movs	r1, #1
+</span></span><span style="display:flex;"><span>   519e8:	4825      	ldr	r0, [pc, #148]	; (51a80 &lt;setup+0x164&gt;)
+</span></span><span style="display:flex;"><span>   519ea:	e7cf      	b.n	5198c &lt;setup+0x70&gt;
+</span></span><span style="display:flex;"><span>   519ec:	4e25      	ldr	r6, [pc, #148]	; (51a84 &lt;setup+0x168&gt;)
+</span></span><span style="display:flex;"><span>   519ee:	ac05      	add	r4, sp, #20
+</span></span><span style="display:flex;"><span>   519f0:	cc0f      	ldmia	r4!, {r0, r1, r2, r3}
+</span></span><span style="display:flex;"><span>   519f2:	c60f      	stmia	r6!, {r0, r1, r2, r3}
+</span></span><span style="display:flex;"><span>   519f4:	e894 0007 	ldmia.w	r4, {r0, r1, r2}
+</span></span><span style="display:flex;"><span>   519f8:	2301      	movs	r3, #1
+</span></span><span style="display:flex;"><span>   519fa:	e886 0007 	stmia.w	r6, {r0, r1, r2}
+</span></span><span style="display:flex;"><span>   519fe:	2209      	movs	r2, #9
+</span></span><span style="display:flex;"><span>   51a00:	622b      	str	r3, [r5, #32]
+</span></span><span style="display:flex;"><span>   51a02:	6aeb      	ldr	r3, [r5, #44]	; 0x2c
+</span></span><span style="display:flex;"><span>   51a04:	61aa      	str	r2, [r5, #24]
+</span></span><span style="display:flex;"><span>   51a06:	eb05 0183 	add.w	r1, r5, r3, lsl #2
+</span></span><span style="display:flex;"><span>   51a0a:	624a      	str	r2, [r1, #36]	; 0x24
+</span></span><span style="display:flex;"><span>   51a0c:	491e      	ldr	r1, [pc, #120]	; (51a88 &lt;setup+0x16c&gt;)
+</span></span><span style="display:flex;"><span>   51a0e:	f103 020a 	add.w	r2, r3, #10
+</span></span><span style="display:flex;"><span>   51a12:	3301      	adds	r3, #1
+</span></span><span style="display:flex;"><span>   51a14:	f845 1022 	str.w	r1, [r5, r2, lsl #2]
+</span></span><span style="display:flex;"><span>   51a18:	62eb      	str	r3, [r5, #44]	; 0x2c
+</span></span><span style="display:flex;"><span>   51a1a:	e7b9      	b.n	51990 &lt;setup+0x74&gt;
+</span></span><span style="display:flex;"><span>   ...
+</span></span><span style="display:flex;"><span>   51a38:	b00d      	add	sp, #52	; 0x34
+</span></span><span style="display:flex;"><span>   51a3a:	bdf0      	pop	{r4, r5, r6, r7, pc}
+</span></span><span style="display:flex;"><span>   51a3c:	0005afa8 	andeq	sl, r5, r8, lsr #31
+</span></span><span style="display:flex;"><span>   51a40:	20016384 	andcs	r6, r1, r4, lsl #7
+</span></span><span style="display:flex;"><span>   51a44:	0005c2e8 	andeq	ip, r5, r8, ror #5
+</span></span><span style="display:flex;"><span>   51a48:	20016340 	andcs	r6, r1, r0, asr #6
+</span></span><span style="display:flex;"><span>   51a4c:	20016344 	andcs	r6, r1, r4, asr #6
+</span></span><span style="display:flex;"><span>   51a50:	0005bbfc 	strdeq	fp, [r5], -ip
+</span></span><span style="display:flex;"><span>   51a54:	20016388 	andcs	r6, r1, r8, lsl #7
+</span></span><span style="display:flex;"><span>   51a58:	000584e7 	andeq	r8, r5, r7, ror #9
+</span></span><span style="display:flex;"><span>   51a5c:	0005c32f 	andeq	ip, r5, pc, lsr #6
+</span></span><span style="display:flex;"><span>   51a60:	0005c35e 	andeq	ip, r5, lr, asr r3
+</span></span><span style="display:flex;"><span>   51a64:	20016278 	andcs	r6, r1, r8, ror r2
+</span></span><span style="display:flex;"><span>   51a68:	2001649c 	mulcs	r1, ip, r4
+</span></span><span style="display:flex;"><span>   51a6c:	2001627c 	andcs	r6, r1, ip, ror r2
+</span></span><span style="display:flex;"><span>   51a70:	000595d9 	ldrdeq	r9, [r5], -r9	; &lt;UNPREDICTABLE&gt;
+</span></span><span style="display:flex;"><span>   51a74:	20016380 	andcs	r6, r1, r0, lsl #7
+</span></span><span style="display:flex;"><span>   51a78:	0005c3c3 	andeq	ip, r5, r3, asr #7
+</span></span><span style="display:flex;"><span>   51a7c:	0005c37f 	andeq	ip, r5, pc, ror r3
+</span></span><span style="display:flex;"><span>   51a80:	0005c3b0 			; &lt;UNDEFINED&gt; instruction: 0x0005c3b0
+</span></span><span style="display:flex;"><span>   51a84:	20016348 	andcs	r6, r1, r8, asr #6
+</span></span><span style="display:flex;"><span>   51a88:	00054e99 	muleq	r5, r9, lr
+</span></span><span style="display:flex;"><span>   51a8c:	2001637c 	andcs	r6, r1, ip, ror r3
+</span></span><span style="display:flex;"><span>   51a90:	20016378 	andcs	r6, r1, r8, ror r3
+</span></span><span style="display:flex;"><span>   51a94:	20016374 	andcs	r6, r1, r4, ror r3
+</span></span></code></pre></div><p>Prior to calling <code>Register_FULLY_CONNECTED()</code>, we set aside a region on the
+stack (<code>add r0, sp, #20</code>) for storing the <a href="https://github.com/tensorflow/tflite-micro/blob/bbf70db4993618bcabc01cf2f02cd9eb089d5dca/tensorflow/lite/micro/micro_common.h#L23">returned
+<code>TFLMRegistration</code></a>
+for the <code>FULLY_CONNECTED</code> operator. <code>Register_FULLY_CONNECTED()</code> subsequently
+calls the helper <code>RegisterOp()</code> function.</p>
+<p><a href="https://github.com/tensorflow/tflite-micro/blob/bbf70db4993618bcabc01cf2f02cd9eb089d5dca/tensorflow/lite/micro/kernels/fully_connected.cc#L354"><code>tensorflow/lite/micro/kernels/fully_connected.cc</code></a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>TFLMRegistration Register_FULLY_CONNECTED() {
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">return</span> tflite::micro::RegisterOp(FullyConnectedInit, FullyConnectedPrepare,
+</span></span><span style="display:flex;"><span>                                   FullyConnectedEval);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The last three addresses in the <code>Register_FULLY_CONNECTED()</code> disassembly are not
+instructions, but rather pointers to the <code>FullyConnectedPrepare</code> (<code>0x00054f80</code>),
+<code>FullyConnectedEval</code> (<code>0x000541c</code>), and <code>FullyConnectedInit</code> (<code>0x0005a394</code>)
+functions. They are passed in registers to the <code>RegisterOp()</code> helper.</p>
+<blockquote>
+<p>Note that the least significant bit in all three function addresses is <code>1</code>,
+indicating the use of the <a href="https://en.wikipedia.org/wiki/ARM_architecture_family#Thumb">Thumb compressed instruction
+set</a>.</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>00055124 &lt;_ZN6tflite24Register_FULLY_CONNECTEDEv&gt;:
+</span></span><span style="display:flex;"><span>   55124:	2300      	movs	r3, #0
+</span></span><span style="display:flex;"><span>   55126:	b513      	push	{r0, r1, r4, lr}
+</span></span><span style="display:flex;"><span>   55128:	4604      	mov	r4, r0
+</span></span><span style="display:flex;"><span>   5512a:	e9cd 3300 	strd	r3, r3, [sp]
+</span></span><span style="display:flex;"><span>   5512e:	4a04      	ldr	r2, [pc, #16]	; (55140 &lt;_ZN6tflite24Register_FULLY_CONNECTEDEv+0x1c&gt;)
+</span></span><span style="display:flex;"><span>   55130:	4b04      	ldr	r3, [pc, #16]	; (55144 &lt;_ZN6tflite24Register_FULLY_CONNECTEDEv+0x20&gt;)
+</span></span><span style="display:flex;"><span>   55132:	4905      	ldr	r1, [pc, #20]	; (55148 &lt;_ZN6tflite24Register_FULLY_CONNECTEDEv+0x24&gt;)
+</span></span><span style="display:flex;"><span>   55134:	f005 f9df 	bl	5a4f6 &lt;_ZN6tflite5micro10RegisterOpEPFPvP13TfLiteContextPKcjEPF12TfLiteStatusS3_P10TfLiteNodeESC_PFvS3_S1_ESE_&gt;
+</span></span><span style="display:flex;"><span>   55138:	4620      	mov	r0, r4
+</span></span><span style="display:flex;"><span>   5513a:	b002      	add	sp, #8
+</span></span><span style="display:flex;"><span>   5513c:	bd10      	pop	{r4, pc}
+</span></span><span style="display:flex;"><span>   5513e:	bf00      	nop
+</span></span><span style="display:flex;"><span>   55140:	00054f81 	andeq	r4, r5, r1, lsl #31
+</span></span><span style="display:flex;"><span>   55144:	0005514d 	andeq	r5, r5, sp, asr #2
+</span></span><span style="display:flex;"><span>   55148:	0005a395 	muleq	r5, r5, r3
+</span></span></code></pre></div><p>The <code>RegisterOp()</code> helper simply constructs and returns the <code>TFLMRegistration</code>.</p>
+<p><a href="https://github.com/tensorflow/tflite-micro/blob/bbf70db4993618bcabc01cf2f02cd9eb089d5dca/tensorflow/lite/micro/kernels/kernel_util.cc#L41"><code>tensorflow/lite/micro/kernels/kernel_util.cc</code></a></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>TFLMRegistration RegisterOp(
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">void</span>* (*init)(TfLiteContext* context, <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">char</span>* buffer, size_t length),
+</span></span><span style="display:flex;"><span>    TfLiteStatus (*prepare)(TfLiteContext* context, TfLiteNode* node),
+</span></span><span style="display:flex;"><span>    TfLiteStatus (*invoke)(TfLiteContext* context, TfLiteNode* node),
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">void</span> (*free)(TfLiteContext* context, <span style="color:#fff;font-weight:bold">void</span>* buffer),
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">void</span> (*reset)(TfLiteContext* context, <span style="color:#fff;font-weight:bold">void</span>* buffer)) {
+</span></span><span style="display:flex;"><span>  <span style="color:#fff;font-weight:bold">return</span> {<span style="color:#007f7f">/*init=*/</span>init,
+</span></span><span style="display:flex;"><span>          <span style="color:#007f7f">/*free=*/</span>free,
+</span></span><span style="display:flex;"><span>          <span style="color:#007f7f">/*prepare=*/</span>prepare,
+</span></span><span style="display:flex;"><span>          <span style="color:#007f7f">/*invoke=*/</span>invoke,
+</span></span><span style="display:flex;"><span>          <span style="color:#007f7f">/*reset*/</span> reset,
+</span></span><span style="display:flex;"><span>          <span style="color:#007f7f">/*builtin_code=*/</span><span style="color:#ff0;font-weight:bold">0</span>,
+</span></span><span style="display:flex;"><span>          <span style="color:#007f7f">/*custom_name=*/</span><span style="color:#fff;font-weight:bold">nullptr</span>};
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><code>r0</code> still contains the address of the region on the stack that we made for the
+<code>TFLMRegistration</code> prior to calling <code>Register_FULLY_CONNECTED()</code>, so the passed
+function pointers and other data are stored at offsets relative the address.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>0005a4f6 &lt;_ZN6tflite5micro10RegisterOpEPFPvP13TfLiteContextPKcjEPF12TfLiteStatusS3_P10TfLiteNodeESC_PFvS3_S1_ESE_&gt;:
+</span></span><span style="display:flex;"><span>   5a4f6:	b510      	push	{r4, lr}
+</span></span><span style="display:flex;"><span>   5a4f8:	60c3      	str	r3, [r0, #12]
+</span></span><span style="display:flex;"><span>   5a4fa:	9b03      	ldr	r3, [sp, #12]
+</span></span><span style="display:flex;"><span>   5a4fc:	6001      	str	r1, [r0, #0]
+</span></span><span style="display:flex;"><span>   5a4fe:	6103      	str	r3, [r0, #16]
+</span></span><span style="display:flex;"><span>   5a500:	2300      	movs	r3, #0
+</span></span><span style="display:flex;"><span>   5a502:	9902      	ldr	r1, [sp, #8]
+</span></span><span style="display:flex;"><span>   5a504:	e9c0 3305 	strd	r3, r3, [r0, #20]
+</span></span><span style="display:flex;"><span>   5a508:	e9c0 1201 	strd	r1, r2, [r0, #4]
+</span></span><span style="display:flex;"><span>   5a50c:	bd10      	pop	{r4, pc}
+</span></span></code></pre></div><p>When returning back out to <code>setup()</code>, the <code>TFLMRegistration</code> on the stack needs
+to be copied to the <code>resolver</code> <code>registrations_</code> array. The <code>resolver</code> was
+instantiated with <code>static</code> linkage, meaning it will not be stored on the stack.
+This is necessary as the lifetime of the <code>OpResvoler</code> used with a <code>tflite-micro</code>
+interpreter needs to have a lifetime at least as long as the interpreter itself.</p>
+<p>The <code>resolver</code> exists in memory next to the <code>static_interpreter</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>20016278 &lt;_ZGVZ5setupE18static_interpreter&gt;:
+</span></span><span style="display:flex;"><span>20016278:	00000000 	andeq	r0, r0, r0
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>2001627c &lt;_ZZ5setupE18static_interpreter&gt;:
+</span></span><span style="display:flex;"><span>	...
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>20016340 &lt;_ZGVZ5setupE8resolver&gt;:
+</span></span><span style="display:flex;"><span>20016340:	00000000 	andeq	r0, r0, r0
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>20016344 &lt;_ZZ5setupE8resolver&gt;:
+</span></span><span style="display:flex;"><span>	...
+</span></span></code></pre></div><p>The bottom section of the <code>setup()</code> dump includes addresses of these objects.
+After constructing the <code>TFLMRegistration</code> on the stack, we subsequently copy it
+to the <code>registrations_</code> member array of the <code>resolver</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>   519ec:	4e25      	ldr	r6, [pc, #148]	; (51a84 &lt;setup+0x168&gt;)
+</span></span><span style="display:flex;"><span>   519ee:	ac05      	add	r4, sp, #20
+</span></span><span style="display:flex;"><span>   519f0:	cc0f      	ldmia	r4!, {r0, r1, r2, r3}
+</span></span><span style="display:flex;"><span>   519f2:	c60f      	stmia	r6!, {r0, r1, r2, r3}
+</span></span><span style="display:flex;"><span>   519f4:	e894 0007 	ldmia.w	r4, {r0, r1, r2}
+</span></span><span style="display:flex;"><span>   519f8:	2301      	movs	r3, #1
+</span></span><span style="display:flex;"><span>   519fa:	e886 0007 	stmia.w	r6, {r0, r1, r2}
+</span></span></code></pre></div><p>Now that we have an idea of how each operator is registered, we can see why only
+registering those that are stricly necessary can have a significant impact on
+whether or not performing inference on microcontrollers is feasible. For
+example, additionally registering the five operators (<code>AVERAGE_POOL_2D</code>,
+<code>CONV_2D</code>, <code>DEPTHWISE_CONV_2D</code>, <code>RESHAPE</code>, and <code>SOFTMAX</code>) used in the
+<code>person_detection</code> example from our last post to our <code>resolver</code> increases ROM
+usage by more than 20 KB.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Memory region         Used Size  Region Size  %age Used
+</span></span><span style="display:flex;"><span>           FLASH:       76708 B       192 KB     39.02%
+</span></span><span style="display:flex;"><span>             RAM:        7792 B       168 KB      4.53%
+</span></span><span style="display:flex;"><span>        IDT_LIST:          0 GB        32 KB      0.00%
+</span></span></code></pre></div><p>We&rsquo;ve focused on optimizing the footprint of the <code>tflite-micro</code> framework in
+this post, while happily ignoring the impact of the size and structure of the
+model itself. Typically, models will be much larger than the <code>2488</code> bytes
+occupied by the simple one used in the <code>hello_world</code> example. In upcoming posts,
+we&rsquo;ll start to look at model optimization techniques and see how they impact
+both size and runtime performance.</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2025
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
