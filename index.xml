@@ -6,7 +6,16 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 14 Jul 2025 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 09 Oct 2025 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Using a Laptop as an HDMI Monitor for an SBC</title>
+      <link>https://danielmangum.com/posts/laptop-hdmi-monitor-sbc/</link>
+      <pubDate>Thu, 09 Oct 2025 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/laptop-hdmi-monitor-sbc/</guid>
+      <description>Though I spend the majority of my time working with microcontroller class devices, I also have an embarassingly robust collection of single board computers (SBC), including a few different Raspberry Pi models, the BeagleV Starlight Beta (RIP), and more. Typically when setting up these devices for whatever automation task I have planned for them, I&amp;rsquo;ll use &amp;ldquo;headless mode&amp;rdquo; and configure initial user and network credentials when writing the operating system to the storage device using a tool like Raspberry Pi&amp;rsquo;s Imager.</description>
+    </item>
+    
     <item>
       <title>How AI on Microcontrollers Actually Works: Registering Operators</title>
       <link>https://danielmangum.com/posts/ai-microcontrollers-registering-operators/</link>

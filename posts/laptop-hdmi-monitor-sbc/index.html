@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  Using a Laptop as an HDMI Monitor for an SBC · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="Though I spend the majority of my time working with microcontroller class devices, I also have an embarassingly robust collection of single board computers (SBC), including a few different Raspberry Pi models, the BeagleV Starlight Beta (RIP), and more. Typically when setting up these devices for whatever automation task I have planned for them, I&rsquo;ll use &ldquo;headless mode&rdquo; and configure initial user and network credentials when writing the operating system to the storage device using a tool like Raspberry Pi&rsquo;s Imager.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="Using a Laptop as an HDMI Monitor for an SBC"/>
+<meta name="twitter:description" content="Though I spend the majority of my time working with microcontroller class devices, I also have an embarassingly robust collection of single board computers (SBC), including a few different Raspberry Pi models, the BeagleV Starlight Beta (RIP), and more. Typically when setting up these devices for whatever automation task I have planned for them, I&rsquo;ll use &ldquo;headless mode&rdquo; and configure initial user and network credentials when writing the operating system to the storage device using a tool like Raspberry Pi&rsquo;s Imager."/>
+
+<meta property="og:title" content="Using a Laptop as an HDMI Monitor for an SBC" />
+<meta property="og:description" content="Though I spend the majority of my time working with microcontroller class devices, I also have an embarassingly robust collection of single board computers (SBC), including a few different Raspberry Pi models, the BeagleV Starlight Beta (RIP), and more. Typically when setting up these devices for whatever automation task I have planned for them, I&rsquo;ll use &ldquo;headless mode&rdquo; and configure initial user and network credentials when writing the operating system to the storage device using a tool like Raspberry Pi&rsquo;s Imager." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/laptop-hdmi-monitor-sbc/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2025-10-09T01:41:34-06:00" />
+<meta property="article:modified_time" content="2025-10-09T01:41:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/laptop-hdmi-monitor-sbc/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/laptop-hdmi-monitor-sbc/">
+              Using a Laptop as an HDMI Monitor for an SBC
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2025-10-09T01:41:34-06:00">
+                October 9, 2025
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              2-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>Though I spend the majority of my time working with microcontroller class
+devices, I also have an embarassingly robust collection of single board
+computers (SBC), including a few different <a href="https://www.raspberrypi.com/">Raspberry
+Pi</a> models, the <a href="https://github.com/beagleboard/beaglev-starlight/tree/main">BeagleV Starlight
+Beta</a> (RIP), and
+more. Typically when setting up these devices for whatever automation task I
+have planned for them, I&rsquo;ll use &ldquo;headless mode&rdquo; and configure initial user and
+network credentials when writing the operating system to the storage device
+using a tool like <a href="https://www.raspberrypi.com/documentation/computers/getting-started.html#raspberry-pi-imager">Raspberry Pi&rsquo;s
+Imager</a>.</p>
+<p>However, sometimes direct physical access to the SBC with a monitor and keyboard
+is useful for initial configuration, maintenance operations, or workloads that
+have a visual component. As someone who doesn&rsquo;t use any external monitors<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>
+for my daily development, digging up an HDMI monitor, finding somewhere to put
+it, and connecting it to the device is an annoying process. Furthermore, if I&rsquo;m
+on the go I almost certainly don&rsquo;t have easy access to an external monitor.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/laptop_hdmi_monitor_0.png"
+    alt="laptop-hdmi-monitor-0"
+  />
+</div>
+<blockquote>
+<p>Raspberry Pi boot logs shown in VLC media player.</p>
+</blockquote>
+<p>Fortunately, I rarely ever do this because I have a handful of HDMI to USB
+capture cards, ranging from extremely <a href="https://www.amazon.com/Audio-Express-AXHDCAP-Broadcasting-Conference/dp/B0C2MDTY8P">cheap variants from
+Amazon</a>,
+to the higher quality <a href="https://www.elgato.com/us/en/p/cam-link-4k">Elgato Cam Link
+4k</a>. These are typically used for
+live streaming a video feed from DSLR / mirrorless cameras or gaming consoles,
+but they also serve as a great option for capturing video from any other device
+that has HDMI output. On my System76 Linux daily driver laptop, I can use any
+number of different video playback applications to display the HDMI output via
+the capture card. For longer term use cases, I can breathe new life into one of
+my old laptops, using the capture card to effectively convert it into a monitor.</p>
+<p><a href="https://www.videolan.org/vlc/">VLC media player</a>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>vlc v4l2:///dev/video0
+</span></span></code></pre></div><p><a href="https://www.ffmpeg.org/ffplay.html">FFplay (FFmpeg)</a>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>ffplay /dev/video0
+</span></span></code></pre></div><p><a href="https://en.wikipedia.org/wiki/Cheese_(software)">Cheese</a>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>cheese v4l2:///dev/video0
+</span></span></code></pre></div><p>If you do want to stream or record the SBC output,
+<a href="https://obsproject.com/">OBS</a> will give you even more control. You&rsquo;ll still
+need a USB keyboard, but I already use one with my laptop, so temporarily
+plugging it into the SBC for configuration while I use the laptop as a monitor
+is minimally disruptive. However, if you find yourself regularly needing to
+connect to multiple machines, it might be time to consider getting a <a href="https://en.wikipedia.org/wiki/KVM_switch">KVM
+switch</a>.</p>
+<div class="footnotes" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn:1">
+<p>Yeah, I just sit here with my one laptop screen. Can you believe that?&#160;<a href="#fnref:1" class="footnote-backref" role="doc-backlink">&#x21a9;&#xfe0e;</a></p>
+</li>
+</ol>
+</div>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2025
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
