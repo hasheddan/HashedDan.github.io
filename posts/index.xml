@@ -6,7 +6,17 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Thu, 09 Oct 2025 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 07 Nov 2025 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Interesting SPI Routing with iCE40 FPGAs</title>
+      <link>https://danielmangum.com/posts/spi-routing-ice40-fpga/</link>
+      <pubDate>Fri, 07 Nov 2025 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/spi-routing-ice40-fpga/</guid>
+      <description>A few weeks ago I posted about how much fun I was having with the Fomu FPGA development board while travelling. This project from Tim &amp;lsquo;mithro&amp;rsquo; Ansell and Sean &amp;lsquo;xobs&amp;rsquo; Cross is not new, but remains a favorite of mine because of how portable it is — the entire board can fit in your USB port!
+The Fomu includes a Lattice Semiconductor iCE40 UltraPlus 5K, which has been a popular FPGA option over the past few years due to the reverse engineered bitstream format and ability to program it with a fully open source toolchain (see updated repository here).</description>
+    </item>
+    
     <item>
       <title>Using a Laptop as an HDMI Monitor for an SBC</title>
       <link>https://danielmangum.com/posts/laptop-hdmi-monitor-sbc/</link>

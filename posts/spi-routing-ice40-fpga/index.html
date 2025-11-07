@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  Interesting SPI Routing with iCE40 FPGAs · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="A few weeks ago I posted about how much fun I was having with the Fomu FPGA development board while travelling. This project from Tim &lsquo;mithro&rsquo; Ansell and Sean &lsquo;xobs&rsquo; Cross is not new, but remains a favorite of mine because of how portable it is — the entire board can fit in your USB port!
+The Fomu includes a Lattice Semiconductor iCE40 UltraPlus 5K, which has been a popular FPGA option over the past few years due to the reverse engineered bitstream format and ability to program it with a fully open source toolchain (see updated repository here).">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="Interesting SPI Routing with iCE40 FPGAs"/>
+<meta name="twitter:description" content="A few weeks ago I posted about how much fun I was having with the Fomu FPGA development board while travelling. This project from Tim &lsquo;mithro&rsquo; Ansell and Sean &lsquo;xobs&rsquo; Cross is not new, but remains a favorite of mine because of how portable it is — the entire board can fit in your USB port!
+The Fomu includes a Lattice Semiconductor iCE40 UltraPlus 5K, which has been a popular FPGA option over the past few years due to the reverse engineered bitstream format and ability to program it with a fully open source toolchain (see updated repository here)."/>
+
+<meta property="og:title" content="Interesting SPI Routing with iCE40 FPGAs" />
+<meta property="og:description" content="A few weeks ago I posted about how much fun I was having with the Fomu FPGA development board while travelling. This project from Tim &lsquo;mithro&rsquo; Ansell and Sean &lsquo;xobs&rsquo; Cross is not new, but remains a favorite of mine because of how portable it is — the entire board can fit in your USB port!
+The Fomu includes a Lattice Semiconductor iCE40 UltraPlus 5K, which has been a popular FPGA option over the past few years due to the reverse engineered bitstream format and ability to program it with a fully open source toolchain (see updated repository here)." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/spi-routing-ice40-fpga/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2025-11-07T01:41:34-06:00" />
+<meta property="article:modified_time" content="2025-11-07T01:41:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/spi-routing-ice40-fpga/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/spi-routing-ice40-fpga/">
+              Interesting SPI Routing with iCE40 FPGAs
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2025-11-07T01:41:34-06:00">
+                November 7, 2025
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              9-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>A few weeks ago I
+<a href="https://www.linkedin.com/posts/danielmangum_ive-been-seeing-a-lot-of-posts-about-vicharak-activity-7384882523102781440-lpeS">posted</a>
+about how much fun I was having with the <a href="https://tomu.im/fomu.html">Fomu</a> FPGA
+development board while travelling. This project from <a href="https://github.com/mithro">Tim &lsquo;mithro&rsquo;
+Ansell</a> and <a href="https://github.com/xobs">Sean &lsquo;xobs&rsquo;
+Cross</a> is not new, but remains a favorite of mine
+because of how portable it is — the entire board can fit in your USB port!</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/ice40_spi_routing_1.png"
+    alt="ice40-spi-routing-1"
+  />
+</div>
+<p>The Fomu includes a <a href="https://www.latticesemi.com/Products/FPGAandCPLD/iCE40UltraPlus">Lattice Semiconductor iCE40 UltraPlus
+5K</a>, which has
+been a popular FPGA option over the past few years due to the <a href="https://github.com/YosysHQ/icestorm">reverse
+engineered bitstream format</a> and ability to
+program it with a <a href="https://github.com/YosysHQ/fpga-toolchain">fully open source
+toolchain</a> (see updated repository
+<a href="https://github.com/YosysHQ/oss-cad-suite-build">here</a>). One of the more recent
+production uses I have heard about is in the <a href="https://oxide.computer/">Oxide
+Computer</a>, which I discussed with <a href="https://www.linkedin.com/in/nathanael-huffman-5128024a/">Nathanael
+Huffman</a> on an <a href="https://microarch.club/episodes/100/">episode
+of Microarch Club</a> and has also come up on
+the <a href="https://github.com/oxidecomputer/oxide-and-friends/blob/e4810be34181e915b47dafd817722d78e661f933/2021_12_06.md">Oxide &amp; Friends
+podcast</a>.</p>
+<p>One of the most interesting attributes of the Fomu is that, despite the fact
+that it is programmed over USB, it doesn&rsquo;t actually include any USB peripheral
+hardware. Instead, in order to make the board small enough to fit in the USB
+port, the USB core is implemented in RTL (Fomu uses
+<a href="https://github.com/im-tomu/valentyusb">ValentyUSB</a>) and is included in the
+<a href="https://github.com/im-tomu/foboot">Foboot</a> bootloader. Most FPGAs support
+writing bitstreams directly into SRAM, meaning that it will have to be
+reprogrammed after a power cycle, or storing a bistream in a separate flash IC
+that the FPGA will read from when powered on. iCE40 FPGAs are no different, but
+also include a Non-Volatile Configuration Memory (NVCM), which allows for
+one-time programming of a bitstream in high-volume applications. From the <a href="https://github.com/im-tomu/fomu-hardware/blob/master/archive/pvt/reference/FPGA-TN-02001-3-1-iCE40-Programming-Configuration.pdf">iCE40
+Programming and Configuration Technical
+Note</a>:</p>
+<blockquote>
+<p>iCE40 components are configured for a specific application by loading a binary
+configuration bitstream image, generated by the Lattice development system.
+For high-volume applications, the bitstream image is usually permanently
+programmed in the on-chip Non-volatile Configuration Memory. However, the
+bitstream image can also be stored externally in a standard, low-cost
+commodity SPI serial Flash PROM. The iCE40 component can automatically load
+the image using the SPI Master Configuration Interface. Similarly, the iCE40
+configuration data can be downloaded from an external processor,
+microcontroller, or DSP using an SPI-like serial interface.</p>
+</blockquote>
+<p>Given that the Fomu is primarily intended for prototyping and education,
+utilizing the NVCM is unnecessary. However, it does include a
+<a href="https://www.digikey.com/en/products/detail/gigadevice-semiconductor-hk-limited/GD25Q16CEIGR/9484676">GD25Q16CEIGR</a>
+flash chip for persistent bitstream storage. Despite the Fomu hardware <a href="https://github.com/im-tomu/fomu-hardware">also
+being open source</a>, I hadn&rsquo;t spent
+much time looking at the
+<a href="https://github.com/im-tomu/fomu-hardware/blob/9fdebede731c1d963335d65d25c7663cb934f925/archive/pvt/releases/pvt1/tomu-fpga-pvt1.pdf">schematic</a>
+when developing with it in the past. However, while on the plane ride back from
+my travels, I was reading some of the documentation for the device and became
+curious about how the device supported both loading bitstreams into SRAM on the
+iCE40 and into the external flash.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/ice40_spi_routing_0.png"
+    alt="ice40-spi-routing-0"
+  />
+</div>
+<p>Other FPGA development boards, such as the <a href="https://digilent.com/reference/programmable-logic/arty-a7/start">Arty
+A7</a> I have
+<a href="https://danielmangum.com/posts/when-vivado-infer-bram/">previously written
+about</a>, support
+configuring the FPGA&rsquo;s SRAM by including a USB to Serial IC (the Arty A7 uses
+the <a href="https://ftdichip.com/products/ft2232hq/">FTDI FT2232HQ</a>) that can be used
+to configure the FPGA directly, or configure the FPGA with a bitstream that
+allows it to talk to the SPI flash, which is subsequently used to store the user
+bitstream in flash. From the <a href="https://digilent.com/reference/programmable-logic/arty-a7/reference-manual">Arty A7 reference
+manual</a>:</p>
+<blockquote>
+<p>When programming a nonvolatile flash device, a bitstream file is transferred
+to the flash in a two-step process. First, the FPGA is programmed with a
+circuit that can program flash devices, and then data is transferred to the
+flash device via the FPGA circuit (this complexity is hidden from the user by
+the Xilinx tools). This is called indirect programming. After the flash device
+has been programmed, it can automatically configure the FPGA at a subsequent
+power-on or reset event as determined by the mode jumper setting.</p>
+</blockquote>
+<p>However, as previously mentioned, the Fomu&rsquo;s USB core is implemented in RTL,
+which presents a few challenges. Namely, the FPGA needs to be &ldquo;bootstrapped&rdquo; —
+we cannot configure the FPGA or the SPI flash via USB without the USB core
+already running on the FPGA. Fomu uses a bootloader,
+<a href="https://github.com/im-tomu/foboot">Foboot</a>, which includes gateware for a
+RISC-V core
+(<a href="https://github.com/im-tomu/foboot/blob/dfa09fc84b0acb4d9a2d409f3a381274a1551e9f/hw/rtl/VexRiscv_Fomu.v">VexRiscv</a>)
+and various peripherals, as well as
+<a href="https://github.com/im-tomu/foboot/blob/dfa09fc84b0acb4d9a2d409f3a381274a1551e9f/sw/src/main.c">software</a>
+for USB and DFU suppport. If you buy a Fomu, Foboot will already be present on
+the device. You can update Foboot using the
+<a href="https://github.com/im-tomu/foboot/tree/dfa09fc84b0acb4d9a2d409f3a381274a1551e9f/booster">Booster</a>
+program, but if you somehow perform a faulty update, you could find yourself
+with a bricked device that cannot be accesed over USB. In that case, you&rsquo;ll need
+to be able to access the components by some other means. Or, if you&rsquo;re like me,
+you might just be interested in loading alternative gateware and software onto
+the device.</p>
+<p>The <a href="https://github.com/im-tomu/fomu-hardware">Fomu hardware repository</a> has a
+nice image with some of the board&rsquo;s test points labeled.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/ice40_spi_routing_2.jpg"
+    alt="ice40-spi-routing-2"
+  />
+</div>
+<p>The first thing that I noticed was that there was only one &ldquo;chip select&rdquo;
+(<code>SPI_CS</code>) test point. Both the FPGA and the flash IC can act as SPI
+peripherals, and typically a <code>CS</code> line is required from the controller to each
+peripheral in a multidrop configuration, or peripherals can be
+<a href="https://www.analog.com/en/resources/technical-articles/daisychaining-spi-devices.html">daisy-chained</a>
+if supported. The iCE40 is particularly interesting in this scenario because, as
+previously mentioned, it can act as a controller when reading from the flash IC,
+or as a peripheral when being configured directly. When supplying power, the
+iCE40 will act as a SPI controller by default and attempt to load a bistream
+from the flash IC. If we want to program the flash directly via the test points,
+then we need to keep the iCE40 from attempting to control it. This is possible
+because the <code>CRESET</code> pin is also available on a test point.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/ice40_spi_routing_3.png"
+    alt="ice40-spi-routing-3"
+  />
+</div>
+<p>As shown in the technical note, driving <code>CRESET</code> low will reset the device, and
+configuration will not begin until the next rising edge. At this point it is
+clear how we can go about programming the flash IC: hold the iCE40 in reset
+while we program the flash using the exposed SPI test points. One plausible
+assumption is that only the flash IC can be accessed over SPI via the test
+points. In fact, we really don&rsquo;t need direct access to the iCE40 because if the
+flash IC can be programmed, then the iCE40 will load the persistent bitstream
+when powered on, and a bricked device could be recovered.</p>
+<p>Interestingly, the <a href="https://www.latticesemi.com/icestick">iCEstick</a> evaluation
+board made by Lattice Semiconductor, which uses an FTDI FT2232H in similar
+fashion to the Arty A7, takes this to heart. In the <a href="https://www.latticesemi.com/view_document?document_id=50701">user
+guide</a>, it states
+the following under &ldquo;Known Issue&rdquo;.</p>
+<blockquote>
+<p>This board is designed for SPI flash programming only. This would prevent the
+iCE device from being accidentally NVCM programmed.</p>
+</blockquote>
+<p>(This is also called out in the <a href="https://github.com/YosysHQ/icestorm/blob/f31c39cc2eadd0ab7f29f34becba1348ae9f8721/iceprog/iceprog.c#L546">help output for
+<code>iceprog</code></a>,
+a programming tool included in Project IceStorm.)</p>
+<p>As you would expect, this is reflected in the schematic from the same document.
+The SPI chip select pins on the iCE40 and the flash IC have a pull-up resistor,
+and the <code>iCE_SS_B</code> net allows for pulling the <code>CS</code> pin on the flash IC low for
+programming, while the iCE40 <code>SPI_SS_B</code> pin drives it after boot when the FPGA
+is acting as the controller.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/ice40_spi_routing_5.png"
+    alt="ice40-spi-routing-5"
+  />
+</div>
+<p>However, as you may have noticed in the first image in this post, the note on
+the Fomu schematic indicates that <em>both</em> the iCE40 and the flash IC can be
+programmed via the test points. This complicates things a bit because, up until
+now, each component only ever plays a single role:</p>
+<ul>
+<li>The iCE40 FPGA is always a SPI controller.</li>
+<li>The programmer (e.g. the machine connected to the test points) is always a
+SPI controller.</li>
+<li>The flash IC is always a SPI peripheral, either accessed by the programmer or
+the FPGA.</li>
+</ul>
+<p>If we are configuring the iCE40 directly, the iCE40 now needs to act as a
+peripheral, and the flash IC needs to no longer be driven by traffic on the SPI
+nets. Though not labeled in the device image, opening the design in the KiCad
+PCB viewer reveals the placement of the <code>SPI_IO2</code> and <code>SPI_IO3</code> (as well as the
+<code>CDONE</code>, <code>USB_P</code>, and <code>USB_N</code>) test points.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/ice40_spi_routing_4.png"
+    alt="ice40-spi-routing-4"
+  />
+</div>
+<p><code>SPI_IO3</code> is connected to the flash IC <code>HOLD</code> pin. This is in contrast to the
+iCEstick, where the flash IC&rsquo;s <code>HOLD</code> pin has a pull-up resistor (i.e. the
+active low pin is never asserted). Because we have access to the <code>HOLD</code> pin on
+the Fomu, we can drive it low to have the flash IC ignore all SPI traffic while
+configuring the iCE40 directly. We also need to swap the pins used for the MOSI
+and MISO signals, as <code>SPI_MOSI</code> is connected to the iCE40&rsquo;s <code>SPI_SO</code> pin, and
+<code>SPI_MISO</code> is connected to <code>SPI_SI</code>. When I looked <a href="https://github.com/im-tomu/fomu-flash">at
+<code>fomu-flash</code></a>, a utility to program Fomu
+boards using a Raspberry Pi, it appeared as though that <a href="https://github.com/im-tomu/fomu-flash/blob/c2576a62065b94dc2a47fb7820c8834937ba0343/fomu-flash.c#L559C1-L561C30">was exactly what was
+happening</a>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>        spiHold(spi);
+</span></span><span style="display:flex;"><span>        spiSwapTxRx(spi);
+</span></span><span style="display:flex;"><span>        fpgaResetSlave(fpga);
+</span></span></code></pre></div><p>However, upon further inspection, <code>spiHold()</code> is not actually asserting the
+<code>HOLD</code> pin, but rather <a href="https://github.com/im-tomu/fomu-flash/blob/c2576a62065b94dc2a47fb7820c8834937ba0343/spi.c#L1149">issuing a
+command</a>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">void</span> spiHold(<span style="color:#fff;font-weight:bold">struct</span> ff_spi *spi) {
+</span></span><span style="display:flex;"><span>	spiBegin(spi);
+</span></span><span style="display:flex;"><span>	spiCommand(spi, <span style="color:#ff0;font-weight:bold">0xb9</span>);
+</span></span><span style="display:flex;"><span>	spiEnd(spi);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">void</span> spiUnhold(<span style="color:#fff;font-weight:bold">struct</span> ff_spi *spi) {
+</span></span><span style="display:flex;"><span>	spiBegin(spi);
+</span></span><span style="display:flex;"><span>	spiCommand(spi, <span style="color:#ff0;font-weight:bold">0xab</span>);
+</span></span><span style="display:flex;"><span>	spiEnd(spi);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>In looking up the <code>spiHold()</code> / <code>spiUnhold()</code> commands in the <a href="https://www.gigadevice.com.cn/Public/Uploads/uploadfile/files/20220714/DS-00086-GD25Q16C-Rev3.2.pdf">GD25Q16CEIGR
+datasheet</a>,
+I observed that they correspond to &ldquo;Deep Power-Down (DP)&rdquo; (<code>0xb9</code>) and &ldquo;Release
+from Deep Power-Down and Read Device ID (RDI)&rdquo; (<code>0xab</code>).</p>
+<blockquote>
+<p>Executing the Deep Power-Down (DP) command is the only way to put the device
+in the lowest consumption mode (the Deep Power-Down Mode). It can also be used
+as an extra software protection mechanism, while the device is not in active
+use, since in this mode, the device ignores all Write, Program and Erase
+commands&hellip; Once the device has entered the Deep Power-Down Mode, all commands
+are ignored except the Release from Deep Power-Down and Read Device ID (RDI)
+command. These commands can release the device from this mode.</p>
+</blockquote>
+<p>There are a few reasons why using the power down strategy rather than asserting
+<code>HOLD</code> may be useful. First, the GD25Q16CEIGR supports Dual and Quad SPI, and in
+the latter case the <code>HOLD</code> pin is reassigned as the final I/O pin (<code>IO3</code>). If
+the goal is to configure the iCE40 directly, this may not be too much of a
+problem, but the Quad Enable (QE) bit is set in a non-volatile status register,
+so a previous interaction with the device where it was set could cause the
+<code>HOLD</code> strategy to fail (with the Fomu specifically, I suspect that would also
+cause issues any time the iCE40 attempted to control the flash IC). Perhaps a
+more likely motivator is that it reduces the number of test points that need to
+be accessed to configure the iCE40 directly. Only the 7 labeled in the initial
+image (<code>5V</code>, <code>GND</code>, <code>CRESET</code>, <code>SPI_MOSI</code>, <code>SPI_MISO</code>, <code>SPI_CLK</code>, <code>SPI_CS</code>) are
+necessary.</p>
+<p>FPGAs are fascinating on many dimensions, but one of the most interesting is how
+they are configured. As we can see with the Fomu and other iCE40 based
+platforms, the capabilities of the FGPA can lead to some interesting board
+desgin decisions.</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2025
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
