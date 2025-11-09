@@ -6,7 +6,17 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Fri, 07 Nov 2025 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 09 Nov 2025 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Make it Possible, Then Make it Normal</title>
+      <link>https://danielmangum.com/posts/possible-then-normal/</link>
+      <pubDate>Sun, 09 Nov 2025 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/possible-then-normal/</guid>
+      <description>This past Saturday I went out for a 12 mile run with a few friends. Absent the beautiful fall colors on display this time of year in North Carolina, there was nothing especially notable about this particular run. However, the fact that it was not notable is notable itself.
+Two years ago I set a goal to run 2,023 miles in 2023. After reaching that goal with time to spare, I revised the goal to 3,000 miles, and just barely reached it.</description>
+    </item>
+    
     <item>
       <title>Interesting SPI Routing with iCE40 FPGAs</title>
       <link>https://danielmangum.com/posts/spi-routing-ice40-fpga/</link>
