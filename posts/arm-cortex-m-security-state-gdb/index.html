@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  Determining Current Arm Cortex-M Security State with GDB · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="In my day job and free time I frequently find myself debugging Arm Cortex-M microcontrollers (MCUs). In recent years, it has become more and more common for the cores in these MCUs to implement Armv8-M, with the Arm Cortex-M33 being a very popular variant. Armv8-M includes an optional security extension (Cortex-M Security Extension or &ldquo;CMSE&rdquo;), which is more commonly known by its marketing name, TrustZone.
+The security extension allows for a core, or a Processing Element (PE) if using the official terminology in Arm reference manuals, to divide memory into Secure and Non-Secure regions.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="Determining Current Arm Cortex-M Security State with GDB"/>
+<meta name="twitter:description" content="In my day job and free time I frequently find myself debugging Arm Cortex-M microcontrollers (MCUs). In recent years, it has become more and more common for the cores in these MCUs to implement Armv8-M, with the Arm Cortex-M33 being a very popular variant. Armv8-M includes an optional security extension (Cortex-M Security Extension or &ldquo;CMSE&rdquo;), which is more commonly known by its marketing name, TrustZone.
+The security extension allows for a core, or a Processing Element (PE) if using the official terminology in Arm reference manuals, to divide memory into Secure and Non-Secure regions."/>
+
+<meta property="og:title" content="Determining Current Arm Cortex-M Security State with GDB" />
+<meta property="og:description" content="In my day job and free time I frequently find myself debugging Arm Cortex-M microcontrollers (MCUs). In recent years, it has become more and more common for the cores in these MCUs to implement Armv8-M, with the Arm Cortex-M33 being a very popular variant. Armv8-M includes an optional security extension (Cortex-M Security Extension or &ldquo;CMSE&rdquo;), which is more commonly known by its marketing name, TrustZone.
+The security extension allows for a core, or a Processing Element (PE) if using the official terminology in Arm reference manuals, to divide memory into Secure and Non-Secure regions." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/arm-cortex-m-security-state-gdb/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2025-12-24T01:41:34-06:00" />
+<meta property="article:modified_time" content="2025-12-24T01:41:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/arm-cortex-m-security-state-gdb/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/arm-cortex-m-security-state-gdb/">
+              Determining Current Arm Cortex-M Security State with GDB
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2025-12-24T01:41:34-06:00">
+                December 24, 2025
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              3-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>In my day job and free time I frequently find myself debugging Arm Cortex-M
+microcontrollers (MCUs). In recent years, it has become more and more
+common for the cores in these MCUs to implement Armv8-M, with the Arm Cortex-M33
+being a very popular variant. Armv8-M includes an optional security extension
+(Cortex-M Security Extension or &ldquo;CMSE&rdquo;), which is more commonly known by its
+marketing name,
+<a href="https://www.arm.com/technologies/trustzone-for-cortex-m">TrustZone</a>.</p>
+<p>The security extension allows for a core, or a Processing Element (PE) if using
+the official terminology in Arm reference manuals, to divide memory into Secure
+and Non-Secure regions. When executing instructions in a Secure memory region,
+the PE is said to be in the Secure state, and when executing in a Non-Secure
+region, it is said to be in the Non-Secure state.</p>
+<p>The current stack pointer (<code>SP</code> / <code>R13</code>) register in an Armv8-M PE either
+matches the Main Stack Pointer (<code>MSP</code>) or Process Stack Pointer (<code>PSP</code>),
+depending on the operating mode (Handler or Thread) and the <code>SPSEL</code> field in the
+<code>CONTROL</code> special-purpose register. If in Handler mode, the <code>SP</code> register will
+always match <code>MSP</code>. When in Thread mode, the <code>SP</code> will match <code>MSP</code> if <code>SPSEL</code> is
+<code>0</code> or <code>PSP</code> if <code>SPSEL</code> is <code>1</code>.</p>
+<p>When the security extension is implemented, there are both <code>*_S</code> and <code>*_NS</code>
+variants of some registers, inluding <code>MSP</code> (<code>MSP_S</code> and <code>MSP_NS</code>) and <code>PSP</code>
+(<code>PSP_S</code> and <code>PSP_NS</code>). This expands the possible values of <code>SP</code>, adding an
+extra dimension of the current security state. This can be useful to quickly
+determine the security state when debugging a core. With the following GDB
+command, the current stack pointer, as well as the Secure and Non-Secure
+variants of the Main and Process Stack Pointers will be printed.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>i r sp psp_ns msp_ns psp_s msp_s
+</span></span></code></pre></div><p>If the <code>SP</code> matches either <code>PSP_NS</code> or <code>MSP_NS</code>, then the PE is currently in the
+Non-Secure state. If it matches <code>PSP_S</code> or <code>MSP_S</code>, then the PR is currently in
+the Secure state. For example, on reset in a Cortex-M33 core with the security
+extension implemented, the processor will be in Thread mode and Secure state, so
+<code>SP</code> will match <code>MSP_S</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>sp             0x20004000          0x20004000
+</span></span><span style="display:flex;"><span>psp_ns         0x2001ad40          0x2001ad40 &lt;z_main_stack+4048&gt;
+</span></span><span style="display:flex;"><span>msp_ns         0x0                 0x0 &lt;_vector_table&gt;
+</span></span><span style="display:flex;"><span>psp_s          0x0                 0x0 &lt;_vector_table&gt;
+</span></span><span style="display:flex;"><span>msp_s          0x20004000          0x20004000
+</span></span></code></pre></div><p>As evidenced by the <code>z_main_stack</code> symbol, this is a <a href="https://www.zephyrproject.org/">Zephyr
+RTOS</a> application. Breaking at <code>main</code>, then
+checking the the same registers expectedly results in <code>SP</code> matching <code>PSP_NS</code>
+because the processor is in Thread mode and Non-Secure state and <code>CONTROL.SPSEL</code>
+is set to <code>1</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>sp             0x2001ad40          0x2001ad40 &lt;z_main_stack+4048&gt;
+</span></span><span style="display:flex;"><span>psp_ns         0x2001ad40          0x2001ad40 &lt;z_main_stack+4048&gt;
+</span></span><span style="display:flex;"><span>msp_ns         0x20019c30          0x20019c30 &lt;z_idle_stacks&gt;
+</span></span><span style="display:flex;"><span>psp_s          0x20001eb8          0x20001eb8 &lt;z_main_stack-97976&gt;
+</span></span><span style="display:flex;"><span>msp_s          0x20000bf8          0x20000bf8 &lt;sector_buffers+1688&gt;
+</span></span></code></pre></div><p>The <code>CONTROL.SPSEL</code> field can be checked by printing the special-purpose
+<code>CONTROL</code> register with a mask on the second bit, with a non-zero value
+indicating that <code>SPSEL</code> is <code>1</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>(gdb) print $control &amp; 0x2
+</span></span><span style="display:flex;"><span>$0 = 2
+</span></span></code></pre></div><p>While this is certainly not the only way to determine the current security state
+in Armv8-M cores, it can be a helpful way to do so quickly.</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2025
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
