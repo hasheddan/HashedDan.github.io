@@ -6,7 +6,17 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Wed, 24 Dec 2025 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 30 Dec 2025 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Fixing My System76 Laptop in 20 Minutes or Less</title>
+      <link>https://danielmangum.com/posts/fix-system76-laptop-20-min/</link>
+      <pubDate>Tue, 30 Dec 2025 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/fix-system76-laptop-20-min/</guid>
+      <description>Minutes before a recent video call where I was slated to give a demo, I initiated a reboot on my System76 Oryx Pro laptop, but it did not come back up after seemingly powering off. I attempted to manually power on and found it unresponsive. The machine was connected to power, so I saw the familiar power and battery LEDs illuminated on the front of the machine.
+Given that the machine appeared to not even be attempting to boot, I suspected that the issue was likely related to power or the battery.</description>
+    </item>
+    
     <item>
       <title>Determining Current Arm Cortex-M Security State with GDB</title>
       <link>https://danielmangum.com/posts/arm-cortex-m-security-state-gdb/</link>
