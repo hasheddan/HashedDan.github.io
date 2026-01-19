@@ -2,13 +2,16 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://danielmangum.com/</loc>
-    <lastmod>2025-12-30T01:41:34-06:00</lastmod>
+    <loc>https://danielmangum.com/posts/3500-miles-2025/</loc>
+    <lastmod>2026-01-19T01:41:34-06:00</lastmod>
   </url><url>
-    <loc>https://danielmangum.com/posts/fix-system76-laptop-20-min/</loc>
-    <lastmod>2025-12-30T01:41:34-06:00</lastmod>
+    <loc>https://danielmangum.com/</loc>
+    <lastmod>2026-01-19T01:41:34-06:00</lastmod>
   </url><url>
     <loc>https://danielmangum.com/posts/</loc>
+    <lastmod>2026-01-19T01:41:34-06:00</lastmod>
+  </url><url>
+    <loc>https://danielmangum.com/posts/fix-system76-laptop-20-min/</loc>
     <lastmod>2025-12-30T01:41:34-06:00</lastmod>
   </url><url>
     <loc>https://danielmangum.com/posts/arm-cortex-m-security-state-gdb/</loc>
