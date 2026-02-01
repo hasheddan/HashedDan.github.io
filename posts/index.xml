@@ -6,7 +6,17 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 19 Jan 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 01 Feb 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Making Ferrite Core Inductors at Home</title>
+      <link>https://danielmangum.com/posts/making-ferrite-core-inductors-home/</link>
+      <pubDate>Sun, 01 Feb 2026 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/making-ferrite-core-inductors-home/</guid>
+      <description>I have recently been working on tuning circuits, which typically consist of an inductor and a capacitor (i.e. an LC circuit). For those not familiar with inductors, they are passive components that store energy in a magnetic field. They oppose changes in current, meaning that they pass direct current (DC) and block alternating current (AC).
+While there are many types of inductors, ferrite core inductors are useful because the high magnetic permeability of ferrite leads to a significant increase in induction.</description>
+    </item>
+    
     <item>
       <title>3,500 Miles in 2025</title>
       <link>https://danielmangum.com/posts/3500-miles-2025/</link>
