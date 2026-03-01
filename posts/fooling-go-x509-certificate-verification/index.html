@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  Fooling Go&#39;s X.509 Certificate Verification · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="Below are two X.509 certificates. The first is the Certificate Authority (CA) root certificate, and the second is a leaf certifcate signed by the private key of the CA.
+ca.crt.pem
+-----BEGIN CERTIFICATE----- MIIBejCCASGgAwIBAgIUda4UvlFzwQEO/fD0f4hAnj&#43;ydPYwCgYIKoZIzj0EAwIw EjEQMA4GA1UEAxMHUm9vdCBDQTAgFw0yNjAyMjcxOTQ3NDZaGA8yMTI2MDIwMzE5 NDc0NlowEjEQMA4GA1UEAxMHUm9vdCBDQTBZMBMGByqGSM49AgEGCCqGSM49AwEH A0IABKL5BB9aaQ2TtNgUymEsa/&#43;s2ZlTXVll0N22KKWxh0N/JdgHcjrKfzqRlVrt UN2GXdvsdLOq15TxBq97WvE07lKjUzBRMB0GA1UdDgQWBBTAVEw9doSzY1DuPVxP EnwEp/&#43;VJDAfBgNVHSMEGDAWgBTAVEw9doSzY1DuPVxPEnwEp/&#43;VJDAPBgNVHRMB Af8EBTADAQH/MAoGCCqGSM49BAMCA0cAMEQCIHrSTk/KJHAjn3MC/egvfxMM1NpG GEzMB7EH&#43;VXWz7RfAiAyhwy4E9hc8/qsTI&#43;4iKf2o/zMRu5H2GNJOLqOngglbQ== -----END CERTIFICATE----- leaf.crt.pem
+-----BEGIN CERTIFICATE----- MIIBHjCBxAIULE3hvnYxU91g9c9H3&#43;uGCSqXi4MwCgYIKoZIzj0EAwIwEjEQMA4G A1UEAwwHUm9vdCBDQTAgFw0yNjAyMjcxOTQ3NDZaGA8yMTI2MDIwMzE5NDc0Nlow DzENMAsGA1UEAwwEbGVhZjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABKDZ21Yh &#43;1AQp1TrxrS8FquIVEHrFRSXncX9xl5vVhZFqvblzTp2Tg7TER5x7rHG1TIqQL1z xDX4TB&#43;nZOWkyAcwCgYIKoZIzj0EAwIDSQAwRgIhAMeo5t2d1RWL/SB0E&#43;mvvIZP jFT0wDWX1Bm26MtxRcf9AiEApG96fs70WF1JliFgzkTiNvbG7Gj4SvErZ9nNX/Lr PnA= -----END CERTIFICATE----- If you downloaded these certificates, you could visually see that the latter references the former as its Issuer.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="Fooling Go&#39;s X.509 Certificate Verification"/>
+<meta name="twitter:description" content="Below are two X.509 certificates. The first is the Certificate Authority (CA) root certificate, and the second is a leaf certifcate signed by the private key of the CA.
+ca.crt.pem
+-----BEGIN CERTIFICATE----- MIIBejCCASGgAwIBAgIUda4UvlFzwQEO/fD0f4hAnj&#43;ydPYwCgYIKoZIzj0EAwIw EjEQMA4GA1UEAxMHUm9vdCBDQTAgFw0yNjAyMjcxOTQ3NDZaGA8yMTI2MDIwMzE5 NDc0NlowEjEQMA4GA1UEAxMHUm9vdCBDQTBZMBMGByqGSM49AgEGCCqGSM49AwEH A0IABKL5BB9aaQ2TtNgUymEsa/&#43;s2ZlTXVll0N22KKWxh0N/JdgHcjrKfzqRlVrt UN2GXdvsdLOq15TxBq97WvE07lKjUzBRMB0GA1UdDgQWBBTAVEw9doSzY1DuPVxP EnwEp/&#43;VJDAfBgNVHSMEGDAWgBTAVEw9doSzY1DuPVxPEnwEp/&#43;VJDAPBgNVHRMB Af8EBTADAQH/MAoGCCqGSM49BAMCA0cAMEQCIHrSTk/KJHAjn3MC/egvfxMM1NpG GEzMB7EH&#43;VXWz7RfAiAyhwy4E9hc8/qsTI&#43;4iKf2o/zMRu5H2GNJOLqOngglbQ== -----END CERTIFICATE----- leaf.crt.pem
+-----BEGIN CERTIFICATE----- MIIBHjCBxAIULE3hvnYxU91g9c9H3&#43;uGCSqXi4MwCgYIKoZIzj0EAwIwEjEQMA4G A1UEAwwHUm9vdCBDQTAgFw0yNjAyMjcxOTQ3NDZaGA8yMTI2MDIwMzE5NDc0Nlow DzENMAsGA1UEAwwEbGVhZjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABKDZ21Yh &#43;1AQp1TrxrS8FquIVEHrFRSXncX9xl5vVhZFqvblzTp2Tg7TER5x7rHG1TIqQL1z xDX4TB&#43;nZOWkyAcwCgYIKoZIzj0EAwIDSQAwRgIhAMeo5t2d1RWL/SB0E&#43;mvvIZP jFT0wDWX1Bm26MtxRcf9AiEApG96fs70WF1JliFgzkTiNvbG7Gj4SvErZ9nNX/Lr PnA= -----END CERTIFICATE----- If you downloaded these certificates, you could visually see that the latter references the former as its Issuer."/>
+
+<meta property="og:title" content="Fooling Go&#39;s X.509 Certificate Verification" />
+<meta property="og:description" content="Below are two X.509 certificates. The first is the Certificate Authority (CA) root certificate, and the second is a leaf certifcate signed by the private key of the CA.
+ca.crt.pem
+-----BEGIN CERTIFICATE----- MIIBejCCASGgAwIBAgIUda4UvlFzwQEO/fD0f4hAnj&#43;ydPYwCgYIKoZIzj0EAwIw EjEQMA4GA1UEAxMHUm9vdCBDQTAgFw0yNjAyMjcxOTQ3NDZaGA8yMTI2MDIwMzE5 NDc0NlowEjEQMA4GA1UEAxMHUm9vdCBDQTBZMBMGByqGSM49AgEGCCqGSM49AwEH A0IABKL5BB9aaQ2TtNgUymEsa/&#43;s2ZlTXVll0N22KKWxh0N/JdgHcjrKfzqRlVrt UN2GXdvsdLOq15TxBq97WvE07lKjUzBRMB0GA1UdDgQWBBTAVEw9doSzY1DuPVxP EnwEp/&#43;VJDAfBgNVHSMEGDAWgBTAVEw9doSzY1DuPVxPEnwEp/&#43;VJDAPBgNVHRMB Af8EBTADAQH/MAoGCCqGSM49BAMCA0cAMEQCIHrSTk/KJHAjn3MC/egvfxMM1NpG GEzMB7EH&#43;VXWz7RfAiAyhwy4E9hc8/qsTI&#43;4iKf2o/zMRu5H2GNJOLqOngglbQ== -----END CERTIFICATE----- leaf.crt.pem
+-----BEGIN CERTIFICATE----- MIIBHjCBxAIULE3hvnYxU91g9c9H3&#43;uGCSqXi4MwCgYIKoZIzj0EAwIwEjEQMA4G A1UEAwwHUm9vdCBDQTAgFw0yNjAyMjcxOTQ3NDZaGA8yMTI2MDIwMzE5NDc0Nlow DzENMAsGA1UEAwwEbGVhZjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABKDZ21Yh &#43;1AQp1TrxrS8FquIVEHrFRSXncX9xl5vVhZFqvblzTp2Tg7TER5x7rHG1TIqQL1z xDX4TB&#43;nZOWkyAcwCgYIKoZIzj0EAwIDSQAwRgIhAMeo5t2d1RWL/SB0E&#43;mvvIZP jFT0wDWX1Bm26MtxRcf9AiEApG96fs70WF1JliFgzkTiNvbG7Gj4SvErZ9nNX/Lr PnA= -----END CERTIFICATE----- If you downloaded these certificates, you could visually see that the latter references the former as its Issuer." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/fooling-go-x509-certificate-verification/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2026-03-01T01:41:34-06:00" />
+<meta property="article:modified_time" content="2026-03-01T01:41:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/fooling-go-x509-certificate-verification/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/fooling-go-x509-certificate-verification/">
+              Fooling Go&#39;s X.509 Certificate Verification
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2026-03-01T01:41:34-06:00">
+                March 1, 2026
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              10-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>Below are two <a href="https://en.wikipedia.org/wiki/X.509">X.509</a> certificates. The
+first is the Certificate Authority (CA) root certificate, and the second is a
+leaf certifcate signed by the private key of the CA.</p>
+<p><code>ca.crt.pem</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>-----BEGIN CERTIFICATE-----
+</span></span><span style="display:flex;"><span>MIIBejCCASGgAwIBAgIUda4UvlFzwQEO/fD0f4hAnj+ydPYwCgYIKoZIzj0EAwIw
+</span></span><span style="display:flex;"><span>EjEQMA4GA1UEAxMHUm9vdCBDQTAgFw0yNjAyMjcxOTQ3NDZaGA8yMTI2MDIwMzE5
+</span></span><span style="display:flex;"><span>NDc0NlowEjEQMA4GA1UEAxMHUm9vdCBDQTBZMBMGByqGSM49AgEGCCqGSM49AwEH
+</span></span><span style="display:flex;"><span>A0IABKL5BB9aaQ2TtNgUymEsa/+s2ZlTXVll0N22KKWxh0N/JdgHcjrKfzqRlVrt
+</span></span><span style="display:flex;"><span>UN2GXdvsdLOq15TxBq97WvE07lKjUzBRMB0GA1UdDgQWBBTAVEw9doSzY1DuPVxP
+</span></span><span style="display:flex;"><span>EnwEp/+VJDAfBgNVHSMEGDAWgBTAVEw9doSzY1DuPVxPEnwEp/+VJDAPBgNVHRMB
+</span></span><span style="display:flex;"><span>Af8EBTADAQH/MAoGCCqGSM49BAMCA0cAMEQCIHrSTk/KJHAjn3MC/egvfxMM1NpG
+</span></span><span style="display:flex;"><span>GEzMB7EH+VXWz7RfAiAyhwy4E9hc8/qsTI+4iKf2o/zMRu5H2GNJOLqOngglbQ==
+</span></span><span style="display:flex;"><span>-----END CERTIFICATE-----
+</span></span></code></pre></div><p><code>leaf.crt.pem</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>-----BEGIN CERTIFICATE-----
+</span></span><span style="display:flex;"><span>MIIBHjCBxAIULE3hvnYxU91g9c9H3+uGCSqXi4MwCgYIKoZIzj0EAwIwEjEQMA4G
+</span></span><span style="display:flex;"><span>A1UEAwwHUm9vdCBDQTAgFw0yNjAyMjcxOTQ3NDZaGA8yMTI2MDIwMzE5NDc0Nlow
+</span></span><span style="display:flex;"><span>DzENMAsGA1UEAwwEbGVhZjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABKDZ21Yh
+</span></span><span style="display:flex;"><span>+1AQp1TrxrS8FquIVEHrFRSXncX9xl5vVhZFqvblzTp2Tg7TER5x7rHG1TIqQL1z
+</span></span><span style="display:flex;"><span>xDX4TB+nZOWkyAcwCgYIKoZIzj0EAwIDSQAwRgIhAMeo5t2d1RWL/SB0E+mvvIZP
+</span></span><span style="display:flex;"><span>jFT0wDWX1Bm26MtxRcf9AiEApG96fs70WF1JliFgzkTiNvbG7Gj4SvErZ9nNX/Lr
+</span></span><span style="display:flex;"><span>PnA=
+</span></span><span style="display:flex;"><span>-----END CERTIFICATE-----
+</span></span></code></pre></div><p>If you downloaded these certificates, you could visually see that the latter
+references the former as its Issuer. If you were to use a tool like <code>openssl</code> to
+verify that the leaf is signed by the private key of root, you would see that it
+is.</p>
+<blockquote>
+<p>Unless of course you are reading this blog post from the year 2126 or you
+have changed the system time on your machine. If the former, I am exceedingly
+dissapointed that humanity is still using <code>openssl</code>.</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>openssl verify -CAfile ca.crt.pem leaf.crt.pem
+</span></span></code></pre></div><p>Now, if you wanted to write a Go program that verified this chain of trust, it
+might look something like the following.</p>
+<p><code>main.go</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">package</span> main
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;encoding/pem&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;crypto/x509&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;fmt&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;os&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#0ff;font-weight:bold">&#34;time&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">func</span> main() {
+</span></span><span style="display:flex;"><span>	b, err := os.ReadFile(<span style="color:#0ff;font-weight:bold">&#34;ca.crt.pem&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	block, _ := pem.Decode(b)
+</span></span><span style="display:flex;"><span>	ca, err := x509.ParseCertificate(block.Bytes)
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	b, err = os.ReadFile(<span style="color:#0ff;font-weight:bold">&#34;leaf.crt.pem&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	block, _ = pem.Decode(b)
+</span></span><span style="display:flex;"><span>	lc, err := x509.ParseCertificate(block.Bytes)
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	roots := x509.NewCertPool()
+</span></span><span style="display:flex;"><span>	roots.AddCert(ca)
+</span></span><span style="display:flex;"><span>	opts := x509.VerifyOptions{
+</span></span><span style="display:flex;"><span>		Roots:       roots,
+</span></span><span style="display:flex;"><span>		CurrentTime: time.Now(),
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> _, err := lc.Verify(opts); err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">panic</span>(err)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>    fmt.Println(<span style="color:#0ff;font-weight:bold">&#34;Certificate verification successful.&#34;</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>But if you ran that program, you might be surprised to see the following.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>panic: x509: certificate signed by unknown authority
+</span></span></code></pre></div><p>If you used this CA certificate instead, you would see the expected output.</p>
+<p><code>ca.verifies.crt.pem</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>-----BEGIN CERTIFICATE-----
+</span></span><span style="display:flex;"><span>MIIBejCCASGgAwIBAgIUda4UvlFzwQEO/fD0f4hAnj+ydPYwCgYIKoZIzj0EAwIw
+</span></span><span style="display:flex;"><span>EjEQMA4GA1UEAwwHUm9vdCBDQTAgFw0yNjAyMjcxOTQ3NDZaGA8yMTI2MDIwMzE5
+</span></span><span style="display:flex;"><span>NDc0NlowEjEQMA4GA1UEAwwHUm9vdCBDQTBZMBMGByqGSM49AgEGCCqGSM49AwEH
+</span></span><span style="display:flex;"><span>A0IABKL5BB9aaQ2TtNgUymEsa/+s2ZlTXVll0N22KKWxh0N/JdgHcjrKfzqRlVrt
+</span></span><span style="display:flex;"><span>UN2GXdvsdLOq15TxBq97WvE07lKjUzBRMB0GA1UdDgQWBBTAVEw9doSzY1DuPVxP
+</span></span><span style="display:flex;"><span>EnwEp/+VJDAfBgNVHSMEGDAWgBTAVEw9doSzY1DuPVxPEnwEp/+VJDAPBgNVHRMB
+</span></span><span style="display:flex;"><span>Af8EBTADAQH/MAoGCCqGSM49BAMCA0cAMEQCIHrSTk/KJHAjn3MC/egvfxMM1NpG
+</span></span><span style="display:flex;"><span>GEzMB7EH+VXWz7RfAiAyhwy4E9hc8/qsTI+4iKf2o/zMRu5H2GNJOLqOngglbQ==
+</span></span><span style="display:flex;"><span>-----END CERTIFICATE-----
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Certificate verification successful.
+</span></span></code></pre></div><p>At first glance these certificates appear to be identical. You could use
+<code>openssl</code> to view the contents of both certificates, and you would get identical
+output.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>openssl x509 -in ca.crt.pem -noout -text
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Certificate:
+</span></span><span style="display:flex;"><span>    Data:
+</span></span><span style="display:flex;"><span>        Version: 3 (0x2)
+</span></span><span style="display:flex;"><span>        Serial Number:
+</span></span><span style="display:flex;"><span>            75:ae:14:be:51:73:c1:01:0e:fd:f0:f4:7f:88:40:9e:3f:b2:74:f6
+</span></span><span style="display:flex;"><span>        Signature Algorithm: ecdsa-with-SHA256
+</span></span><span style="display:flex;"><span>        Issuer: CN = Root CA
+</span></span><span style="display:flex;"><span>        Validity
+</span></span><span style="display:flex;"><span>            Not Before: Feb 27 19:47:46 2026 GMT
+</span></span><span style="display:flex;"><span>            Not After : Feb  3 19:47:46 2126 GMT
+</span></span><span style="display:flex;"><span>        Subject: CN = Root CA
+</span></span><span style="display:flex;"><span>        Subject Public Key Info:
+</span></span><span style="display:flex;"><span>            Public Key Algorithm: id-ecPublicKey
+</span></span><span style="display:flex;"><span>                Public-Key: (256 bit)
+</span></span><span style="display:flex;"><span>                pub:
+</span></span><span style="display:flex;"><span>                    04:a2:f9:04:1f:5a:69:0d:93:b4:d8:14:ca:61:2c:
+</span></span><span style="display:flex;"><span>                    6b:ff:ac:d9:99:53:5d:59:65:d0:dd:b6:28:a5:b1:
+</span></span><span style="display:flex;"><span>                    87:43:7f:25:d8:07:72:3a:ca:7f:3a:91:95:5a:ed:
+</span></span><span style="display:flex;"><span>                    50:dd:86:5d:db:ec:74:b3:aa:d7:94:f1:06:af:7b:
+</span></span><span style="display:flex;"><span>                    5a:f1:34:ee:52
+</span></span><span style="display:flex;"><span>                ASN1 OID: prime256v1
+</span></span><span style="display:flex;"><span>                NIST CURVE: P-256
+</span></span><span style="display:flex;"><span>        X509v3 extensions:
+</span></span><span style="display:flex;"><span>            X509v3 Subject Key Identifier: 
+</span></span><span style="display:flex;"><span>                C0:54:4C:3D:76:84:B3:63:50:EE:3D:5C:4F:12:7C:04:A7:FF:95:24
+</span></span><span style="display:flex;"><span>            X509v3 Authority Key Identifier: 
+</span></span><span style="display:flex;"><span>                C0:54:4C:3D:76:84:B3:63:50:EE:3D:5C:4F:12:7C:04:A7:FF:95:24
+</span></span><span style="display:flex;"><span>            X509v3 Basic Constraints: critical
+</span></span><span style="display:flex;"><span>                CA:TRUE
+</span></span><span style="display:flex;"><span>    Signature Algorithm: ecdsa-with-SHA256
+</span></span><span style="display:flex;"><span>    Signature Value:
+</span></span><span style="display:flex;"><span>        30:44:02:20:7a:d2:4e:4f:ca:24:70:23:9f:73:02:fd:e8:2f:
+</span></span><span style="display:flex;"><span>        7f:13:0c:d4:da:46:18:4c:cc:07:b1:07:f9:55:d6:cf:b4:5f:
+</span></span><span style="display:flex;"><span>        02:20:32:87:0c:b8:13:d8:5c:f3:fa:ac:4c:8f:b8:88:a7:f6:
+</span></span><span style="display:flex;"><span>        a3:fc:cc:46:ee:47:d8:63:49:38:ba:8e:9e:08:25:6d
+</span></span></code></pre></div><p>However, if you were to compare the bytes of the certificates, you would see
+that there is a very slight difference; two bytes to be exact.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>diff &lt;(openssl x509 -in ca.crt.pem -outform der | xxd) &lt;(openssl x509 -in ca.verifies.crt.pem -outform der | xxd)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>4c4
+</span></span><span style="display:flex;"><span>&lt; 00000030: 1231 1030 0e06 0355 0403 1307 526f 6f74  .1.0...U....Root
+</span></span><span style="display:flex;"><span>---
+</span></span><span style="display:flex;"><span>&gt; 00000030: 1231 1030 0e06 0355 0403 0c07 526f 6f74  .1.0...U....Root
+</span></span><span style="display:flex;"><span>8c8
+</span></span><span style="display:flex;"><span>&lt; 00000070: 1307 526f 6f74 2043 4130 5930 1306 072a  ..Root CA0Y0...*
+</span></span><span style="display:flex;"><span>---
+</span></span><span style="display:flex;"><span>&gt; 00000070: 0c07 526f 6f74 2043 4130 5930 1306 072a  ..Root CA0Y0...*
+</span></span></code></pre></div><p>In both locations, there is a <code>0x13</code> byte in the certificate which failed
+verification with the Go program (<code>ca.crt.pem</code>), and a <code>0x0c</code> byte in the
+certificate that passed (<code>ca.verifies.crt.pem</code>). If you are familiar with X.509
+certificates, you&rsquo;ll know that they are defined using <a href="https://en.wikipedia.org/wiki/ASN.1">Abstract Syntax Notation
+One (ASN.1)</a> and are binary encoded using
+<a href="https://en.wikipedia.org/wiki/X.690#DER_encoding">Distinguished Encoding Rules
+(DER)</a>. They are frequently
+<a href="https://en.wikipedia.org/wiki/Base64">Base64 encoded</a> and stored and
+transmitted as <a href="https://en.wikipedia.org/wiki/Privacy-Enhanced_Mail">Privacy-enhanced Mail
+(PEM)</a> text files (which
+you have already seen in this post).</p>
+<p>The ASN.1 specification defines a set of data types, each with an associated tag
+(non-negative integer identifier), which precedes the length and the value when
+using DER encoding (see <a href="https://letsencrypt.org/docs/a-warm-welcome-to-asn1-and-der/">this
+post</a> from <a href="https://letsencrypt.org">Let&rsquo;s
+Encrypt</a> for more information). <code>openssl</code> can once
+again be used to see the data types of different fields in the certificate that
+is successfully verified.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>openssl asn1parse -in ca.verifies.crt.pem
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>    0:d=0  hl=4 l= 378 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>    4:d=1  hl=4 l= 289 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>    8:d=2  hl=2 l=   3 cons: cont [ 0 ]        
+</span></span><span style="display:flex;"><span>   10:d=3  hl=2 l=   1 prim: INTEGER           :02
+</span></span><span style="display:flex;"><span>   13:d=2  hl=2 l=  20 prim: INTEGER           :75AE14BE5173C1010EFDF0F47F88409E3FB274F6
+</span></span><span style="display:flex;"><span>   35:d=2  hl=2 l=  10 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>   37:d=3  hl=2 l=   8 prim: OBJECT            :ecdsa-with-SHA256
+</span></span><span style="display:flex;"><span>   47:d=2  hl=2 l=  18 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>   49:d=3  hl=2 l=  16 cons: SET               
+</span></span><span style="display:flex;"><span>   51:d=4  hl=2 l=  14 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>   53:d=5  hl=2 l=   3 prim: OBJECT            :commonName
+</span></span><span style="display:flex;"><span>   58:d=5  hl=2 l=   7 prim: UTF8STRING        :Root CA
+</span></span><span style="display:flex;"><span>   67:d=2  hl=2 l=  32 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>   69:d=3  hl=2 l=  13 prim: UTCTIME           :260227194746Z
+</span></span><span style="display:flex;"><span>   84:d=3  hl=2 l=  15 prim: GENERALIZEDTIME   :21260203194746Z
+</span></span><span style="display:flex;"><span>  101:d=2  hl=2 l=  18 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  103:d=3  hl=2 l=  16 cons: SET               
+</span></span><span style="display:flex;"><span>  105:d=4  hl=2 l=  14 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  107:d=5  hl=2 l=   3 prim: OBJECT            :commonName
+</span></span><span style="display:flex;"><span>  112:d=5  hl=2 l=   7 prim: UTF8STRING        :Root CA
+</span></span><span style="display:flex;"><span>  121:d=2  hl=2 l=  89 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  123:d=3  hl=2 l=  19 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  125:d=4  hl=2 l=   7 prim: OBJECT            :id-ecPublicKey
+</span></span><span style="display:flex;"><span>  134:d=4  hl=2 l=   8 prim: OBJECT            :prime256v1
+</span></span><span style="display:flex;"><span>  144:d=3  hl=2 l=  66 prim: BIT STRING        
+</span></span><span style="display:flex;"><span>  212:d=2  hl=2 l=  83 cons: cont [ 3 ]        
+</span></span><span style="display:flex;"><span>  214:d=3  hl=2 l=  81 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  216:d=4  hl=2 l=  29 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  218:d=5  hl=2 l=   3 prim: OBJECT            :X509v3 Subject Key Identifier
+</span></span><span style="display:flex;"><span>  223:d=5  hl=2 l=  22 prim: OCTET STRING      [HEX DUMP]:0414C0544C3D7684B36350EE3D5C4F127C04A7FF9524
+</span></span><span style="display:flex;"><span>  247:d=4  hl=2 l=  31 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  249:d=5  hl=2 l=   3 prim: OBJECT            :X509v3 Authority Key Identifier
+</span></span><span style="display:flex;"><span>  254:d=5  hl=2 l=  24 prim: OCTET STRING      [HEX DUMP]:30168014C0544C3D7684B36350EE3D5C4F127C04A7FF9524
+</span></span><span style="display:flex;"><span>  280:d=4  hl=2 l=  15 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  282:d=5  hl=2 l=   3 prim: OBJECT            :X509v3 Basic Constraints
+</span></span><span style="display:flex;"><span>  287:d=5  hl=2 l=   1 prim: BOOLEAN           :255
+</span></span><span style="display:flex;"><span>  290:d=5  hl=2 l=   5 prim: OCTET STRING      [HEX DUMP]:30030101FF
+</span></span><span style="display:flex;"><span>  297:d=1  hl=2 l=  10 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  299:d=2  hl=2 l=   8 prim: OBJECT            :ecdsa-with-SHA256
+</span></span><span style="display:flex;"><span>  309:d=1  hl=2 l=  71 prim: BIT STRING        
+</span></span></code></pre></div><p>In the diff view of the two CA certificates, the bytes that differed preceded
+the <code>Root CA</code> string in two different places: the Subject and the Issuer, which
+are the same since this is a self-signed certificate. They were also followed by
+a <code>0x07</code> byte, which aligns with the number of characters in <code>Root CA</code> (i.e. the
+length of the value). The differing leading byte suggests differing ASN.1 data
+types for these fields. The CA certificate for which validation is successful
+uses <code>UTF8String</code> (<code>0x0c</code>), and you can use <code>openssl</code> with the failing CA
+certificate to see that it uses <code>PrintableString</code> instead (<code>0x13</code>).</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>openssl asn1parse -in ca.crt.pem
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>    0:d=0  hl=4 l= 378 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>    4:d=1  hl=4 l= 289 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>    8:d=2  hl=2 l=   3 cons: cont [ 0 ]        
+</span></span><span style="display:flex;"><span>   10:d=3  hl=2 l=   1 prim: INTEGER           :02
+</span></span><span style="display:flex;"><span>   13:d=2  hl=2 l=  20 prim: INTEGER           :75AE14BE5173C1010EFDF0F47F88409E3FB274F6
+</span></span><span style="display:flex;"><span>   35:d=2  hl=2 l=  10 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>   37:d=3  hl=2 l=   8 prim: OBJECT            :ecdsa-with-SHA256
+</span></span><span style="display:flex;"><span>   47:d=2  hl=2 l=  18 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>   49:d=3  hl=2 l=  16 cons: SET               
+</span></span><span style="display:flex;"><span>   51:d=4  hl=2 l=  14 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>   53:d=5  hl=2 l=   3 prim: OBJECT            :commonName
+</span></span><span style="display:flex;"><span>   58:d=5  hl=2 l=   7 prim: PRINTABLESTRING   :Root CA
+</span></span><span style="display:flex;"><span>   67:d=2  hl=2 l=  32 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>   69:d=3  hl=2 l=  13 prim: UTCTIME           :260227194746Z
+</span></span><span style="display:flex;"><span>   84:d=3  hl=2 l=  15 prim: GENERALIZEDTIME   :21260203194746Z
+</span></span><span style="display:flex;"><span>  101:d=2  hl=2 l=  18 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  103:d=3  hl=2 l=  16 cons: SET               
+</span></span><span style="display:flex;"><span>  105:d=4  hl=2 l=  14 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  107:d=5  hl=2 l=   3 prim: OBJECT            :commonName
+</span></span><span style="display:flex;"><span>  112:d=5  hl=2 l=   7 prim: PRINTABLESTRING   :Root CA
+</span></span><span style="display:flex;"><span>  121:d=2  hl=2 l=  89 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  123:d=3  hl=2 l=  19 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  125:d=4  hl=2 l=   7 prim: OBJECT            :id-ecPublicKey
+</span></span><span style="display:flex;"><span>  134:d=4  hl=2 l=   8 prim: OBJECT            :prime256v1
+</span></span><span style="display:flex;"><span>  144:d=3  hl=2 l=  66 prim: BIT STRING        
+</span></span><span style="display:flex;"><span>  212:d=2  hl=2 l=  83 cons: cont [ 3 ]        
+</span></span><span style="display:flex;"><span>  214:d=3  hl=2 l=  81 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  216:d=4  hl=2 l=  29 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  218:d=5  hl=2 l=   3 prim: OBJECT            :X509v3 Subject Key Identifier
+</span></span><span style="display:flex;"><span>  223:d=5  hl=2 l=  22 prim: OCTET STRING      [HEX DUMP]:0414C0544C3D7684B36350EE3D5C4F127C04A7FF9524
+</span></span><span style="display:flex;"><span>  247:d=4  hl=2 l=  31 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  249:d=5  hl=2 l=   3 prim: OBJECT            :X509v3 Authority Key Identifier
+</span></span><span style="display:flex;"><span>  254:d=5  hl=2 l=  24 prim: OCTET STRING      [HEX DUMP]:30168014C0544C3D7684B36350EE3D5C4F127C04A7FF9524
+</span></span><span style="display:flex;"><span>  280:d=4  hl=2 l=  15 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  282:d=5  hl=2 l=   3 prim: OBJECT            :X509v3 Basic Constraints
+</span></span><span style="display:flex;"><span>  287:d=5  hl=2 l=   1 prim: BOOLEAN           :255
+</span></span><span style="display:flex;"><span>  290:d=5  hl=2 l=   5 prim: OCTET STRING      [HEX DUMP]:30030101FF
+</span></span><span style="display:flex;"><span>  297:d=1  hl=2 l=  10 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  299:d=2  hl=2 l=   8 prim: OBJECT            :ecdsa-with-SHA256
+</span></span><span style="display:flex;"><span>  309:d=1  hl=2 l=  71 prim: BIT STRING        
+</span></span></code></pre></div><p>This still doesn&rsquo;t explain why <code>openssl</code> verifies successfully with either CA
+certificate, while the Go program does not. To dig further, you can compile and
+step through the program with <code>gdb</code>, starting with a breakpoint on <code>Verify()</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>gdb main -ex &#39;b crypto/x509.(*Certificate).Verify&#39; -ex &#39;run&#39;
+</span></span></code></pre></div><p>Stepping through <a href="https://github.com/golang/go/blob/de0d77c6f8c3977d90b5541a34bca9da32494e38/src/crypto/x509/verify.go#L538">the
+function</a>,
+you eventually arrive at the point where you are building the candidate
+certificate chains.</p>
+<blockquote>
+<p>Add a breakpoint for this function using <code>b crypto/x509.(*Certificate).buildChains</code>.</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">var</span> candidateChains [][]*Certificate
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> opts.Roots.contains(c) {
+</span></span><span style="display:flex;"><span>		candidateChains = [][]*Certificate{{c}}
+</span></span><span style="display:flex;"><span>	} <span style="color:#fff;font-weight:bold">else</span> {
+</span></span><span style="display:flex;"><span>		candidateChains, err = c.buildChains([]*Certificate{c}, <span style="color:#fff;font-weight:bold">nil</span>, &amp;opts)
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">return</span> <span style="color:#fff;font-weight:bold">nil</span>, err
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span></code></pre></div><p>As part of evaluating whether the certificate pool provided has a candidate
+chain, <a href="https://github.com/golang/go/blob/de0d77c6f8c3977d90b5541a34bca9da32494e38/src/crypto/x509/cert_pool.go#L132"><code>findPotentialParents()</code> is
+called</a>
+on the <code>Roots</code> (it is also called on the <code>Intermediates</code>, but there are no
+intermediate certificates provided in this example).</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">for</span> _, root := <span style="color:#fff;font-weight:bold">range</span> opts.Roots.findPotentialParents(c) {
+</span></span><span style="display:flex;"><span>		considerCandidate(rootCertificate, root)
+</span></span><span style="display:flex;"><span>	}
+</span></span></code></pre></div><p>Finally, you arrive at the <a href="https://github.com/golang/go/blob/de0d77c6f8c3977d90b5541a34bca9da32494e38/src/crypto/x509/cert_pool.go#L144">source of the
+failure</a>.
+A potential parent for the leaf certificate should have a Subject that matches
+the Issuer of the leaf (i.e. the leaf should refer to it as the certificate that
+was used for signing).</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">for</span> _, c := <span style="color:#fff;font-weight:bold">range</span> s.byName[<span style="color:#fff;font-weight:bold">string</span>(cert.RawIssuer)] {
+</span></span><span style="display:flex;"><span>		candidate, constraint, err := s.cert(c)
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">if</span> err != <span style="color:#fff;font-weight:bold">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">continue</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		kidMatch := bytes.Equal(candidate.SubjectKeyId, cert.AuthorityKeyId)
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">switch</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">case</span> kidMatch:
+</span></span><span style="display:flex;"><span>			matchingKeyID = <span style="color:#fff;font-weight:bold">append</span>(matchingKeyID, potentialParent{candidate, constraint})
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">case</span> (<span style="color:#fff;font-weight:bold">len</span>(candidate.SubjectKeyId) == <span style="color:#ff0;font-weight:bold">0</span> &amp;&amp; <span style="color:#fff;font-weight:bold">len</span>(cert.AuthorityKeyId) &gt; <span style="color:#ff0;font-weight:bold">0</span>) ||
+</span></span><span style="display:flex;"><span>			(<span style="color:#fff;font-weight:bold">len</span>(candidate.SubjectKeyId) &gt; <span style="color:#ff0;font-weight:bold">0</span> &amp;&amp; <span style="color:#fff;font-weight:bold">len</span>(cert.AuthorityKeyId) == <span style="color:#ff0;font-weight:bold">0</span>):
+</span></span><span style="display:flex;"><span>			oneKeyID = <span style="color:#fff;font-weight:bold">append</span>(oneKeyID, potentialParent{candidate, constraint})
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">default</span>:
+</span></span><span style="display:flex;"><span>			mismatchKeyID = <span style="color:#fff;font-weight:bold">append</span>(mismatchKeyID, potentialParent{candidate, constraint})
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span></code></pre></div><p>The keys in the <a href="https://github.com/golang/go/blob/de0d77c6f8c3977d90b5541a34bca9da32494e38/src/crypto/x509/cert_pool.go#L18"><code>byName</code> map of a
+<code>CertPool</code></a>
+contain the Subject of the CA certificates. When using the CA certificate that
+caused verification failure, stepping through the loop above you can see that
+there are zero iterations, or, that there are no CA certificates with a Subject
+that matches the leaf Issuer. How could that be? The key observation is that the
+raw Subject and Issuer, the literal bytes, are being used for comparison.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#007f7f">// CertPool is a set of certificates.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span><span style="color:#fff;font-weight:bold">type</span> CertPool <span style="color:#fff;font-weight:bold">struct</span> {
+</span></span><span style="display:flex;"><span>	byName <span style="color:#fff;font-weight:bold">map</span>[<span style="color:#fff;font-weight:bold">string</span>][]<span style="color:#fff;font-weight:bold">int</span> <span style="color:#007f7f">// cert.RawSubject =&gt; index into lazyCerts
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// lazyCerts contains funcs that return a certificate,
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// lazily parsing/decompressing it as needed.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	lazyCerts []lazyCert
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// haveSum maps from sum224(cert.Raw) to true. It&#39;s used only
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// for AddCert duplicate detection, to avoid CertPool.contains
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// calls in the AddCert path (because the contains method can
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// call getCert and otherwise negate savings from lazy getCert
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// funcs).
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	haveSum <span style="color:#fff;font-weight:bold">map</span>[sum224]<span style="color:#fff;font-weight:bold">bool</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">// systemPool indicates whether this is a special pool derived from the
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// system roots. If it includes additional roots, it requires doing two
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// verifications, one using the roots provided by the caller, and one using
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	<span style="color:#007f7f">// the system platform verifier.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"></span>	systemPool <span style="color:#fff;font-weight:bold">bool</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>We saw earlier that the two CA certificates differed in the ASN.1 data types
+used for their Subject. Expectedly, if you check the data type of the Issuer in
+the leaf certificate, you&rsquo;ll see that it is a <code>UTF8String</code>, matching the CA
+certificate that was verified successfully.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>openssl asn1parse -in leaf.crt.pem
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>    0:d=0  hl=4 l= 286 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>    4:d=1  hl=3 l= 196 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>    7:d=2  hl=2 l=  20 prim: INTEGER           :2C4DE1BE763153DD60F5CF47DFEB86092A978B83
+</span></span><span style="display:flex;"><span>   29:d=2  hl=2 l=  10 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>   31:d=3  hl=2 l=   8 prim: OBJECT            :ecdsa-with-SHA256
+</span></span><span style="display:flex;"><span>   41:d=2  hl=2 l=  18 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>   43:d=3  hl=2 l=  16 cons: SET               
+</span></span><span style="display:flex;"><span>   45:d=4  hl=2 l=  14 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>   47:d=5  hl=2 l=   3 prim: OBJECT            :commonName
+</span></span><span style="display:flex;"><span>   52:d=5  hl=2 l=   7 prim: UTF8STRING        :Root CA
+</span></span><span style="display:flex;"><span>   61:d=2  hl=2 l=  32 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>   63:d=3  hl=2 l=  13 prim: UTCTIME           :260227194746Z
+</span></span><span style="display:flex;"><span>   78:d=3  hl=2 l=  15 prim: GENERALIZEDTIME   :21260203194746Z
+</span></span><span style="display:flex;"><span>   95:d=2  hl=2 l=  15 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>   97:d=3  hl=2 l=  13 cons: SET               
+</span></span><span style="display:flex;"><span>   99:d=4  hl=2 l=  11 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  101:d=5  hl=2 l=   3 prim: OBJECT            :commonName
+</span></span><span style="display:flex;"><span>  106:d=5  hl=2 l=   4 prim: UTF8STRING        :leaf
+</span></span><span style="display:flex;"><span>  112:d=2  hl=2 l=  89 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  114:d=3  hl=2 l=  19 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  116:d=4  hl=2 l=   7 prim: OBJECT            :id-ecPublicKey
+</span></span><span style="display:flex;"><span>  125:d=4  hl=2 l=   8 prim: OBJECT            :prime256v1
+</span></span><span style="display:flex;"><span>  135:d=3  hl=2 l=  66 prim: BIT STRING        
+</span></span><span style="display:flex;"><span>  203:d=1  hl=2 l=  10 cons: SEQUENCE          
+</span></span><span style="display:flex;"><span>  205:d=2  hl=2 l=   8 prim: OBJECT            :ecdsa-with-SHA256
+</span></span><span style="display:flex;"><span>  215:d=1  hl=2 l=  73 prim: BIT STRING        
+</span></span></code></pre></div><p>Whether this is the correct behavior has been an <a href="https://github.com/golang/go/issues/31440">ongoing
+debate</a> in the Go project, and the
+matter is complicated by some tools, such as <code>openssl</code> as seen in this post,
+treating different ASN.1 data types for strings as equivalent when verifying
+certificates. Typically you&rsquo;ll be using the same tooling or services for
+generating CA certificates and the leaf certificates they sign, so the encoding
+will likely be consistent. However, given that leaf certificates are typically
+much shorter lived than CA certificates, your tooling may evolve over time,
+potentially causing discrepancies in newly generated leaves.</p>
+<p>Though Go&rsquo;s handling of this scenario results in
+<a href="https://authzed.com/blog/fail-open">fail-closed</a> behavior, it can still cause
+outages and downtime, making it import to be aware of how you are generating
+certificates and how they are expected to be verified.</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2026
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>

@@ -6,7 +6,19 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 01 Feb 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 01 Mar 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Fooling Go&#39;s X.509 Certificate Verification</title>
+      <link>https://danielmangum.com/posts/fooling-go-x509-certificate-verification/</link>
+      <pubDate>Sun, 01 Mar 2026 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/fooling-go-x509-certificate-verification/</guid>
+      <description>Below are two X.509 certificates. The first is the Certificate Authority (CA) root certificate, and the second is a leaf certifcate signed by the private key of the CA.
+ca.crt.pem
+-----BEGIN CERTIFICATE----- MIIBejCCASGgAwIBAgIUda4UvlFzwQEO/fD0f4hAnj+ydPYwCgYIKoZIzj0EAwIw EjEQMA4GA1UEAxMHUm9vdCBDQTAgFw0yNjAyMjcxOTQ3NDZaGA8yMTI2MDIwMzE5 NDc0NlowEjEQMA4GA1UEAxMHUm9vdCBDQTBZMBMGByqGSM49AgEGCCqGSM49AwEH A0IABKL5BB9aaQ2TtNgUymEsa/+s2ZlTXVll0N22KKWxh0N/JdgHcjrKfzqRlVrt UN2GXdvsdLOq15TxBq97WvE07lKjUzBRMB0GA1UdDgQWBBTAVEw9doSzY1DuPVxP EnwEp/+VJDAfBgNVHSMEGDAWgBTAVEw9doSzY1DuPVxPEnwEp/+VJDAPBgNVHRMB Af8EBTADAQH/MAoGCCqGSM49BAMCA0cAMEQCIHrSTk/KJHAjn3MC/egvfxMM1NpG GEzMB7EH+VXWz7RfAiAyhwy4E9hc8/qsTI+4iKf2o/zMRu5H2GNJOLqOngglbQ== -----END CERTIFICATE----- leaf.crt.pem
+-----BEGIN CERTIFICATE----- MIIBHjCBxAIULE3hvnYxU91g9c9H3+uGCSqXi4MwCgYIKoZIzj0EAwIwEjEQMA4G A1UEAwwHUm9vdCBDQTAgFw0yNjAyMjcxOTQ3NDZaGA8yMTI2MDIwMzE5NDc0Nlow DzENMAsGA1UEAwwEbGVhZjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABKDZ21Yh +1AQp1TrxrS8FquIVEHrFRSXncX9xl5vVhZFqvblzTp2Tg7TER5x7rHG1TIqQL1z xDX4TB+nZOWkyAcwCgYIKoZIzj0EAwIDSQAwRgIhAMeo5t2d1RWL/SB0E+mvvIZP jFT0wDWX1Bm26MtxRcf9AiEApG96fs70WF1JliFgzkTiNvbG7Gj4SvErZ9nNX/Lr PnA= -----END CERTIFICATE----- If you downloaded these certificates, you could visually see that the latter references the former as its Issuer.</description>
+    </item>
+    
     <item>
       <title>Making Ferrite Core Inductors at Home</title>
       <link>https://danielmangum.com/posts/making-ferrite-core-inductors-home/</link>
