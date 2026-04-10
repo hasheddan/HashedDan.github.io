@@ -6,7 +6,16 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 01 Mar 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 10 Apr 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>PSA Crypto: The P is for Portability</title>
+      <link>https://danielmangum.com/posts/psa-crypto-portability/</link>
+      <pubDate>Fri, 10 Apr 2026 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/psa-crypto-portability/</guid>
+      <description>Arm&amp;rsquo;s Platform Security Architecture (PSA) was released in 2017, but it was two years until the first beta release of the PSA Cryptography API in 2019, and another year until the 1.0 specification in 2020. Aimed at securing connected devices and originally targeting only Arm-based systems, PSA has evolved with the donation of the PSA Certified program to GlobalPlatform in 2025, allowing non-Arm devices, such as popular RISC-V microcontrollers (MCUs), to achieve certification.</description>
+    </item>
+    
     <item>
       <title>Fooling Go&#39;s X.509 Certificate Verification</title>
       <link>https://danielmangum.com/posts/fooling-go-x509-certificate-verification/</link>

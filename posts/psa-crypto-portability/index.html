@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  PSA Crypto: The P is for Portability · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="Arm&rsquo;s Platform Security Architecture (PSA) was released in 2017, but it was two years until the first beta release of the PSA Cryptography API in 2019, and another year until the 1.0 specification in 2020. Aimed at securing connected devices and originally targeting only Arm-based systems, PSA has evolved with the donation of the PSA Certified program to GlobalPlatform in 2025, allowing non-Arm devices, such as popular RISC-V microcontrollers (MCUs), to achieve certification.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="PSA Crypto: The P is for Portability"/>
+<meta name="twitter:description" content="Arm&rsquo;s Platform Security Architecture (PSA) was released in 2017, but it was two years until the first beta release of the PSA Cryptography API in 2019, and another year until the 1.0 specification in 2020. Aimed at securing connected devices and originally targeting only Arm-based systems, PSA has evolved with the donation of the PSA Certified program to GlobalPlatform in 2025, allowing non-Arm devices, such as popular RISC-V microcontrollers (MCUs), to achieve certification."/>
+
+<meta property="og:title" content="PSA Crypto: The P is for Portability" />
+<meta property="og:description" content="Arm&rsquo;s Platform Security Architecture (PSA) was released in 2017, but it was two years until the first beta release of the PSA Cryptography API in 2019, and another year until the 1.0 specification in 2020. Aimed at securing connected devices and originally targeting only Arm-based systems, PSA has evolved with the donation of the PSA Certified program to GlobalPlatform in 2025, allowing non-Arm devices, such as popular RISC-V microcontrollers (MCUs), to achieve certification." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/psa-crypto-portability/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2026-04-10T01:41:34-06:00" />
+<meta property="article:modified_time" content="2026-04-10T01:41:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/psa-crypto-portability/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/psa-crypto-portability/">
+              PSA Crypto: The P is for Portability
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2026-04-10T01:41:34-06:00">
+                April 10, 2026
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              12-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>Arm&rsquo;s <a href="https://www.arm.com/architecture/security-features/platform-security">Platform Security Architecture
+(PSA)</a> was
+<a href="https://newsroom.arm.com/news/its-here-a-common-industry-framework-for-protecting-a-trillion-connected-devices">released in
+2017</a>,
+but it was two years until the first beta <a href="https://arm-software.github.io/psa-api/crypto/1.4/about/about.html#release-information">release of the PSA Cryptography
+API</a>
+in 2019, and another year until the 1.0 specification in 2020. Aimed at securing
+connected devices and originally targeting only Arm-based systems, PSA has
+evolved with the donation of the <a href="https://www.psacertified.org/">PSA Certified</a>
+program <a href="https://globalplatform.org/latest-news/globalplatform-to-drive-next-phase-of-growth-for-psa-certified-accelerating-security-adoption/">to GlobalPlatform in
+2025</a>,
+allowing non-Arm devices, such as <a href="https://www.espressif.com/en/news/C6_PSA_Level2">popular RISC-V microcontrollers
+(MCUs)</a>, to achieve
+certification. Arm still provides resources to assist in the certification
+process, such as developing the specifications for <a href="https://arm-software.github.io/psa-api/">PSA Certified
+APIs</a>, which include the <a href="https://arm-software.github.io/psa-api/crypto/1.4/">Crypto
+API</a>, <a href="https://arm-software.github.io/psa-api/storage/1.0/">Secure Storage
+API</a>, <a href="https://arm-software.github.io/psa-api/attestation/1.0/">Attestation
+API</a>, <a href="https://arm-software.github.io/psa-api/fwu/1.0/">Firmware Update
+API</a>, and <a href="https://arm-software.github.io/psa-api/status-code/1.0/">Status Code
+API</a>.</p>
+<p>The distinction between resources targeting Arm platforms and those that are
+generally applicable can be confusing, but for the most part, the PSA Certfied
+APIs are platform-agnostic, while Arm provides additional resources that extend
+beyond specification and into implementation of the APIs using their hardware
+IP. For example, <a href="https://trustedfirmware-m.readthedocs.io/en/latest/introduction/index.html">Trusted Firmware M
+(TF-M)</a>
+is a reference implementation of PSA, which relies on the boundary between the
+Secure Processing Environment (SPE) and Non-Secure Processing Environment (NSPE)
+on Arm Cortex-M platforms. Armv8-M provides this hardware-level isolation via
+the Cortex-M Security Extension (CMSE), more commonly referred to as
+<a href="https://www.arm.com/technologies/trustzone-for-cortex-m">TrustZone</a>.</p>
+<blockquote>
+<p>I have previously written about Arm Cortex-M hardware security states
+<a href="https://danielmangum.com/posts/arm-cortex-m-security-state-gdb/">here</a>.</p>
+</blockquote>
+<p>The PSA APIs create a consistent programming interface for which many
+implementations may exist. At my day job at <a href="https://golioth.io/">Golioth</a> (now
+part of <a href="https://canonical.com/">Canonical</a>), we have been tracking the adoption
+of the PSA Crypto API over the past few years. Because we typically develop
+embedded software that enables connectivity and targets a wide variety of
+hardware and platforms, we are intimately familiar with the security capabilites
+of different processor architectures, microcontrollers, and RTOS&rsquo;s. However,
+ensuring that we are taking advantage of not just the security features, but
+also the available cryptographic acceleration, has been painful. <strong>On highly
+constrained devices, performance is an integral component of security</strong>. Slow or
+power hungry cryptographic operations can be enough to sink a product that needs
+to operate for an extended period of time on a small battery. In the worst case
+scenario, product makers punt on security because of the complexity it
+introduces into the system.</p>
+<h2 id="mbedtls-v400-and-tf-psa-crypto">
+  MbedTLS v4.0.0 and TF-PSA-Crypto
+  <a class="heading-link" href="#mbedtls-v400-and-tf-psa-crypto">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>If you work on connected embedded systems, you have almost certainly either been
+migrating your own firmware to leverage PSA APIs, or been watching closely as
+libraries you depend on, such as <a href="https://github.com/Mbed-TLS/mbedtls">MbedTLS</a>
+have been rearchitected to target PSA APIs or offer implementations. In October
+of 2025, the <a href="https://github.com/Mbed-TLS/mbedtls/releases/tag/mbedtls-4.0.0">v4.0.0
+release</a>
+officially split out the PSA Crypto API implementation of MbedTLS into
+<a href="https://github.com/Mbed-TLS/TF-PSA-Crypto">TF-PSA-Crypto</a>.</p>
+<p>MbedTLS, a library that traditionally has offered TLS / DTLS support, X.509
+certificate utilities, and various cryptographic primitives, has been
+incorporating the PSA Crypto API since the <a href="https://github.com/Mbed-TLS/mbedtls/releases/tag/mbedtls-2.15.0">v2.15.0
+release</a> in
+2018. The recent step of splitting out the PSA Crypto implementation imposes <a href="https://github.com/Mbed-TLS/mbedtls/blob/mbedtls-4.0.0/docs/4.0-migration-guide.md">non-trivial migration work</a>
+on consumers of MbedTLS, but it also takes an important step towards enabling
+them to standardize on the API.</p>
+<p>While MbedTLS has <a href="https://mbed-tls.readthedocs.io/en/latest/kb/development/hw_acc_guidelines/">supported alternative drivers in the
+past</a>
+to allow for hardware acceleration and proprietary cryptography libaries, the
+new TF-PSA-Crypto library offers a much cleaner mechanism, where both
+<a href="https://github.com/Mbed-TLS/TF-PSA-Crypto/blob/tf-psa-crypto-1.0.0/docs/proposed/psa-driver-interface.md#types-of-drivers">transparent and opaque
+drivers</a>
+can be implemented. Transparent drivers require the passing of plaintext keys,
+making them suitable for pure software and hardware accelerated cryptographic
+operations, while opaque drivers operate on keys stored in secure locations,
+such as a physically separate secure element or an integrated secure enclave.
+Driver capabilities can be declared using a <a href="https://github.com/Mbed-TLS/TF-PSA-Crypto/blob/tf-psa-crypto-1.0.0/docs/proposed/psa-driver-interface.md#driver-description-syntax">JSON
+syntax</a>,
+then the necessary wrappers can be auto-generated to call into the driver
+implemenations. For example, the <a href="https://github.com/Mbed-TLS/TF-PSA-Crypto/blob/tf-psa-crypto-1.0.0/scripts/data_files/driver_jsons/mbedtls_test_opaque_driver.json">test opaque
+driver</a>
+is specified in the following JSON file.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">&#34;prefix&#34;</span>:       <span style="color:#0ff;font-weight:bold">&#34;mbedtls_test&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">&#34;type&#34;</span>:         <span style="color:#0ff;font-weight:bold">&#34;opaque&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">&#34;location&#34;</span>:     <span style="color:#0ff;font-weight:bold">&#34;0x7fffff&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">&#34;mbedtls/h_condition&#34;</span>:   <span style="color:#0ff;font-weight:bold">&#34;defined(PSA_CRYPTO_DRIVER_TEST)&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">&#34;headers&#34;</span>:      [<span style="color:#0ff;font-weight:bold">&#34;test/drivers/test_driver.h&#34;</span>],
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">&#34;capabilities&#34;</span>: [
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">&#34;_comment&#34;</span>:     <span style="color:#0ff;font-weight:bold">&#34;The Mbed TLS opaque driver supports import key/export key/export_public key&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">&#34;mbedtls/c_condition&#34;</span>:    <span style="color:#0ff;font-weight:bold">&#34;defined(PSA_CRYPTO_DRIVER_TEST)&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">&#34;entry_points&#34;</span>: [<span style="color:#0ff;font-weight:bold">&#34;import_key&#34;</span>, <span style="color:#0ff;font-weight:bold">&#34;export_key&#34;</span>, <span style="color:#0ff;font-weight:bold">&#34;export_public_key&#34;</span>]
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">&#34;_comment&#34;</span>:     <span style="color:#0ff;font-weight:bold">&#34;The Mbed TLS opaque driver supports copy key/ get builtin key&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">&#34;mbedtls/c_condition&#34;</span>:    <span style="color:#0ff;font-weight:bold">&#34;defined(PSA_CRYPTO_DRIVER_TEST)&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">&#34;entry_points&#34;</span>: [<span style="color:#0ff;font-weight:bold">&#34;copy_key&#34;</span>, <span style="color:#0ff;font-weight:bold">&#34;get_builtin_key&#34;</span>],
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">&#34;names&#34;</span>:         {<span style="font-weight:bold">&#34;copy_key&#34;</span>:<span style="color:#0ff;font-weight:bold">&#34;mbedtls_test_opaque_copy_key&#34;</span>, <span style="font-weight:bold">&#34;get_builtin_key&#34;</span>:<span style="color:#0ff;font-weight:bold">&#34;mbedtls_test_opaque_get_builtin_key&#34;</span>}
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>     ]
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>There are <a href="https://github.com/Mbed-TLS/TF-PSA-Crypto/blob/tf-psa-crypto-1.0.0/scripts/data_files/driver_templates/psa_crypto_driver_wrappers.h.jinja">template header
+files</a>
+that use <a href="https://jinja.palletsprojects.com/en/stable/">Jinja</a> to automatically
+incorporate the driver entry points in the wrapper calls.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">inline</span> <span style="color:#fff;font-weight:bold">psa_status_t</span> psa_driver_wrapper_import_key(
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">psa_key_attributes_t</span> *attributes,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">uint8_t</span> *data,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">size_t</span> data_length,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">uint8_t</span> *key_buffer,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">size_t</span> key_buffer_size,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">size_t</span> *key_buffer_length,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">size_t</span> *bits )
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>{% with entry_point = <span style="color:#0ff;font-weight:bold">&#34;import_key&#34;</span> -%}
+</span></span><span style="display:flex;"><span>{% macro entry_point_param(driver) -%}
+</span></span><span style="display:flex;"><span>attributes,
+</span></span><span style="display:flex;"><span>data,
+</span></span><span style="display:flex;"><span>data_length,
+</span></span><span style="display:flex;"><span>key_buffer,
+</span></span><span style="display:flex;"><span>key_buffer_size,
+</span></span><span style="display:flex;"><span>key_buffer_length,
+</span></span><span style="display:flex;"><span>bits
+</span></span><span style="display:flex;"><span>{% endmacro %}
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">psa_status_t</span> status = PSA_ERROR_CORRUPTION_DETECTED;
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">psa_key_location_t</span> location = PSA_KEY_LIFETIME_GET_LOCATION(
+</span></span><span style="display:flex;"><span>                                      psa_get_key_lifetime( attributes ) );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">switch</span>( location )
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">case</span> PSA_KEY_LOCATION_LOCAL_STORAGE:
+</span></span><span style="display:flex;"><span>            <span style="color:#007f7f">/* Key is stored in the slot in export representation, so
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">             * cycle through all known transparent accelerators */</span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>{% with nest_indent=<span style="color:#ff0;font-weight:bold">12</span> %}
+</span></span><span style="display:flex;"><span>{% include <span style="color:#0ff;font-weight:bold">&#34;OS-template-transparent.jinja&#34;</span> -%}
+</span></span><span style="display:flex;"><span>{% endwith -%}
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>            <span style="color:#007f7f">/* Fell through, meaning no accelerator supports this operation */</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">return</span>( psa_import_key_into_slot( attributes,
+</span></span><span style="display:flex;"><span>                                              data, data_length,
+</span></span><span style="display:flex;"><span>                                              key_buffer, key_buffer_size,
+</span></span><span style="display:flex;"><span>                                              key_buffer_length, bits ) );
+</span></span><span style="display:flex;"><span>        <span style="color:#007f7f">/* Add cases for opaque driver here */</span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>{% with nest_indent=<span style="color:#ff0;font-weight:bold">8</span> %}
+</span></span><span style="display:flex;"><span>{% include <span style="color:#0ff;font-weight:bold">&#34;OS-template-opaque.jinja&#34;</span> -%}
+</span></span><span style="display:flex;"><span>{% endwith -%}
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>        <span style="color:#fff;font-weight:bold">default</span>:
+</span></span><span style="display:flex;"><span>            (<span style="color:#fff;font-weight:bold">void</span>)status;
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">return</span>( PSA_ERROR_INVALID_ARGUMENT );
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>{% endwith %}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>While there are currently <a href="https://github.com/Mbed-TLS/TF-PSA-Crypto/blob/tf-psa-crypto-1.0.0/docs/psa-driver-example-and-guide.md#background-on-how-mbed-tls-calls-drivers">limited entry points supported by
+auto-generation</a>,
+additional entry points can be enabled through a <a href="https://github.com/Mbed-TLS/TF-PSA-Crypto/blob/tf-psa-crypto-1.0.0/docs/psa-driver-example-and-guide.md#process-for-entry-points-where-auto-generation-is-not-implemented">more manual
+procedure</a>.
+The primary benefit of this architecture is that platform developers and silicon
+vendors can easily introduce new drivers, and conditionally enable them based on
+the hardware the consumer is targeting. Meanwhile, library authors, and
+consumers themselves, can leverage the same APIs across a wide range of systems.
+In fact, while the TF-PSA-Crypto library makes the modular inclusion of
+cryptographic implementations simpler, vendors can also opt to implement the
+entire PSA Crypto API themselves without breaking compatibility.</p>
+<h2 id="portability-in-practice">
+  Portability in Practice
+  <a class="heading-link" href="#portability-in-practice">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>In one of our newer embedded libraries,
+<a href="https://github.com/golioth/signy"><code>signy</code></a>, which <a href="https://blog.golioth.io/signed-urls-for-embedded-devices/">generates signed URLs on
+embedded devices</a> and
+thus must interact with private keys and perform cryptographic operations, we
+made the decision to build solely on the PSA Crypto API from the beginning. This
+made <a href="https://blog.golioth.io/signed-urls-on-esp32/#bringing-signed-urls-to-the-esp32">expanding
+support</a>
+from just <a href="https://github.com/zephyrproject-rtos/zephyr">Zephyr</a> to Espressif&rsquo;s
+<a href="https://freertos.org/">FreeRTOS</a>-based
+<a href="https://github.com/espressif/esp-idf"><code>esp-idf</code></a> straightforward, despite
+implementations of cryptographic operations looking quite different.</p>
+<p>For example, to generate the signature portion of the signed URL, <code>signy</code>
+<a href="https://github.com/golioth/signy/blob/2c6a1440ea33e6decd069198375097356ca475b7/src/signy.c#L118">calls</a>
+<code>psa_sign_hash()</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>    <span style="color:#007f7f">/* Sign the hash */</span>
+</span></span><span style="display:flex;"><span>    status = psa_sign_hash(signy_key,
+</span></span><span style="display:flex;"><span>                           PSA_ALG_ECDSA(PSA_ALG_SHA_256),
+</span></span><span style="display:flex;"><span>                           hash,
+</span></span><span style="display:flex;"><span>                           <span style="color:#fff;font-weight:bold">sizeof</span>(hash),
+</span></span><span style="display:flex;"><span>                           sig,
+</span></span><span style="display:flex;"><span>                           <span style="color:#fff;font-weight:bold">sizeof</span>(sig),
+</span></span><span style="display:flex;"><span>                           &amp;sig_len);
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> (status != PSA_SUCCESS)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        err = -EINVAL;
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">goto</span> cleanup;
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>When building for the <a href="https://www.nordicsemi.com/Products/nRF52840">nRF52840</a>
+<a href="https://www.nordicsemi.com/Products/Development-hardware/nRF52840-DK">development
+kit</a> from
+Nordic Semiconductor, we build on top of the <a href="https://github.com/nrfconnect/sdk-nrf">nRF Connect SDK
+(NCS)</a>, a downstream fork of Zephyr. The
+nRF52840 includes an Arm
+<a href="https://developer.arm.com/Processors/Cortex-M4">Cortex-M4</a> core, which does not
+support hardware-level isolation via the aforementioned Cortex-M Security
+Extension (CMSE). However, it does include the <a href="https://docs.nordicsemi.com/bundle/ps_nrf52840/page/cryptocell.html">Arm TrustZone CryptoCell
+310</a>
+subsystem, which provides root of trust and security services, including a
+<a href="https://docs.nordicsemi.com/bundle/ps_nrf52840/page/cryptocell.html#ariaid-title101">Public Key Accelerator
+(PKA)</a>
+engine.</p>
+<p>NCS allows us to leverage this capability through its (somewhat complex)
+<a href="https://docs.nordicsemi.com/bundle/ncs-3.1.1/page/nrf/security/crypto/crypto_architecture.html">cryptographic
+architecture</a>.
+It uses the <a href="https://github.com/nrfconnect/sdk-oberon-psa-crypto"><code>sdk-oberon-psa-crypto</code>
+library</a> rather than
+MbedTLS or TF-PSA-Crypto as the PSA Crypto API implementation, which allows for
+configuration of multiple drivers. In the case of the nRF52840, we enable the
+<code>nrf_cc3xx</code> driver, making the <code>cc3xx_sign_hash()</code>
+<a href="https://github.com/nrfconnect/sdk-oberon-psa-crypto/blob/fd1f2aa156d8beb78584dfbaf30df30bf8f6568f/oberon/platforms/nordic_nrf/library/psa_crypto_driver_wrappers.c#L292">function</a>
+available (this eventually calls into a closed source library with
+<code>cc3xx_internal_ecdsa_sign()</code>).</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#007f7f">/** \defgroup psa_asym_sign PSA driver entry points for asymmetric sign/verify
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"> *
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"> *  Entry points for asymmetric message signing and signature verification as
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"> *  described by the PSA Cryptoprocessor Driver interface specification
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"> *
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"> *  @{
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f"> */</span>
+</span></span><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">psa_status_t</span> cc3xx_sign_hash(<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">psa_key_attributes_t</span> *attributes, <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">uint8_t</span> *key,
+</span></span><span style="display:flex;"><span>			     <span style="color:#fff;font-weight:bold">size_t</span> key_length, <span style="color:#fff;font-weight:bold">psa_algorithm_t</span> alg, <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">uint8_t</span> *input,
+</span></span><span style="display:flex;"><span>			     <span style="color:#fff;font-weight:bold">size_t</span> input_length, <span style="color:#fff;font-weight:bold">uint8_t</span> *signature, <span style="color:#fff;font-weight:bold">size_t</span> signature_size,
+</span></span><span style="display:flex;"><span>			     <span style="color:#fff;font-weight:bold">size_t</span> *signature_length)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (alg != PSA_ALG_RSA_PKCS1V15_SIGN_RAW &amp;&amp;
+</span></span><span style="display:flex;"><span>	    input_length != PSA_HASH_LENGTH(PSA_ALG_SIGN_GET_HASH(alg))) {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> PSA_ERROR_INVALID_ARGUMENT;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (!PSA_KEY_TYPE_IS_ASYMMETRIC(psa_get_key_type(attributes))) {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> PSA_ERROR_NOT_SUPPORTED;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">if</span> (PSA_ALG_IS_ECDSA(alg)) {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> cc3xx_internal_ecdsa_sign(attributes, key, key_length, alg, input,
+</span></span><span style="display:flex;"><span>						 input_length, signature, signature_size,
+</span></span><span style="display:flex;"><span>						 signature_length, <span style="color:#fff;font-weight:bold">false</span>);
+</span></span><span style="display:flex;"><span>	} <span style="color:#fff;font-weight:bold">else</span> <span style="color:#fff;font-weight:bold">if</span> (PSA_ALG_IS_RSA_PKCS1V15_SIGN(alg) || PSA_ALG_IS_RSA_PSS(alg)) {
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> cc3xx_internal_rsa_sign(attributes, key, key_length, alg, input,
+</span></span><span style="display:flex;"><span>					       input_length, signature, signature_size,
+</span></span><span style="display:flex;"><span>					       signature_length, <span style="color:#fff;font-weight:bold">false</span>);
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">return</span> PSA_ERROR_NOT_SUPPORTED;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The Oberon library calls into the <code>nrf_security</code> subsystem, which looks very
+similar to TF-PSA-Crypto,
+<a href="https://github.com/nrfconnect/sdk-nrf/blob/89ba1294ac9b624e28271a5c71e99193ed4d92a4/subsys/nrf_security/src/psa_crypto_driver_wrappers.c#L317-L380">dispatching</a>
+PSA Crypto API operations to the enabled driver(s).</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">psa_status_t</span> psa_driver_wrapper_sign_hash(<span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">psa_key_attributes_t</span> *attributes,
+</span></span><span style="display:flex;"><span>					  <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">uint8_t</span> *key_buffer, <span style="color:#fff;font-weight:bold">size_t</span> key_buffer_size,
+</span></span><span style="display:flex;"><span>					  <span style="color:#fff;font-weight:bold">psa_algorithm_t</span> alg, <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">uint8_t</span> *hash,
+</span></span><span style="display:flex;"><span>					  <span style="color:#fff;font-weight:bold">size_t</span> hash_length, <span style="color:#fff;font-weight:bold">uint8_t</span> *signature,
+</span></span><span style="display:flex;"><span>					  <span style="color:#fff;font-weight:bold">size_t</span> signature_size, <span style="color:#fff;font-weight:bold">size_t</span> *signature_length)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">psa_status_t</span> status = PSA_ERROR_CORRUPTION_DETECTED;
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">psa_key_location_t</span> location = PSA_KEY_LIFETIME_GET_LOCATION(attributes-&gt;lifetime);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">switch</span> (location) {
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">case</span> PSA_KEY_LOCATION_LOCAL_STORAGE:
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(PSA_CRYPTO_DRIVER_TFM_BUILTIN_KEY_LOADER)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">case</span> TFM_BUILTIN_KEY_LOADER_KEY_LOCATION:
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif		</span><span style="color:#007f7f">/* defined(PSA_CRYPTO_DRIVER_TFM_BUILTIN_KEY_LOADER) */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>		<span style="color:#007f7f">/* Key is stored in the slot in export representation, so
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">		 * cycle through all known transparent accelerators
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">		 */</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(PSA_NEED_CRACEN_ASYMMETRIC_SIGNATURE_DRIVER)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">case</span> PSA_KEY_LOCATION_CRACEN:
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(PSA_NEED_CRACEN_KMU_DRIVER)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#fff;font-weight:bold">case</span> PSA_KEY_LOCATION_CRACEN_KMU:
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* PSA_NEED_CRACEN_KMU_DRIVER */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>		status = cracen_sign_hash(attributes, key_buffer, key_buffer_size, alg, hash,
+</span></span><span style="display:flex;"><span>					  hash_length, signature, signature_size, signature_length);
+</span></span><span style="display:flex;"><span>		<span style="color:#007f7f">/* Declared with fallback == true */</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">if</span> (status != PSA_ERROR_NOT_SUPPORTED) {
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">return</span> status;
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* PSA_NEED_CRACEN_ASYMMETRIC_SIGNATURE_DRIVER */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(PSA_NEED_CC3XX_ASYMMETRIC_SIGNATURE_DRIVER)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>		status = cc3xx_sign_hash(attributes, key_buffer, key_buffer_size, alg, hash,
+</span></span><span style="display:flex;"><span>					 hash_length, signature, signature_size, signature_length);
+</span></span><span style="display:flex;"><span>		<span style="color:#007f7f">/* Declared with fallback == true */</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">if</span> (status != PSA_ERROR_NOT_SUPPORTED) {
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">return</span> status;
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* PSA_NEED_CC3XX_ASYMMETRIC_SIGNATURE_DRIVER */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(PSA_NEED_OBERON_ASYMMETRIC_SIGNATURE_DRIVER)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>		status = oberon_sign_hash(attributes, key_buffer, key_buffer_size, alg, hash,
+</span></span><span style="display:flex;"><span>					  hash_length, signature, signature_size, signature_length);
+</span></span><span style="display:flex;"><span>		<span style="color:#007f7f">/* Declared with fallback == true */</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">if</span> (status != PSA_ERROR_NOT_SUPPORTED) {
+</span></span><span style="display:flex;"><span>			<span style="color:#fff;font-weight:bold">return</span> status;
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* PSA_NEED_OBERON_ASYMMETRIC_SIGNATURE_DRIVER */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>		<span style="color:#007f7f">/* Fell through, meaning nothing supports this operation */</span>
+</span></span><span style="display:flex;"><span>		(<span style="color:#fff;font-weight:bold">void</span>)attributes;
+</span></span><span style="display:flex;"><span>		(<span style="color:#fff;font-weight:bold">void</span>)key_buffer;
+</span></span><span style="display:flex;"><span>		(<span style="color:#fff;font-weight:bold">void</span>)key_buffer_size;
+</span></span><span style="display:flex;"><span>		(<span style="color:#fff;font-weight:bold">void</span>)alg;
+</span></span><span style="display:flex;"><span>		(<span style="color:#fff;font-weight:bold">void</span>)hash;
+</span></span><span style="display:flex;"><span>		(<span style="color:#fff;font-weight:bold">void</span>)hash_length;
+</span></span><span style="display:flex;"><span>		(<span style="color:#fff;font-weight:bold">void</span>)signature;
+</span></span><span style="display:flex;"><span>		(<span style="color:#fff;font-weight:bold">void</span>)signature_size;
+</span></span><span style="display:flex;"><span>		(<span style="color:#fff;font-weight:bold">void</span>)signature_length;
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> PSA_ERROR_NOT_SUPPORTED;
+</span></span><span style="display:flex;"><span>		<span style="color:#007f7f">/* Add cases for opaque driver here */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#fff;font-weight:bold">default</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#007f7f">/* Key is declared with a lifetime not known to us */</span>
+</span></span><span style="display:flex;"><span>		(<span style="color:#fff;font-weight:bold">void</span>)status;
+</span></span><span style="display:flex;"><span>		<span style="color:#fff;font-weight:bold">return</span> PSA_ERROR_INVALID_ARGUMENT;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>When building for Espressif devices, we target <code>esp-idf</code>. Espressif maintains a
+<a href="https://github.com/espressif/mbedtls">fork</a> of MbedTLS, where changes can be
+implemented to support specific capabilities of ESP32 devices. In theory, once
+the auto-generation functionality in TF-PSA-Crypto is expanded to cover all
+entrypoints, there would no longer be a need to maintain a fork. For the time
+being, commits such as <a href="https://github.com/espressif/mbedtls/commit/ccdb388c276d67c8c86066ec1f1b277483884c78#diff-d207b2c0feac1691c958393305352992fafb5cb55c803870beb4b74cf287e8b8">this
+one</a>
+are necessary to modify wrappers to call into specific <code>esp-idf</code> functions.</p>
+<p>Even when manual changes are required, the Espressif MbedTLS maintainers have
+been adding driver JSON files. For example, the hardware accelerated ECDSA
+opaque driver is
+<a href="https://github.com/espressif/mbedtls/blob/582ff482038db6e4010dbf6f943d97b05ad06ea5/tf-psa-crypto/scripts/data_files/driver_jsons/esp_ecdsa_opaque_driver.json">specified</a>
+as follows.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">&#34;prefix&#34;</span>:       <span style="color:#0ff;font-weight:bold">&#34;esp_ecdsa&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">&#34;type&#34;</span>:         <span style="color:#0ff;font-weight:bold">&#34;opaque&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">&#34;mbedtls/h_condition&#34;</span>:   <span style="color:#0ff;font-weight:bold">&#34;defined(ESP_ECDSA_DRIVER_ENABLED), defined(ESP_ECDSA_SIGN_DRIVER_ENABLED)&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">&#34;headers&#34;</span>:      [<span style="color:#0ff;font-weight:bold">&#34;../../../port/psa_driver/include/psa_crypto_driver_esp_ecdsa.h&#34;</span>],
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">&#34;capabilities&#34;</span>: [
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">&#34;mbedtls/c_condition&#34;</span>: <span style="color:#0ff;font-weight:bold">&#34;defined(ESP_ECDSA_DRIVER_ENABLED), defined(ESP_ECDSA_SIGN_DRIVER_ENABLED)&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">&#34;_comment&#34;</span>: <span style="color:#0ff;font-weight:bold">&#34;This driver will support ECDSA operations using the ESP hardware accelerator.&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">&#34;entry_points&#34;</span>: [<span style="color:#0ff;font-weight:bold">&#34;sign_hash&#34;</span>, <span style="color:#0ff;font-weight:bold">&#34;export_public_key&#34;</span>, <span style="color:#0ff;font-weight:bold">&#34;import_key&#34;</span>],
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">&#34;algorithms&#34;</span>: [<span style="color:#0ff;font-weight:bold">&#34;PSA_ALG_ECDSA(PSA_ALG_SHA_256), PSA_ALG_ECDSA(PSA_ALG_SHA_384)&#34;</span>],
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">&#34;key_types&#34;</span>: [<span style="color:#0ff;font-weight:bold">&#34;PSA_KEY_TYPE_ECC_KEY_PAIR(PSA_ECC_FAMILY_SECP_R1)&#34;</span>],
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">&#34;key_sizes&#34;</span>: [<span style="color:#ff0;font-weight:bold">192</span>, <span style="color:#ff0;font-weight:bold">256</span>, <span style="color:#ff0;font-weight:bold">384</span>],
+</span></span><span style="display:flex;"><span>            <span style="font-weight:bold">&#34;fallback&#34;</span>: <span style="color:#fff;font-weight:bold">false</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>In the modified <code>psa_driver_wrapper_sign_hash()</code>
+<a href="https://github.com/espressif/mbedtls/blob/0e4c264731198025d93a60c6e92128b896211b47/tf-psa-crypto/core/psa_crypto_driver_wrappers.h#L292-L417">implementation</a>,
+there are a variety of transparent and opaque drivers that may be selected. For
+devices that support ECDSA acceleration, the call to <code>psa_sign_hash()</code> in
+<code>signy</code> will result in a call to <code>esp_ecdsa_opaque_sign_hash()</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">inline</span> <span style="color:#fff;font-weight:bold">psa_status_t</span> psa_driver_wrapper_sign_hash(
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">psa_key_attributes_t</span> *attributes,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">uint8_t</span> *key_buffer, <span style="color:#fff;font-weight:bold">size_t</span> key_buffer_size,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">psa_algorithm_t</span> alg, <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">uint8_t</span> *hash, <span style="color:#fff;font-weight:bold">size_t</span> hash_length,
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">uint8_t</span> *signature, <span style="color:#fff;font-weight:bold">size_t</span> signature_size, <span style="color:#fff;font-weight:bold">size_t</span> *signature_length )
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">psa_status_t</span> status = PSA_ERROR_CORRUPTION_DETECTED;
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">psa_key_location_t</span> location =
+</span></span><span style="display:flex;"><span>        PSA_KEY_LIFETIME_GET_LOCATION( psa_get_key_lifetime(attributes) );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">switch</span>( location )
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">case</span> PSA_KEY_LOCATION_LOCAL_STORAGE:
+</span></span><span style="display:flex;"><span>            <span style="color:#007f7f">/* Key is stored in the slot in export representation, so
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">             * cycle through all known transparent accelerators */</span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(PSA_CRYPTO_DRIVER_TEST)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>            status = mbedtls_test_transparent_signature_sign_hash( attributes,
+</span></span><span style="display:flex;"><span>                                                           key_buffer,
+</span></span><span style="display:flex;"><span>                                                           key_buffer_size,
+</span></span><span style="display:flex;"><span>                                                           alg,
+</span></span><span style="display:flex;"><span>                                                           hash,
+</span></span><span style="display:flex;"><span>                                                           hash_length,
+</span></span><span style="display:flex;"><span>                                                           signature,
+</span></span><span style="display:flex;"><span>                                                           signature_size,
+</span></span><span style="display:flex;"><span>                                                           signature_length );
+</span></span><span style="display:flex;"><span>            <span style="color:#007f7f">/* Declared with fallback == true */</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">if</span>( status != PSA_ERROR_NOT_SUPPORTED )
+</span></span><span style="display:flex;"><span>                <span style="color:#fff;font-weight:bold">return</span>( status );
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* PSA_CRYPTO_DRIVER_TEST */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined (MBEDTLS_PSA_P256M_DRIVER_ENABLED)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>            <span style="color:#fff;font-weight:bold">if</span>( PSA_KEY_TYPE_IS_ECC( psa_get_key_type(attributes) ) &amp;&amp;
+</span></span><span style="display:flex;"><span>                PSA_ALG_IS_RANDOMIZED_ECDSA(alg) &amp;&amp;
+</span></span><span style="display:flex;"><span>                PSA_KEY_TYPE_ECC_GET_FAMILY(psa_get_key_type(attributes)) == PSA_ECC_FAMILY_SECP_R1 &amp;&amp;
+</span></span><span style="display:flex;"><span>                psa_get_key_bits(attributes) == <span style="color:#ff0;font-weight:bold">256</span> )
+</span></span><span style="display:flex;"><span>            {
+</span></span><span style="display:flex;"><span>                status = p256_transparent_sign_hash( attributes,
+</span></span><span style="display:flex;"><span>                                                     key_buffer,
+</span></span><span style="display:flex;"><span>                                                     key_buffer_size,
+</span></span><span style="display:flex;"><span>                                                     alg,
+</span></span><span style="display:flex;"><span>                                                     hash,
+</span></span><span style="display:flex;"><span>                                                     hash_length,
+</span></span><span style="display:flex;"><span>                                                     signature,
+</span></span><span style="display:flex;"><span>                                                     signature_size,
+</span></span><span style="display:flex;"><span>                                                     signature_length );
+</span></span><span style="display:flex;"><span>                <span style="color:#fff;font-weight:bold">if</span>( status != PSA_ERROR_NOT_SUPPORTED )
+</span></span><span style="display:flex;"><span>                <span style="color:#fff;font-weight:bold">return</span>( status );
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* MBEDTLS_PSA_P256M_DRIVER_ENABLED */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>            <span style="color:#007f7f">/* Fell through, meaning no accelerator supports this operation */</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">return</span>( psa_sign_hash_builtin( attributes,
+</span></span><span style="display:flex;"><span>                                           key_buffer,
+</span></span><span style="display:flex;"><span>                                           key_buffer_size,
+</span></span><span style="display:flex;"><span>                                           alg,
+</span></span><span style="display:flex;"><span>                                           hash,
+</span></span><span style="display:flex;"><span>                                           hash_length,
+</span></span><span style="display:flex;"><span>                                           signature,
+</span></span><span style="display:flex;"><span>                                           signature_size,
+</span></span><span style="display:flex;"><span>                                           signature_length ) );
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#007f7f">/* Add cases for opaque driver here */</span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(PSA_CRYPTO_DRIVER_TEST)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>        <span style="color:#fff;font-weight:bold">case</span> PSA_CRYPTO_TEST_DRIVER_LOCATION:
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">return</span>( mbedtls_test_opaque_signature_sign_hash( attributes,
+</span></span><span style="display:flex;"><span>                                                             key_buffer,
+</span></span><span style="display:flex;"><span>                                                             key_buffer_size,
+</span></span><span style="display:flex;"><span>                                                             alg,
+</span></span><span style="display:flex;"><span>                                                             hash,
+</span></span><span style="display:flex;"><span>                                                             hash_length,
+</span></span><span style="display:flex;"><span>                                                             signature,
+</span></span><span style="display:flex;"><span>                                                             signature_size,
+</span></span><span style="display:flex;"><span>                                                             signature_length ) );
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* PSA_CRYPTO_DRIVER_TEST */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(ESP_ECDSA_DRIVER_ENABLED) &amp;&amp; defined(ESP_ECDSA_SIGN_DRIVER_ENABLED)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>        <span style="color:#fff;font-weight:bold">case</span> PSA_KEY_LOCATION_ESP_ECDSA:
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">if</span>( PSA_KEY_TYPE_IS_ECC( psa_get_key_type(attributes) ) &amp;&amp;
+</span></span><span style="display:flex;"><span>                PSA_ALG_IS_ECDSA(alg) &amp;&amp; PSA_ALG_IS_ECDSA( psa_get_key_algorithm(attributes) ) &amp;&amp;
+</span></span><span style="display:flex;"><span>                PSA_KEY_TYPE_ECC_GET_FAMILY(psa_get_key_type(attributes)) == PSA_ECC_FAMILY_SECP_R1)
+</span></span><span style="display:flex;"><span>            {
+</span></span><span style="display:flex;"><span>                <span style="color:#fff;font-weight:bold">return</span> ( esp_ecdsa_opaque_sign_hash( attributes,
+</span></span><span style="display:flex;"><span>                                                key_buffer,
+</span></span><span style="display:flex;"><span>                                                key_buffer_size,
+</span></span><span style="display:flex;"><span>                                                alg,
+</span></span><span style="display:flex;"><span>                                                hash,
+</span></span><span style="display:flex;"><span>                                                hash_length,
+</span></span><span style="display:flex;"><span>                                                signature,
+</span></span><span style="display:flex;"><span>                                                signature_size,
+</span></span><span style="display:flex;"><span>                                                signature_length ) );
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">return</span> PSA_ERROR_INVALID_ARGUMENT;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* defined(ESP_ECDSA_DRIVER_ENABLED) &amp;&amp; defined(ESP_ECDSA_SIGN_DRIVER_ENABLED) */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(ESP_RSA_DS_DRIVER_ENABLED)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>        <span style="color:#fff;font-weight:bold">case</span> PSA_KEY_LOCATION_ESP_RSA_DS:
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">if</span>( PSA_KEY_TYPE_IS_RSA( psa_get_key_type(attributes) )  &amp;&amp;
+</span></span><span style="display:flex;"><span>                (PSA_ALG_IS_RSA_PKCS1V15_SIGN(alg) || PSA_ALG_IS_RSA_PSS(alg)))
+</span></span><span style="display:flex;"><span>            {
+</span></span><span style="display:flex;"><span>                <span style="color:#fff;font-weight:bold">return</span>( esp_rsa_ds_opaque_signature_sign_hash( attributes,
+</span></span><span style="display:flex;"><span>                                                        key_buffer,
+</span></span><span style="display:flex;"><span>                                                        key_buffer_size,
+</span></span><span style="display:flex;"><span>                                                        alg,
+</span></span><span style="display:flex;"><span>                                                        hash,
+</span></span><span style="display:flex;"><span>                                                        hash_length,
+</span></span><span style="display:flex;"><span>                                                        signature,
+</span></span><span style="display:flex;"><span>                                                        signature_size,
+</span></span><span style="display:flex;"><span>                                                        signature_length ) );
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">return</span> PSA_ERROR_INVALID_ARGUMENT;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* ESP_RSA_DS_DRIVER_ENABLED */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(SECURE_ELEMENT_DRIVER_ENABLED)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>        <span style="color:#fff;font-weight:bold">case</span> PSA_KEY_LOCATION_SECURE_ELEMENT:
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">return</span>( secure_element_opaque_sign_hash(
+</span></span><span style="display:flex;"><span>                        attributes,
+</span></span><span style="display:flex;"><span>                        key_buffer, key_buffer_size,
+</span></span><span style="display:flex;"><span>                        alg, hash, hash_length,
+</span></span><span style="display:flex;"><span>                        signature, signature_size,
+</span></span><span style="display:flex;"><span>                        signature_length ) );
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* SECURE_ELEMENT_DRIVER_ENABLED */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>        <span style="color:#fff;font-weight:bold">default</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#007f7f">/* Key is declared with a lifetime not known to us */</span>
+</span></span><span style="display:flex;"><span>            (<span style="color:#fff;font-weight:bold">void</span>)status;
+</span></span><span style="display:flex;"><span>            <span style="color:#fff;font-weight:bold">return</span>( PSA_ERROR_INVALID_ARGUMENT );
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>The
+<a href="https://github.com/espressif/esp-idf/blob/c32c7152efe8df1a0411d9b11a1f0105e1eebfe1/components/mbedtls/port/psa_driver/esp_ecdsa/psa_crypto_driver_esp_ecdsa.c">implementation</a>
+of the <code>esp_ecdsa</code> PSA driver leverages the <code>esp_hal_security</code> component&rsquo;s
+<code>ecdsa_hal</code> functionality to interact with the hardware accelerator directly.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">void</span> ecdsa_hal_gen_signature(<span style="color:#fff;font-weight:bold">ecdsa_hal_config_t</span> *conf, <span style="color:#fff;font-weight:bold">const</span> <span style="color:#fff;font-weight:bold">uint8_t</span> *hash,
+</span></span><span style="display:flex;"><span>                             <span style="color:#fff;font-weight:bold">uint8_t</span> *r_out, <span style="color:#fff;font-weight:bold">uint8_t</span> *s_out, <span style="color:#fff;font-weight:bold">uint16_t</span> len)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> (len != ECDSA_HAL_P192_COMPONENT_LEN &amp;&amp; len != ECDSA_HAL_P256_COMPONENT_LEN
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if SOC_ECDSA_SUPPORT_CURVE_P384
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>            &amp;&amp; len != ECDSA_HAL_P384_COMPONENT_LEN
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* SOC_ECDSA_SUPPORT_CURVE_P384 */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>       ) {
+</span></span><span style="display:flex;"><span>        HAL_ASSERT(<span style="color:#fff;font-weight:bold">false</span> &amp;&amp; <span style="color:#0ff;font-weight:bold">&#34;Incorrect length&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> (conf-&gt;sha_mode == ECDSA_Z_USER_PROVIDED &amp;&amp; hash == <span style="color:#fff;font-weight:bold">NULL</span>) {
+</span></span><span style="display:flex;"><span>        HAL_ASSERT(<span style="color:#fff;font-weight:bold">false</span> &amp;&amp; <span style="color:#0ff;font-weight:bold">&#34;Mismatch in SHA configuration&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">if</span> (ecdsa_ll_get_state() != ECDSA_STATE_IDLE) {
+</span></span><span style="display:flex;"><span>        HAL_ASSERT(<span style="color:#fff;font-weight:bold">false</span> &amp;&amp; <span style="color:#0ff;font-weight:bold">&#34;Incorrect ECDSA state&#34;</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    configure_ecdsa_periph(conf);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if HAL_CONFIG(ECDSA_GEN_SIG_CM)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if SOC_IS(ESP32H2)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>    <span style="color:#fff;font-weight:bold">if</span> (!ESP_CHIP_REV_ABOVE(efuse_hal_chip_revision(), <span style="color:#ff0;font-weight:bold">102</span>)) {
+</span></span><span style="display:flex;"><span>        ecdsa_hal_gen_signature_with_countermeasure(hash, r_out, s_out, len);
+</span></span><span style="display:flex;"><span>        <span style="color:#fff;font-weight:bold">return</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>    ecdsa_hal_gen_signature_with_countermeasure(hash, r_out, s_out, len);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else </span><span style="color:#007f7f">/* HAL_CONFIG_ECDSA_GEN_SIG_CM */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>    ecdsa_hal_gen_signature_inner(hash, r_out, s_out, len);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* !HAL_CONFIG_ECDSA_GEN_SIG_CM */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><blockquote>
+<p>We&rsquo;ll talk about the countermeasure approach here and power analysis attacks
+in general in a future post.</p>
+</blockquote>
+<p>This looks slightly different depending on the specific silicon, but for the
+most part the <a href="https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/hardware-abstraction.html">low level (<code>ll</code>)
+layer</a>
+is copying data from buffers into various registers. For example, <a href="https://github.com/espressif/esp-idf/blob/508ba7ae0430e4dd0be876384d8eea699c27da3b/components/esp_hal_security/esp32p4/include/hal/ecdsa_ll.h#L362-L398">setting the
+various
+parameters</a>
+for an ECDSA signature operations looks as follows on the
+<a href="https://www.espressif.com/en/products/socs/esp32-p4">ESP32-P4</a>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>/**
+</span></span><span style="display:flex;"><span> * @brief Write the ECDSA parameter
+</span></span><span style="display:flex;"><span> *
+</span></span><span style="display:flex;"><span> * @param param Parameter to be written
+</span></span><span style="display:flex;"><span> * @param buf   Buffer containing data
+</span></span><span style="display:flex;"><span> * @param len   Length of buffer
+</span></span><span style="display:flex;"><span> */
+</span></span><span style="display:flex;"><span>static inline void ecdsa_ll_write_param(ecdsa_ll_param_t param, const uint8_t *buf, uint16_t len)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    uint32_t reg;
+</span></span><span style="display:flex;"><span>    uint32_t word;
+</span></span><span style="display:flex;"><span>    switch (param) {
+</span></span><span style="display:flex;"><span>    case ECDSA_PARAM_R:
+</span></span><span style="display:flex;"><span>        reg = ECDSA_R_MEM;
+</span></span><span style="display:flex;"><span>        break;
+</span></span><span style="display:flex;"><span>    case ECDSA_PARAM_S:
+</span></span><span style="display:flex;"><span>        reg = ECDSA_S_MEM;
+</span></span><span style="display:flex;"><span>        break;
+</span></span><span style="display:flex;"><span>    case ECDSA_PARAM_Z:
+</span></span><span style="display:flex;"><span>        reg = ECDSA_Z_MEM;
+</span></span><span style="display:flex;"><span>        break;
+</span></span><span style="display:flex;"><span>    case ECDSA_PARAM_QAX:
+</span></span><span style="display:flex;"><span>        reg = ECDSA_QAX_MEM;
+</span></span><span style="display:flex;"><span>        break;
+</span></span><span style="display:flex;"><span>    case ECDSA_PARAM_QAY:
+</span></span><span style="display:flex;"><span>        reg = ECDSA_QAY_MEM;
+</span></span><span style="display:flex;"><span>        break;
+</span></span><span style="display:flex;"><span>    default:
+</span></span><span style="display:flex;"><span>        HAL_ASSERT(false &amp;&amp; &#34;Invalid parameter&#34;);
+</span></span><span style="display:flex;"><span>        return;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    for (int i = 0; i &lt; len; i += 4) {
+</span></span><span style="display:flex;"><span>        memcpy(&amp;word, buf + i, 4);
+</span></span><span style="display:flex;"><span>        REG_WRITE(reg + i, word);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h2 id="what-comes-next">
+  What Comes Next?
+  <a class="heading-link" href="#what-comes-next">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>We have seen that the PSA Crypto API allows <code>signy</code> to leverage different
+software libraries and hardware capabilities across Arm, Xtensa, and RISC-V
+architectures with relatively minimal effort. This is just one example of how
+library authors are able to support more hardware faster, without compromising
+on performance or security.</p>
+<p>This adoption may also make migration to new algorithms simpler. If you&rsquo;ve been
+paying attention to the news, you may have seen that
+<a href="https://research.google/blog/safeguarding-cryptocurrency-by-disclosing-quantum-vulnerabilities-responsibly/">recent</a>
+<a href="https://arxiv.org/abs/2603.28627">publications</a> have caused some
+<a href="https://words.filippo.io/crqc-timeline/">individauls</a> and
+<a href="https://blog.cloudflare.com/post-quantum-roadmap/">organizations</a> to
+justifiably accelerate their roadmap towards post-quantum cryptography (PQC)
+adoption. Just recently, TF-PSA-Crypto added the
+<a href="https://github.com/Mbed-TLS/TF-PSA-Crypto/pull/652">beginnings</a> of a <a href="https://github.com/Mbed-TLS/TF-PSA-Crypto/pull/652">PQC
+driver in-tree</a>, based on
+the <a href="https://pqca.org/">Post-Quantum Cryptography Alliance&rsquo;s (PQCA)</a>
+<a href="https://github.com/pq-code-package/mldsa-native"><code>mldsa-native</code></a> library.</p>
+<p>Similarly, in January of this year, Arm released a final 1.4 version of the <a href="https://arm-software.github.io/psa-api/crypto/1.4/ext-pqc/">PSA
+Certified Crypto API 1.4 PQC
+Extension</a>, which
+extends the PSA Crypto API with <a href="https://www.nist.gov/news-events/news/2024/08/nist-releases-first-3-finalized-post-quantum-encryption-standards">NIST approved PQC
+schemes</a>.
+While there are certainly other complications for constrained devices that will
+come with migration, namely impacts on resource usage and performance, the
+specification and broad adoption of PSA has dramatically improved the starting
+position for the ecosystem.</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2026
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
