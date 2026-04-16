@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  Floating Point Fun on Cortex-M Processors · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="In my recent post on the PSA Crypto API, I demonstrated the use of the API on two different MCUs: the nRF52840 and the ESP32-S3. In the case of the former, the ECDSA signature operation was eventually executed in a closed source library that manages communication between the Arm Cortex-M4 processor and the Arm TrustZone CryptoCell 310 security subsytem. Readers that ventured down the rabbit hole of links in the post may have noticed that there are variants of the nrf_cc310_mbedcrypto libraries for hard-float and soft-float.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="Floating Point Fun on Cortex-M Processors"/>
+<meta name="twitter:description" content="In my recent post on the PSA Crypto API, I demonstrated the use of the API on two different MCUs: the nRF52840 and the ESP32-S3. In the case of the former, the ECDSA signature operation was eventually executed in a closed source library that manages communication between the Arm Cortex-M4 processor and the Arm TrustZone CryptoCell 310 security subsytem. Readers that ventured down the rabbit hole of links in the post may have noticed that there are variants of the nrf_cc310_mbedcrypto libraries for hard-float and soft-float."/>
+
+<meta property="og:title" content="Floating Point Fun on Cortex-M Processors" />
+<meta property="og:description" content="In my recent post on the PSA Crypto API, I demonstrated the use of the API on two different MCUs: the nRF52840 and the ESP32-S3. In the case of the former, the ECDSA signature operation was eventually executed in a closed source library that manages communication between the Arm Cortex-M4 processor and the Arm TrustZone CryptoCell 310 security subsytem. Readers that ventured down the rabbit hole of links in the post may have noticed that there are variants of the nrf_cc310_mbedcrypto libraries for hard-float and soft-float." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/floating-point-cortex-m/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2026-04-16T01:41:34-06:00" />
+<meta property="article:modified_time" content="2026-04-16T01:41:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/floating-point-cortex-m/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/floating-point-cortex-m/">
+              Floating Point Fun on Cortex-M Processors
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2026-04-16T01:41:34-06:00">
+                April 16, 2026
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              12-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>In my <a href="https://danielmangum.com/posts/psa-crypto-portability/">recent post</a> on
+the <a href="https://arm-software.github.io/psa-api/crypto/1.4/">PSA Crypto API</a>, I
+demonstrated the use of the API on two different MCUs: the
+<a href="https://www.nordicsemi.com/Products/nRF52840">nRF52840</a> and the
+<a href="https://www.espressif.com/en/products/socs/esp32-s3">ESP32-S3</a>. In the case of
+the former, the ECDSA signature operation was eventually executed in a closed
+source library that manages communication between the Arm Cortex-M4 processor
+and the Arm <a href="https://docs.nordicsemi.com/bundle/ps_nrf52840/page/cryptocell.html">TrustZone CryptoCell
+310</a>
+security subsytem. Readers that ventured down the rabbit hole of links in the
+post may have noticed that there are
+<a href="https://github.com/nrfconnect/sdk-nrfxlib/tree/529012899ffb2aa8ef69cbbb315eaf2848737aca/crypto/nrf_cc310_mbedcrypto/lib/cortex-m4">variants</a>
+of the <code>nrf_cc310_mbedcrypto</code> libraries for <code>hard-float</code> and <code>soft-float</code>. If
+you have ever hit an error from your linker of the following style, you know
+exactly why.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>ld.bfd: error: X uses VFP register arguments, Y does not
+</span></span><span style="display:flex;"><span>ld.bfd: failed to merge target specific data of file
+</span></span></code></pre></div><p>Arm
+<a href="https://developer.arm.com/documentation/107656/0101/Registers/Floating-point-registers/Using-Floating-point-extension/ABI-options">defines</a>
+three floating point Application Binary Interface (ABI) options, which are
+controlled by the <code>-mfloat-abi</code> compiler flag.</p>
+<ul>
+<li><code>soft</code>: Soft ABI without FPU hardare: All floating-point operations are
+handled by the runtime library functions. Values are passed through integer
+register bank.</li>
+<li><code>softfp</code>: Soft ABI with FPU hardware: This allows the compiled code to
+generate codes that directly access the FPU. But, if a calculation needs to
+use a runtime library function, a soft-float calling convention is used.
+Values are passed through integer register bank.</li>
+<li><code>hard</code>: Hard ABI: This allows the compiled code to generate codes that
+directly accesss the FPU and use FPU-specific calling conventions when calling
+runtime library functions.</li>
+</ul>
+<p>Arm, like most Instruction Set Architectures (ISAs), <a href="https://github.com/ARM-software/abi-aa/blob/main/aapcs32/aapcs32.rst#65parameter-passing">passes arguments to
+subroutines</a>
+in general purpose registers (GPRs), specifically <code>r0</code>-<code>r3</code>. When the number or
+size of arguments exceeds the available GPRs, the remaining arguments are
+<a href="https://danielmangum.com/posts/risc-v-bytes-passing-on-the-stack/">&ldquo;spilled&rdquo;</a>
+to the stack, where they can be accessed by the callee. However, when a
+processor includes a Floating Point Unit (FPU) (more specifically for Armv7-M
+processors, the <a href="https://developer.arm.com/documentation/ddi0403/d/Application-Level-Architecture/Application-Level-Programmers--Model/Coprocessor-support">C10 and C11
+coprocessors</a>),
+and thus the <a href="https://developer.arm.com/documentation/ddi0403/d/Application-Level-Architecture/Application-Level-Programmers--Model/The-optional-Floating-point-extension">floating point
+extension</a>,
+there is an additional register bank with 32 <a href="%5Bhttps://developer.arm.com/documentation/107656/0101/Registers/Floating-point-registers%5D(https://developer.arm.com/documentation/ddi0403/d/Application-Level-Architecture/Application-Level-Programmers--Model/The-optional-Floating-point-extension/The-FP-extension-registers)">floating point
+registers</a>
+(<code>s0</code>-<code>s31</code>).</p>
+<blockquote>
+<p>Side note: you may see the term Vector Floating Point (VFP) when referring to
+floating point on Armv7-M processors, such as the Cortex-M4. The reference
+manual explains why this is the case: <strong>&ldquo;In the ARMv7-A and ARMv7-R
+architecture profiles, floating point instructions are called VFP instructions
+and have mnemonics starting with V. Because ARM assembler is highly consistent
+across architecture versions and profiles, ARMv7-M retains these mnemonics,
+but normally describes the instructions as floating point instructions, or FP
+instructions.&rdquo;</strong></p>
+</blockquote>
+<p>When using the <code>hard</code> ABI, the <code>s0</code>-<code>s15</code> registers can be used for <a href="https://github.com/ARM-software/abi-aa/blob/main/aapcs32/aapcs32.rst#6121vfp-register-usage-conventions">passing
+arguments to
+subroutines</a>.
+The use of <code>hard</code> also indicates that floating point instructions (<a href="https://developer.arm.com/documentation/ddi0403/d/Application-Level-Architecture/The-ARMv7-M-Instruction-Set/Floating-point-load-and-store-instructions">load and
+store</a>,
+<a href="https://developer.arm.com/documentation/ddi0403/d/Application-Level-Architecture/The-ARMv7-M-Instruction-Set/Floating-point-register-transfer-instructions">register
+transfer</a>,
+<a href="https://developer.arm.com/documentation/ddi0403/d/Application-Level-Architecture/The-ARMv7-M-Instruction-Set/Floating-point-data-processing-instructions">data
+processing</a>)
+may be used within routines.</p>
+<p>When using <code>softfp</code>, floating point instructions are allowed within routines,
+but arguments cannot be passed in floating point registers. <code>soft</code> uses the same
+calling convention as <code>softfp</code>, and is thus compatible, but does not allow for
+the use of floating point instructions. When floating point operations are
+performed without support for floating point instructions, they must be
+<a href="https://gcc.gnu.org/onlinedocs/gccint/Soft-float-library-routines.html">emulated in
+software</a>.
+When you see the error described at the beginning of this post, you are mixing
+<code>soft</code>/<code>softfp</code> with <code>hard</code>, which the linker will refuse. It is able to
+determine the ABI of an object file being linked by looking at the Arm
+attributes section, which differs for each variant. For example, on the
+nRF52840, the attributes appear as follows (extracted via <code>readelf</code>).</p>
+<p><code>hard</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Attribute Section: aeabi
+</span></span><span style="display:flex;"><span>File Attributes
+</span></span><span style="display:flex;"><span>  Tag_CPU_name: &#34;7E-M&#34;
+</span></span><span style="display:flex;"><span>  Tag_CPU_arch: v7E-M
+</span></span><span style="display:flex;"><span>  Tag_CPU_arch_profile: Microcontroller
+</span></span><span style="display:flex;"><span>  Tag_THUMB_ISA_use: Thumb-2
+</span></span><span style="display:flex;"><span>  Tag_FP_arch: VFPv4-D16
+</span></span><span style="display:flex;"><span>  Tag_ABI_PCS_wchar_t: 4
+</span></span><span style="display:flex;"><span>  Tag_ABI_FP_denormal: Needed
+</span></span><span style="display:flex;"><span>  Tag_ABI_FP_exceptions: Needed
+</span></span><span style="display:flex;"><span>  Tag_ABI_FP_number_model: IEEE 754
+</span></span><span style="display:flex;"><span>  Tag_ABI_align_needed: 8-byte
+</span></span><span style="display:flex;"><span>  Tag_ABI_align_preserved: 8-byte, except leaf SP
+</span></span><span style="display:flex;"><span>  Tag_ABI_enum_size: small
+</span></span><span style="display:flex;"><span>  Tag_ABI_HardFP_use: SP only
+</span></span><span style="display:flex;"><span>  Tag_ABI_VFP_args: VFP registers
+</span></span><span style="display:flex;"><span>  Tag_ABI_optimization_goals: Aggressive Speed
+</span></span><span style="display:flex;"><span>  Tag_CPU_unaligned_access: v6
+</span></span></code></pre></div><p><code>softfp</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Attribute Section: aeabi
+</span></span><span style="display:flex;"><span>File Attributes
+</span></span><span style="display:flex;"><span>  Tag_CPU_name: &#34;7E-M&#34;
+</span></span><span style="display:flex;"><span>  Tag_CPU_arch: v7E-M
+</span></span><span style="display:flex;"><span>  Tag_CPU_arch_profile: Microcontroller
+</span></span><span style="display:flex;"><span>  Tag_THUMB_ISA_use: Thumb-2
+</span></span><span style="display:flex;"><span>  Tag_FP_arch: VFPv4-D16
+</span></span><span style="display:flex;"><span>  Tag_ABI_PCS_wchar_t: 4
+</span></span><span style="display:flex;"><span>  Tag_ABI_FP_rounding: Needed
+</span></span><span style="display:flex;"><span>  Tag_ABI_FP_denormal: Needed
+</span></span><span style="display:flex;"><span>  Tag_ABI_FP_exceptions: Needed
+</span></span><span style="display:flex;"><span>  Tag_ABI_FP_user_exceptions: Needed
+</span></span><span style="display:flex;"><span>  Tag_ABI_FP_number_model: IEEE 754
+</span></span><span style="display:flex;"><span>  Tag_ABI_align_needed: 8-byte
+</span></span><span style="display:flex;"><span>  Tag_ABI_enum_size: small
+</span></span><span style="display:flex;"><span>  Tag_ABI_HardFP_use: SP only
+</span></span><span style="display:flex;"><span>  Tag_ABI_optimization_goals: Aggressive Size
+</span></span><span style="display:flex;"><span>  Tag_CPU_unaligned_access: v6
+</span></span><span style="display:flex;"><span>  Tag_ABI_FP_16bit_format: IEEE 754
+</span></span></code></pre></div><p><code>soft</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Attribute Section: aeabi
+</span></span><span style="display:flex;"><span>File Attributes
+</span></span><span style="display:flex;"><span>  Tag_CPU_name: &#34;7E-M&#34;
+</span></span><span style="display:flex;"><span>  Tag_CPU_arch: v7E-M
+</span></span><span style="display:flex;"><span>  Tag_CPU_arch_profile: Microcontroller
+</span></span><span style="display:flex;"><span>  Tag_THUMB_ISA_use: Thumb-2
+</span></span><span style="display:flex;"><span>  Tag_ABI_PCS_wchar_t: 4
+</span></span><span style="display:flex;"><span>  Tag_ABI_FP_denormal: Needed
+</span></span><span style="display:flex;"><span>  Tag_ABI_FP_exceptions: Needed
+</span></span><span style="display:flex;"><span>  Tag_ABI_FP_number_model: IEEE 754
+</span></span><span style="display:flex;"><span>  Tag_ABI_align_needed: 8-byte
+</span></span><span style="display:flex;"><span>  Tag_ABI_align_preserved: 8-byte, except leaf SP
+</span></span><span style="display:flex;"><span>  Tag_ABI_enum_size: small
+</span></span><span style="display:flex;"><span>  Tag_ABI_optimization_goals: Aggressive Speed
+</span></span><span style="display:flex;"><span>  Tag_CPU_unaligned_access: v6
+</span></span></code></pre></div><h2 id="floating-point-abis-in-practice">
+  Floating Point ABIs in Practice
+  <a class="heading-link" href="#floating-point-abis-in-practice">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>The output of compiling with each ABI can be observed with a simple function
+like the following <code>addf</code> with optimizations turned off to ensure that it is not
+inlined or stripped entirely.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">float</span> __attribute__((optimize(<span style="color:#0ff;font-weight:bold">&#34;O0&#34;</span>))) addf(<span style="color:#fff;font-weight:bold">float</span> a, <span style="color:#fff;font-weight:bold">float</span> b)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> a + b;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>If invoking the compiler directly, you can pass the <code>-mfloat-abi</code> option, but if
+you are leveraging a build system you may need to identify configuration
+specific to the platform. For example, when using
+<a href="https://github.com/zephyrproject-rtos/zephyr">Zephyr</a>, the FPU is enabled by
+setting <code>CONFIG_FPU=y</code>. The option <a href="https://github.com/zephyrproject-rtos/zephyr/blob/6182bc08c9d72e9e9aed8f5cf05a406fbfd25dd8/arch/Kconfig#L1052">depends
+on</a>
+<code>CONFIG_CPU_HAS_FPU</code>, but defaults to <code>false</code> even when an FPU is present.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>config FPU
+</span></span><span style="display:flex;"><span>	bool &#34;Floating point unit (FPU)&#34;
+</span></span><span style="display:flex;"><span>	depends on CPU_HAS_FPU
+</span></span><span style="display:flex;"><span>	help
+</span></span><span style="display:flex;"><span>	  This option enables the hardware Floating Point Unit (FPU), in order to
+</span></span><span style="display:flex;"><span>	  support using the floating point registers and instructions.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	  When this option is enabled, by default, threads may use the floating
+</span></span><span style="display:flex;"><span>	  point registers only in an exclusive manner, and this usually means that
+</span></span><span style="display:flex;"><span>	  only one thread may perform floating point operations.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	  If it is necessary for multiple threads to perform concurrent floating
+</span></span><span style="display:flex;"><span>	  point operations, the &#34;FPU register sharing&#34; option must be enabled to
+</span></span><span style="display:flex;"><span>	  preserve the floating point registers across context switches.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	  Note that this option cannot be selected for the platforms that do not
+</span></span><span style="display:flex;"><span>	  include a hardware floating point unit; the floating point support for
+</span></span><span style="display:flex;"><span>	  those platforms is dependent on the availability of the toolchain-
+</span></span><span style="display:flex;"><span>	  provided software floating point library.
+</span></span></code></pre></div><p>Because the nRF52840 has an FPU, <code>CONFIG_CPU_HAS_FPU</code> is
+<a href="https://github.com/zephyrproject-rtos/zephyr/blob/6182bc08c9d72e9e9aed8f5cf05a406fbfd25dd8/soc/nordic/nrf52/Kconfig#L31">selected</a>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>config SOC_NRF52840
+</span></span><span style="display:flex;"><span>	select CPU_CORTEX_M_HAS_DWT
+</span></span><span style="display:flex;"><span>	select CPU_HAS_FPU
+</span></span></code></pre></div><p>With the FPU being off by default, <code>west build</code> will result in the use of the
+<code>soft</code> ABI.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>west build -p -b nrf52840dk/nrf52840 .
+</span></span></code></pre></div><p>As expected, arguments are passed in GPRs, and the floating point addition
+operation makes a call to the runtime library function <code>__addsf3</code>, which
+implements the operation in software.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>0001a860 &lt;addf&gt;:
+</span></span><span style="display:flex;"><span>   1a860:	b580      	push	{r7, lr}
+</span></span><span style="display:flex;"><span>   1a862:	b082      	sub	sp, #8
+</span></span><span style="display:flex;"><span>   1a864:	af00      	add	r7, sp, #0
+</span></span><span style="display:flex;"><span>   1a866:	6078      	str	r0, [r7, #4]
+</span></span><span style="display:flex;"><span>   1a868:	6039      	str	r1, [r7, #0]
+</span></span><span style="display:flex;"><span>   1a86a:	6839      	ldr	r1, [r7, #0]
+</span></span><span style="display:flex;"><span>   1a86c:	6878      	ldr	r0, [r7, #4]
+</span></span><span style="display:flex;"><span>   1a86e:	f7e5 fc4d 	bl	10c &lt;__addsf3&gt;
+</span></span><span style="display:flex;"><span>   1a872:	4603      	mov	r3, r0
+</span></span><span style="display:flex;"><span>   1a874:	4618      	mov	r0, r3
+</span></span><span style="display:flex;"><span>   1a876:	3708      	adds	r7, #8
+</span></span><span style="display:flex;"><span>   1a878:	46bd      	mov	sp, r7
+</span></span><span style="display:flex;"><span>   1a87a:	bd80      	pop	{r7, pc}
+</span></span></code></pre></div><p>When setting <code>CONFIG_FPU=y</code> and building again, the <code>hard</code> float ABI will be
+used by default, and the floating point arguments will instead be passed to
+<code>addf</code> in floating point registers, then <code>vadd.f32</code> will be used to perform the
+addition.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>0001b5ae &lt;addf&gt;:
+</span></span><span style="display:flex;"><span>   1b5ae:	b480      	push	{r7}
+</span></span><span style="display:flex;"><span>   1b5b0:	b083      	sub	sp, #12
+</span></span><span style="display:flex;"><span>   1b5b2:	af00      	add	r7, sp, #0
+</span></span><span style="display:flex;"><span>   1b5b4:	ed87 0a01 	vstr	s0, [r7, #4]
+</span></span><span style="display:flex;"><span>   1b5b8:	edc7 0a00 	vstr	s1, [r7]
+</span></span><span style="display:flex;"><span>   1b5bc:	ed97 7a01 	vldr	s14, [r7, #4]
+</span></span><span style="display:flex;"><span>   1b5c0:	edd7 7a00 	vldr	s15, [r7]
+</span></span><span style="display:flex;"><span>   1b5c4:	ee77 7a27 	vadd.f32	s15, s14, s15
+</span></span><span style="display:flex;"><span>   1b5c8:	eeb0 0a67 	vmov.f32	s0, s15
+</span></span><span style="display:flex;"><span>   1b5cc:	370c      	adds	r7, #12
+</span></span><span style="display:flex;"><span>   1b5ce:	46bd      	mov	sp, r7
+</span></span><span style="display:flex;"><span>   1b5d0:	f85d 7b04 	ldr.w	r7, [sp], #4
+</span></span><span style="display:flex;"><span>   1b5d4:	4770      	bx	lr
+</span></span></code></pre></div><p>Setting
+<a href="https://github.com/zephyrproject-rtos/zephyr/blob/6182bc08c9d72e9e9aed8f5cf05a406fbfd25dd8/arch/arm/core/Kconfig#L309"><code>CONFIG_FP_SOFTABI=y</code></a>
+will instead result in the use of <code>softfp</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>choice
+</span></span><span style="display:flex;"><span>	prompt &#34;Floating point ABI&#34;
+</span></span><span style="display:flex;"><span>	default FP_HARDABI
+</span></span><span style="display:flex;"><span>	depends on FPU
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>config FP_HARDABI
+</span></span><span style="display:flex;"><span>	bool &#34;Floating point Hard ABI&#34;
+</span></span><span style="display:flex;"><span>	help
+</span></span><span style="display:flex;"><span>	  This option selects the Floating point ABI in which hardware floating
+</span></span><span style="display:flex;"><span>	  point instructions are generated and uses FPU-specific calling
+</span></span><span style="display:flex;"><span>	  conventions.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>config FP_SOFTABI
+</span></span><span style="display:flex;"><span>	bool &#34;Floating point Soft ABI&#34;
+</span></span><span style="display:flex;"><span>	help
+</span></span><span style="display:flex;"><span>	  This option selects the Floating point ABI in which hardware floating
+</span></span><span style="display:flex;"><span>	  point instructions are generated but soft-float calling conventions.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>endchoice
+</span></span></code></pre></div><p>The presence of the flag can be observed by providing the <code>-v</code> flag (i.e. <code>west -v build</code>).</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>-mcpu=cortex-m4  -mthumb  -mabi=aapcs  -mfpu=fpv4-sp-d16  -mfloat-abi=softfp  -mfp16-format=ieee
+</span></span></code></pre></div><p>Finally, the observed output includes the soft calling convention (arguments
+passed in GPRs), but still utilizes the floating point registers and
+instructions within the routine.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>0001b59a &lt;addf&gt;:
+</span></span><span style="display:flex;"><span>   1b59a:	b480      	push	{r7}
+</span></span><span style="display:flex;"><span>   1b59c:	b083      	sub	sp, #12
+</span></span><span style="display:flex;"><span>   1b59e:	af00      	add	r7, sp, #0
+</span></span><span style="display:flex;"><span>   1b5a0:	6078      	str	r0, [r7, #4]
+</span></span><span style="display:flex;"><span>   1b5a2:	6039      	str	r1, [r7, #0]
+</span></span><span style="display:flex;"><span>   1b5a4:	ed97 7a01 	vldr	s14, [r7, #4]
+</span></span><span style="display:flex;"><span>   1b5a8:	edd7 7a00 	vldr	s15, [r7]
+</span></span><span style="display:flex;"><span>   1b5ac:	ee77 7a27 	vadd.f32	s15, s14, s15
+</span></span><span style="display:flex;"><span>   1b5b0:	ee17 3a90 	vmov	r3, s15
+</span></span><span style="display:flex;"><span>   1b5b4:	4618      	mov	r0, r3
+</span></span><span style="display:flex;"><span>   1b5b6:	370c      	adds	r7, #12
+</span></span><span style="display:flex;"><span>   1b5b8:	46bd      	mov	sp, r7
+</span></span><span style="display:flex;"><span>   1b5ba:	f85d 7b04 	ldr.w	r7, [sp], #4
+</span></span><span style="display:flex;"><span>   1b5be:	4770      	bx	lr
+</span></span></code></pre></div><h2 id="bonus-round-dynamically-enabling-the-fpu">
+  Bonus Round: Dynamically Enabling the FPU
+  <a class="heading-link" href="#bonus-round-dynamically-enabling-the-fpu">
+    <i class="fa fa-link" aria-hidden="true" title="Link to heading"></i>
+    <span class="sr-only">Link to heading</span>
+  </a>
+</h2>
+<p>If you read the description of <code>CONFIG_FPU</code> above, you&rsquo;ll notice that it does
+not only allow the configuration of <code>softfp</code> and <code>hard</code> ABIs, it also enables
+the FPU on reset. <code>z_arm_floating_point_init()</code> is <a href="https://github.com/zephyrproject-rtos/zephyr/blob/c4706d71bc4d265c801877b78840886afc5b91c1/arch/arm/core/cortex_m/prep_c.c#L204">called
+from</a>
+<code>z_prep_c()</code> whenever a processor has an FPU (<code>CONFIG_CPU_HAS_FPU</code>), whether it
+is configured to be enabled or not.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span>FUNC_NORETURN <span style="color:#fff;font-weight:bold">void</span> z_prep_c(<span style="color:#fff;font-weight:bold">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	soc_prep_hook();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	relocate_vector_table();
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_CPU_HAS_FPU)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	z_arm_floating_point_init();
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	arch_bss_zero();
+</span></span><span style="display:flex;"><span>	arch_data_copy();
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_ARM_CUSTOM_INTERRUPT_CONTROLLER)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* Invoke SoC-specific interrupt controller initialization */</span>
+</span></span><span style="display:flex;"><span>	z_soc_irq_init();
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	z_arm_interrupt_init();
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* CONFIG_ARM_CUSTOM_INTERRUPT_CONTROLLER */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if CONFIG_ARCH_CACHE
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	arch_cache_init();
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#ifdef CONFIG_NULL_POINTER_EXCEPTION_DETECTION_DWT
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	z_arm_debug_enable_null_pointer_detection();
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	z_cstart();
+</span></span><span style="display:flex;"><span>	CODE_UNREACHABLE;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Depending on the value of <code>CONFIG_FPU</code>, as well as other configuration,
+<code>z_arm_floating_point_init()</code> will setup the FPU accordingly. This is
+accomplished by first clearing the <a href="https://developer.arm.com/documentation/ddi0403/d/System-Level-Architecture/System-Address-Map/System-Control-Space--SCS-/Coprocessor-Access-Control-Register--CPACR">Coprocessor Access Control Register
+(<code>CPACR</code>)</a>,
+then, if <code>CONFIG_FPU=y</code>, setting the CP10 (<code>CPACR_CP10_PRIV_ACCESS</code>) and CP11
+(<code>CPACR_CP11_PRIV_ACCESS</code>) flags to enable the floating point coprocessor. Next,
+the <a href="https://developer.arm.com/documentation/ddi0403/d/System-Level-Architecture/System-Address-Map/System-Control-Space--SCS-/Floating-Point-Context-Control-Register--FPCCR">Floating-Point Context Control Register
+(<code>FPCCR</code>)</a>
+flags for <a href="https://developer.arm.com/documentation/ddi0403/d/System-Level-Architecture/System-Level-Programmers--Model/ARMv7-M-exception-model/Stack-alignment-on-exception-entry">context state stacking
+(<code>ASPEN</code>)</a>
+and <a href="https://developer.arm.com/documentation/ddi0403/d/System-Level-Architecture/System-Level-Programmers--Model/ARMv7-M-exception-model/Stack-alignment-on-exception-entry">lazy context save
+(<code>LSPEN</code>)</a>
+are configured, then the <a href="https://developer.arm.com/documentation/ddi0403/d/Application-Level-Architecture/Application-Level-Programmers--Model/The-optional-Floating-point-extension/Floating-point-Status-and-Control-Register--FPSCR">Floating-point Status and Control Register
+(<code>FPSCR</code>)</a>
+is cleared.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_CPU_HAS_FPU)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span><span style="color:#fff;font-weight:bold">static</span> <span style="color:#fff;font-weight:bold">inline</span> <span style="color:#fff;font-weight:bold">void</span> z_arm_floating_point_init(<span style="color:#fff;font-weight:bold">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * Upon reset, the Co-Processor Access Control Register is, normally,
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * 0x00000000. However, it might be left un-cleared by firmware running
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * before Zephyr boot.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span>	SCB-&gt;CPACR &amp;= (~(CPACR_CP10_Msk | CPACR_CP11_Msk));
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_FPU)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * Enable CP10 and CP11 Co-Processors to enable access to floating
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * point registers.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_USERSPACE)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* Full access */</span>
+</span></span><span style="display:flex;"><span>	SCB-&gt;CPACR |= CPACR_CP10_FULL_ACCESS | CPACR_CP11_FULL_ACCESS;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* Privileged access only */</span>
+</span></span><span style="display:flex;"><span>	SCB-&gt;CPACR |= CPACR_CP10_PRIV_ACCESS | CPACR_CP11_PRIV_ACCESS;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif  </span><span style="color:#007f7f">/* CONFIG_USERSPACE */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * Upon reset, the FPU Context Control Register is 0xC0000000
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * (both Automatic and Lazy state preservation is enabled).
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_MULTITHREADING) &amp;&amp; !defined(CONFIG_FPU_SHARING)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/* Unshared FP registers (multithreading) mode. We disable the
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * automatic stacking of FP registers (automatic setting of
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * FPCA bit in the CONTROL register), upon exception entries,
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * as the FP registers are to be used by a single context (and
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * the use of FP registers in ISRs is not supported). This
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * configuration improves interrupt latency and decreases the
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * stack memory requirement for the (single) thread that makes
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * use of the FP co-processor.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span>	FPU-&gt;FPCCR &amp;= (~(FPU_FPCCR_ASPEN_Msk | FPU_FPCCR_LSPEN_Msk));
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * FP register sharing (multithreading) mode or single-threading mode.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 *
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * Enable both automatic and lazy state preservation of the FP context.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * The FPCA bit of the CONTROL register will be automatically set, if
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * the thread uses the floating point registers. Because of lazy state
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * preservation the volatile FP registers will not be stacked upon
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * exception entry, however, the required area in the stack frame will
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * be reserved for them. This configuration improves interrupt latency.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * The registers will eventually be stacked when the thread is swapped
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * out during context-switch or if an ISR attempts to execute floating
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * point instructions.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span>	FPU-&gt;FPCCR = FPU_FPCCR_ASPEN_Msk | FPU_FPCCR_LSPEN_Msk;
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* CONFIG_FPU_SHARING */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Make the side-effects of modifying the FPCCR be realized
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * immediately.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span>	barrier_dsync_fence_full();
+</span></span><span style="display:flex;"><span>	barrier_isync_fence_full();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/* Initialize the Floating Point Status and Control Register. */</span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if defined(CONFIG_ARMV8_1_M_MAINLINE)
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	<span style="color:#007f7f">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * For ARMv8.1-M with FPU, the FPSCR[18:16] LTPSIZE field must be set
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * to 0b100 for &#34;Tail predication not applied&#34; as it&#39;s reset value
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span>	__set_FPSCR(<span style="color:#ff0;font-weight:bold">4</span> &lt;&lt; FPU_FPDSCR_LTPSIZE_Pos);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#else
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>	__set_FPSCR(<span style="color:#ff0;font-weight:bold">0</span>);
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * Note:
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * The use of the FP register bank is enabled, however the FP context
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * will be activated (FPCA bit on the CONTROL register) in the presence
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * of floating point instructions.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif </span><span style="color:#007f7f">/* CONFIG_FPU */</span><span style="color:#0f0;font-weight:bold">
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#007f7f">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * Upon reset, the CONTROL.FPCA bit is, normally, cleared. However,
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * it might be left un-cleared by firmware running before Zephyr boot.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * We must clear this bit to prevent errors in exception unstacking.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 *
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * Note:
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * In Sharing FP Registers mode CONTROL.FPCA is cleared before switching
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * to main, so it may be skipped here (saving few boot cycles).
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 *
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 * If CONFIG_INIT_ARCH_HW_AT_BOOT is set, CONTROL is cleared at reset.
+</span></span></span><span style="display:flex;"><span><span style="color:#007f7f">	 */</span>
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#if (!defined(CONFIG_FPU) || !defined(CONFIG_FPU_SHARING)) &amp;&amp;                                      \
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">	(!defined(CONFIG_INIT_ARCH_HW_AT_BOOT))
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>
+</span></span><span style="display:flex;"><span>	__set_CONTROL(__get_CONTROL() &amp; (~(CONTROL_FPCA_Msk)));
+</span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#0f0;font-weight:bold"></span>}
+</span></span></code></pre></div><p>Because <code>z_arm_floating_point_init()</code> ensures that the FPU is enabled whenever
+<code>CONFIG_FP_HARDABI=y</code> or <code>CONFIG_FP_SOFTABI=y</code>, executing floating point
+instructions will not trigger an exception. However, if the FPU were to not be
+enabled prior to the execution of a floating point instruction, an <a href="https://developer.arm.com/documentation/ddi0403/d/System-Level-Architecture/System-Level-Programmers--Model/ARMv7-M-exception-model/Fault-behavior">NOCP (No
+Coprocessor) Usage
+Fault</a>
+would be generated. This can be demonstrated by <strong>not</strong> setting <code>CONFIG_FPU</code>,
+then adding the following lines to your <code>CMakeLists.txt</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>list(APPEND TOOLCHAIN_C_FLAGS -mfloat-abi=softfp)
+</span></span><span style="display:flex;"><span>list(APPEND TOOLCHAIN_CXX_FLAGS -mfloat-abi=softfp)
+</span></span></code></pre></div><p>Stepping through the program with GDB, the fault can be observed.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>(gdb) b addf
+</span></span><span style="display:flex;"><span>Breakpoint 1 at 0x1a662: file main.c.
+</span></span><span style="display:flex;"><span>(gdb) c
+</span></span><span style="display:flex;"><span>Continuing.
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Breakpoint 1, addf (a=1.87308763e-40, b=1.09258461e-19) at main.c
+</span></span><span style="display:flex;"><span>141	{
+</span></span><span style="display:flex;"><span>(gdb) s
+</span></span><span style="display:flex;"><span>142	    return a + b;
+</span></span><span style="display:flex;"><span>(gdb) x/i $pc
+</span></span><span style="display:flex;"><span>=&gt; 0x1a66c &lt;addf+10&gt;:	vldr	s14, [r7, #4]
+</span></span><span style="display:flex;"><span>(gdb) s
+</span></span><span style="display:flex;"><span>z_arm_usage_fault () at zephyr/arch/arm/core/cortex_m/fault_s.S:80
+</span></span><span style="display:flex;"><span>80		mrs r0, MSP
+</span></span><span style="display:flex;"><span>(gdb) x/1xh 0xe000ed2a
+</span></span><span style="display:flex;"><span>0xe000ed2a:	0x0008
+</span></span></code></pre></div><p>As expected, the <a href="https://developer.arm.com/documentation/101273/0101/Cortex-M55-Processor-level-components-and-system-registers---Reference-Material/System-Control-and-Implementation-Control-Block/Configurable-Fault-Status-Register/UsageFault-Status-Register">Usage Fault Status Register
+(<code>0xe000ed2a</code>)</a>
+has bit 3 asserted (<code>1000 = 0x0008</code>), which corresponds to the NOCP usage fault.
+However, there is no specific reason why the FPU must be enabled at reset, or
+even enabled continuously. The same sequence of operations could be added to the
+<code>addf</code> function, to &ldquo;just in time&rdquo; enable the FPU.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#fff;font-weight:bold">float</span> __attribute__((optimize(<span style="color:#0ff;font-weight:bold">&#34;O0&#34;</span>))) addf(<span style="color:#fff;font-weight:bold">float</span> a, <span style="color:#fff;font-weight:bold">float</span> b)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    SCB-&gt;CPACR &amp;= (~(CPACR_CP10_Msk | CPACR_CP11_Msk));
+</span></span><span style="display:flex;"><span>    SCB-&gt;CPACR |= CPACR_CP10_PRIV_ACCESS | CPACR_CP11_PRIV_ACCESS;
+</span></span><span style="display:flex;"><span>    FPU-&gt;FPCCR = FPU_FPCCR_ASPEN_Msk | FPU_FPCCR_LSPEN_Msk;
+</span></span><span style="display:flex;"><span>    barrier_dsync_fence_full();
+</span></span><span style="display:flex;"><span>    barrier_isync_fence_full();
+</span></span><span style="display:flex;"><span>    __set_FPSCR(<span style="color:#ff0;font-weight:bold">0</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#fff;font-weight:bold">return</span> a + b;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Recompiling and flashing the nRF52840 results in successful execution of the
+floating point operations in the function. A similar behavior could be
+accomplished by adjusting the usage fault handler to enable the FPU if the NOCP
+bit is set, then returning execution to the instruction that generated the
+fault.</p>
+<p>While there are many reasons why turning the FPU on and off in this manner could
+lead to issues and should be used with extreme caution, there are legitimate use
+cases for limiting the time in which floating point hardware is enabled. We&rsquo;ll
+explore these scenarios and some of the trade-offs between hardware and software
+floating point in a future post.</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2026
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>

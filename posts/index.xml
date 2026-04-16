@@ -6,7 +6,16 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Fri, 10 Apr 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 16 Apr 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Floating Point Fun on Cortex-M Processors</title>
+      <link>https://danielmangum.com/posts/floating-point-cortex-m/</link>
+      <pubDate>Thu, 16 Apr 2026 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/floating-point-cortex-m/</guid>
+      <description>In my recent post on the PSA Crypto API, I demonstrated the use of the API on two different MCUs: the nRF52840 and the ESP32-S3. In the case of the former, the ECDSA signature operation was eventually executed in a closed source library that manages communication between the Arm Cortex-M4 processor and the Arm TrustZone CryptoCell 310 security subsytem. Readers that ventured down the rabbit hole of links in the post may have noticed that there are variants of the nrf_cc310_mbedcrypto libraries for hard-float and soft-float.</description>
+    </item>
+    
     <item>
       <title>PSA Crypto: The P is for Portability</title>
       <link>https://danielmangum.com/posts/psa-crypto-portability/</link>
