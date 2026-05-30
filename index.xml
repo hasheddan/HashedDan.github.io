@@ -6,7 +6,16 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Thu, 16 Apr 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 30 May 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>JLink JTAG Access on the Pinecil</title>
+      <link>https://danielmangum.com/posts/jlink-jtag-pinecil/</link>
+      <pubDate>Sat, 30 May 2026 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/jlink-jtag-pinecil/</guid>
+      <description>It has been more than two years since I bought a Pinecil soldering iron and wrote about soldering the breakout board and accessing the UART. I&amp;rsquo;ve been doing more work with the Pinecil as of late following the addition of upstream support for the Bouffalo Lab BL706 MCU in Zephyr (big shout out to @VynDragon, @will-tm, @josuah, and everyone else who has been contributing to the upstream Bouffalo Lab efforts!).</description>
+    </item>
+    
     <item>
       <title>Floating Point Fun on Cortex-M Processors</title>
       <link>https://danielmangum.com/posts/floating-point-cortex-m/</link>

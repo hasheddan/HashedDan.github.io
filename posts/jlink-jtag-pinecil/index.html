@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  JLink JTAG Access on the Pinecil · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="It has been more than two years since I bought a Pinecil soldering iron and wrote about soldering the breakout board and accessing the UART. I&rsquo;ve been doing more work with the Pinecil as of late following the addition of upstream support for the Bouffalo Lab BL706 MCU in Zephyr (big shout out to @VynDragon, @will-tm, @josuah, and everyone else who has been contributing to the upstream Bouffalo Lab efforts!).">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="JLink JTAG Access on the Pinecil"/>
+<meta name="twitter:description" content="It has been more than two years since I bought a Pinecil soldering iron and wrote about soldering the breakout board and accessing the UART. I&rsquo;ve been doing more work with the Pinecil as of late following the addition of upstream support for the Bouffalo Lab BL706 MCU in Zephyr (big shout out to @VynDragon, @will-tm, @josuah, and everyone else who has been contributing to the upstream Bouffalo Lab efforts!)."/>
+
+<meta property="og:title" content="JLink JTAG Access on the Pinecil" />
+<meta property="og:description" content="It has been more than two years since I bought a Pinecil soldering iron and wrote about soldering the breakout board and accessing the UART. I&rsquo;ve been doing more work with the Pinecil as of late following the addition of upstream support for the Bouffalo Lab BL706 MCU in Zephyr (big shout out to @VynDragon, @will-tm, @josuah, and everyone else who has been contributing to the upstream Bouffalo Lab efforts!)." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/jlink-jtag-pinecil/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2026-05-30T01:41:34-06:00" />
+<meta property="article:modified_time" content="2026-05-30T01:41:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/jlink-jtag-pinecil/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.96ad7294e087b3b0719f71d369346642c5ad661660899f0b35025c5b10a70230.css" integrity="sha256-lq1ylOCHs7Bxn3HTaTRmQsWtZhZgiZ8LNQJcWxCnAjA=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/jlink-jtag-pinecil/">
+              JLink JTAG Access on the Pinecil
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2026-05-30T01:41:34-06:00">
+                May 30, 2026
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              4-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>It has been more than two years since I bought a <a href="https://pine64.com/product/pinecil-smart-mini-portable-soldering-iron/">Pinecil soldering
+iron</a>
+and wrote about <a href="https://danielmangum.com/posts/risc-v-bytes-soldering-pinecil-breakout-board/">soldering the breakout
+board</a>
+and <a href="https://danielmangum.com/posts/risc-v-bytes-accessing-pinecil-uart-picoprobe/">accessing the
+UART</a>.
+I&rsquo;ve been doing more work with the Pinecil as of late following the addition of
+<a href="https://github.com/zephyrproject-rtos/zephyr/pull/94004">upstream support</a> for
+the <a href="https://en.bouffalolab.com/product/?type=detail&amp;id=8">Bouffalo Lab BL706
+MCU</a> in
+<a href="https://zephyrproject.org/">Zephyr</a> (big shout out to
+<a href="https://github.com/VynDragon">@VynDragon</a>,
+<a href="https://github.com/will-tm">@will-tm</a>, <a href="https://github.com/josuah">@josuah</a>,
+and everyone else who has been contributing to the upstream Bouffalo Lab
+efforts!).</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/jlink_jtag_pinecil_0.jpg"
+    alt="jlink-jtag-pinecil-0"
+  />
+</div>
+<p>While accessing the UART is helpful for viewing logs, debug access is critical
+when chasing down early system initialization and driver issues. While there are
+a variety of JTAG probes on the market, I typically reach for my
+<a href="https://www.segger.com/products/debug-probes/j-link/">JLink</a> due to its broad
+compatibilty and robust tooling. In order to connect a JLink to the Pinecil, the
+<a href="https://pine64.com/product/pinecil-break-out-board/">breakout board</a> described
+in my previous posts is required. It includes a 10-pin header for JTAG breakout
+with a 3v3 reference pin, 4 GND pins, and the standard JTAG signals. While there
+are <a href="https://www.segger.com/products/debug-probes/j-link/accessories/adapters/overview/">many
+adapters</a>
+for attaching various debug pinouts to the JLink 20-pin connector, it is easy
+to use female-to-female dupont wires to connect the standard 2.54mm pins on the
+Pinecil breakout and the JLink. The diagram at the top of this post illustrates
+the pin mapping, and the image below shows the wiring with a ribbon cable
+between the wires and the JLink (with female-to-male dupont wires), which can be
+useful to avoid having to reconnect the pins each time if needing to use the
+JLink for other purposes between Pinecil debugging sessions.</p>
+<blockquote>
+<p>If using a ribbon cable, it can be easy to get confused about orientation when
+mapping pins. With the notch upwards, the <code>VTref</code> pin (pin 1 on JLink, see
+white wire below) is in the top left corner of the ribbon cable pinout as it
+needs to mate with the <code>VTref</code> pin in the top right corner of the JLink
+pinout.</p>
+</blockquote>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/jlink_jtag_pinecil_1.jpg"
+    alt="jlink-jtag-pinecil-1"
+  />
+</div>
+<p>After connecting, <code>JLinkExe</code> can be used to verify that the mapping is correct.
+The <code>VTref</code> connection to the breakout board&rsquo;s 3v3 pin should allow the JLink to
+detect the logic voltage level (~ <code>3.3V</code>).</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>JLinkExe
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>SEGGER J-Link Commander V9.28 (Compiled Mar 18 2026 15:27:55)
+</span></span><span style="display:flex;"><span>DLL version V9.28, compiled Mar 18 2026 15:26:49
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Connecting to J-Link via USB...O.K.
+</span></span><span style="display:flex;"><span>Firmware: J-Link V11 compiled Apr  1 2025 10:02:30
+</span></span><span style="display:flex;"><span>Hardware version: V11.00
+</span></span><span style="display:flex;"><span>J-Link uptime (since boot): 0d 00h 00m 02s
+</span></span><span style="display:flex;"><span>S/N: 821010562
+</span></span><span style="display:flex;"><span>License(s): GDB
+</span></span><span style="display:flex;"><span>USB speed mode: High speed (480 MBit/s)
+</span></span><span style="display:flex;"><span>VTref=3.335V
+</span></span></code></pre></div><p>To attach a debugger, such as <code>gdb</code>, <code>JLinkGDBServer</code> can be used to connect to
+the JTAG circuitry on the underlying <a href="https://www.sifive.com/cores/essential-e-series">SiFive E24 core
+complex</a> in the BL706 MCU and
+start a local <code>gdb</code> server on port <code>2331</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>JLinkGDBServer -device E24 -if JTAG
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>SEGGER J-Link GDB Server V9.28 Command Line Version
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>JLinkARM.dll V9.28 (DLL compiled Mar 18 2026 15:26:49)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Command line: -device E24 -if JTAG
+</span></span><span style="display:flex;"><span>-----GDB Server start settings-----
+</span></span><span style="display:flex;"><span>GDBInit file:                  none
+</span></span><span style="display:flex;"><span>GDB Server Listening port:     2331
+</span></span><span style="display:flex;"><span>SWO raw output listening port: 2332
+</span></span><span style="display:flex;"><span>Terminal I/O port:             2333
+</span></span><span style="display:flex;"><span>Accept remote connection:      yes
+</span></span><span style="display:flex;"><span>Generate logfile:              off
+</span></span><span style="display:flex;"><span>Verify download:               off
+</span></span><span style="display:flex;"><span>Init regs on start:            off
+</span></span><span style="display:flex;"><span>Silent mode:                   off
+</span></span><span style="display:flex;"><span>Single run mode:               off
+</span></span><span style="display:flex;"><span>Target connection timeout:     0 ms
+</span></span><span style="display:flex;"><span>------J-Link related settings------
+</span></span><span style="display:flex;"><span>J-Link Host interface:         USB
+</span></span><span style="display:flex;"><span>J-Link script:                 none
+</span></span><span style="display:flex;"><span>J-Link settings file:          none
+</span></span><span style="display:flex;"><span>------Target related settings------
+</span></span><span style="display:flex;"><span>Target device:                 E24
+</span></span><span style="display:flex;"><span>Target device parameters:      none
+</span></span><span style="display:flex;"><span>Target interface:              JTAG
+</span></span><span style="display:flex;"><span>Target interface speed:        4000kHz
+</span></span><span style="display:flex;"><span>Target endian:                 little
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Connecting to J-Link...
+</span></span><span style="display:flex;"><span>J-Link is connected.
+</span></span><span style="display:flex;"><span>Firmware: J-Link V11 compiled Apr  1 2025 10:02:30
+</span></span><span style="display:flex;"><span>Hardware: V11.00
+</span></span><span style="display:flex;"><span>S/N: 821010562
+</span></span><span style="display:flex;"><span>Feature(s): GDB
+</span></span><span style="display:flex;"><span>Checking target voltage...
+</span></span><span style="display:flex;"><span>Target voltage: 3.30 V
+</span></span><span style="display:flex;"><span>Listening on TCP/IP port 2331
+</span></span><span style="display:flex;"><span>Connecting to target...
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>J-Link found 1 JTAG device, Total IRLen = 5
+</span></span><span style="display:flex;"><span>JTAG ID: 0x20000E05 (RISC-V)
+</span></span><span style="display:flex;"><span>Halting core...
+</span></span><span style="display:flex;"><span>RISC-V RV32 detected. Using RV32 register set for communication with GDB
+</span></span><span style="display:flex;"><span>Core implements single precision FPU
+</span></span><span style="display:flex;"><span>Connected to target
+</span></span><span style="display:flex;"><span>Waiting for GDB connection...
+</span></span></code></pre></div><p>The following <code>gdb</code> command can be used to connect to the server and load the
+firmware symbols.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>gdb -ex &#39;target remote :2331&#39; ./path/to/firmware.elf
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Remote debugging using :2331
+</span></span><span style="display:flex;"><span>arch_irq_unlock (key=8) at /home/hasheddan/code/github.com/zephyrproject-rtos/zephyr/include/zephyr/arch/riscv/arch.h:338
+</span></span><span style="display:flex;"><span>338		__asm__ volatile (&#34;csrs &#34; RV_STATUS_CSR &#34;, %0&#34;
+</span></span></code></pre></div><p>From there you can start stepping through instructions.</p>
+<p>Happy debugging!</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2026
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
