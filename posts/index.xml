@@ -6,7 +6,17 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sat, 30 May 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 27 Jul 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Leadership Lessons from The Odyssey</title>
+      <link>https://danielmangum.com/posts/odyssey-leadership-lessons/</link>
+      <pubDate>Mon, 27 Jul 2026 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/odyssey-leadership-lessons/</guid>
+      <description>Disclaimer: this post contains spoilers for Christopher Nolan&amp;rsquo;s 2026 depiction of The Odyssey. If you are planning to watch the movie, I would recommend doing so prior to reading, even if you are already familiar with the story.
+I&amp;rsquo;ve spent most of my career leading teams, including serving as CTO at Golioth prior to our acquisition by Canonical. Over the years I&amp;rsquo;ve tried to commit a significant portion of my time to listening to feedback from individuals on those teams, reflecting on my own decisions and motivations, and seeking advice and guidance from those who have been successful leaders.</description>
+    </item>
+    
     <item>
       <title>JLink JTAG Access on the Pinecil</title>
       <link>https://danielmangum.com/posts/jlink-jtag-pinecil/</link>
