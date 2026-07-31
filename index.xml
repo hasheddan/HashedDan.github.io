@@ -6,7 +6,16 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 27 Jul 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 31 Jul 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>The Simple Elegance of the Integrated Timing Belt Loopback Fastener</title>
+      <link>https://danielmangum.com/posts/integrated-timing-belt-loopback-fastener/</link>
+      <pubDate>Fri, 31 Jul 2026 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/integrated-timing-belt-loopback-fastener/</guid>
+      <description>I&amp;rsquo;ve recently been working on a mechatronics project that involves constructing an X-Y cartesian motion system. I opted to use stepper motors to drive each axis, and timing belts and pulleys for translating the rotational torque of the steppers into linear motion. The timing belts need to be anchored to the component that is being actuated, which in this case is the carriage on the linear rails. Though matching toothed clamps exist, it is common, particularly in DIY projects, for timing belts to be fastened using zip ties or custom clips.</description>
+    </item>
+    
     <item>
       <title>Leadership Lessons from The Odyssey</title>
       <link>https://danielmangum.com/posts/odyssey-leadership-lessons/</link>
