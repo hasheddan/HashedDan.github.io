@@ -6,7 +6,17 @@
     <description>Recent content on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Fri, 31 Jul 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 24 Aug 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Farewell Golioth... and Hello Nordic!</title>
+      <link>https://danielmangum.com/posts/farewell-golioth-hello-nordic/</link>
+      <pubDate>Mon, 24 Aug 2026 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/farewell-golioth-hello-nordic/</guid>
+      <description>Friday was my last day at Golioth (and Canonical), and today is my first day at Nordic Semiconductor! It has been an interesting journey to say the least, but before diving into what drew me to Nordic, I would be remiss not to briefly reflect on my time at Golioth.
+I joined Golioth after a few years at Upbound, where I spent the majority of my time working on the open source Crossplane project, before eventually moving over to lead teams that built Upbound Cloud and the Upbound Marketplace.</description>
+    </item>
+    
     <item>
       <title>The Simple Elegance of the Integrated Timing Belt Loopback Fastener</title>
       <link>https://danielmangum.com/posts/integrated-timing-belt-loopback-fastener/</link>
