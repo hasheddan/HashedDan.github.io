@@ -6,7 +6,16 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Mon, 24 Aug 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 18 Sep 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>When the Debugger Lies</title>
+      <link>https://danielmangum.com/posts/when-the-debugger-lies/</link>
+      <pubDate>Fri, 18 Sep 2026 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/when-the-debugger-lies/</guid>
+      <description>I&amp;rsquo;ve spent the last few weeks working with the security architecture of the nRF54L series from Nordic Semiconductor (in case you missed it, I recently joined Nordic!). While doing so, I have engaged my typical low-level learning technique of eschewing writing firmware for manually poking at registers using the debugger. A few nights ago I found myself observing unexpected values in memory when working with the key management unit. It turned out to be a familiar issue, but one that requires an understanding of the internal system on chip (SoC) components, and how the debugger interacts with them, to diagnose.</description>
+    </item>
+    
     <item>
       <title>Farewell Golioth... and Hello Nordic!</title>
       <link>https://danielmangum.com/posts/farewell-golioth-hello-nordic/</link>
