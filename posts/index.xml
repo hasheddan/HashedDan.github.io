@@ -6,7 +6,16 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Fri, 18 Sep 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 07 Oct 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>What&#39;s on that Access Port?</title>
+      <link>https://danielmangum.com/posts/whats-on-that-access-port/</link>
+      <pubDate>Wed, 07 Oct 2026 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/whats-on-that-access-port/</guid>
+      <description>In my last post, I wrote about debugging the Nordic Semiconductor nRF54LM20 when a peripheral, specifically the Key Management Unit (KMU), writes directly to memory while the CPU is halted. Or I should really say that I wrote about debugging the application core (Cortex-M33), as the nRF54LM20 also has a RISC-V coprocessor (VPR) referred to as the Fast Lightweight Peripheral Processor (FLPR). Around the time that Nordic announced the VPR core, I wrote two posts; one about its architecture and the other about how communication works between it and an application core.</description>
+    </item>
+    
     <item>
       <title>When the Debugger Lies</title>
       <link>https://danielmangum.com/posts/when-the-debugger-lies/</link>

@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  What&#39;s on that Access Port? · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="In my last post, I wrote about debugging the Nordic Semiconductor nRF54LM20 when a peripheral, specifically the Key Management Unit (KMU), writes directly to memory while the CPU is halted. Or I should really say that I wrote about debugging the application core (Cortex-M33), as the nRF54LM20 also has a RISC-V coprocessor (VPR) referred to as the Fast Lightweight Peripheral Processor (FLPR). Around the time that Nordic announced the VPR core, I wrote two posts; one about its architecture and the other about how communication works between it and an application core.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="What&#39;s on that Access Port?"/>
+<meta name="twitter:description" content="In my last post, I wrote about debugging the Nordic Semiconductor nRF54LM20 when a peripheral, specifically the Key Management Unit (KMU), writes directly to memory while the CPU is halted. Or I should really say that I wrote about debugging the application core (Cortex-M33), as the nRF54LM20 also has a RISC-V coprocessor (VPR) referred to as the Fast Lightweight Peripheral Processor (FLPR). Around the time that Nordic announced the VPR core, I wrote two posts; one about its architecture and the other about how communication works between it and an application core."/>
+
+<meta property="og:title" content="What&#39;s on that Access Port?" />
+<meta property="og:description" content="In my last post, I wrote about debugging the Nordic Semiconductor nRF54LM20 when a peripheral, specifically the Key Management Unit (KMU), writes directly to memory while the CPU is halted. Or I should really say that I wrote about debugging the application core (Cortex-M33), as the nRF54LM20 also has a RISC-V coprocessor (VPR) referred to as the Fast Lightweight Peripheral Processor (FLPR). Around the time that Nordic announced the VPR core, I wrote two posts; one about its architecture and the other about how communication works between it and an application core." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/whats-on-that-access-port/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2026-10-07T01:41:34-06:00" />
+<meta property="article:modified_time" content="2026-10-07T01:41:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/whats-on-that-access-port/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.7eb906735c986306997653e3c0f049b4c53e1ab1f240f25728f2c1c67d31cd61.css" integrity="sha256-frkGc1yYYwaZdlPjwPBJtMU&#43;GrHyQPJXKPLBxn0xzWE=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/whats-on-that-access-port/">
+              What&#39;s on that Access Port?
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2026-10-07T01:41:34-06:00">
+                October 7, 2026
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              9-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>In my <a href="https://danielmangum.com/posts/when-the-debugger-lies/">last post</a>, I
+wrote about debugging the <a href="https://www.nordicsemi.com/">Nordic Semiconductor</a>
+<a href="https://www.nordicsemi.com/Products/nRF54LM20B">nRF54LM20</a> when a peripheral,
+specifically the <a href="https://docs.nordicsemi.com/r/bundle/ps_nrf54lm20a/page/kmu.html">Key Management Unit
+(KMU)</a>, writes
+directly to memory while the CPU is halted. Or I should really say that I wrote
+about debugging the application core
+(<a href="https://en.wikipedia.org/wiki/ARM_Cortex-M#Cortex-M33">Cortex-M33</a>), as the
+nRF54LM20 also has a RISC-V coprocessor (VPR) referred to as the <a href="https://nrfconnectdocs.nordicsemi.com/ncs/latest/nrf/app_dev/device_guides/nrf54l/vpr_flpr.html">Fast
+Lightweight Peripheral Processor
+(FLPR)</a>.
+Around the time that Nordic announced the VPR core, I wrote two posts; one about
+<a href="https://danielmangum.com/posts/vpr-nordic-risc-v-processor/">its architecture</a>
+and the other about <a href="https://danielmangum.com/posts/vpr-arm-risc-v-inter-processor/">how communication
+works</a> between
+it and an application core.</p>
+<p>In the latter VPR post, I attached to the application core with GDB and
+<code>JLinkGDBServer</code> in the same manner that I did in my recent KMU exploration post
+in order to step through the communication protocol. This strategy was
+appropriate for the operations described in the respective posts, but in some
+cases it may be desirable to connect to the VPR core for debugging.</p>
+<p>Typically, silicon vendors will provide tooling, or work with open source
+projects, to make it easy to designate the core you want to connect to at a
+higher level of abstraction. For example, Nordic products have robust suport in
+the <a href="https://www.zephyrproject.org/">Zephyr RTOS</a> ecosystem, and <a href="https://docs.zephyrproject.org/latest/develop/west/index.html">Zephyr&rsquo;s meta
+CLI</a>, <code>west</code>, can
+be used to build (<code>west build</code>) and flash (<code>west flash</code>) firmware on all chips.
+<code>west</code> supports building and flashing <a href="https://docs.zephyrproject.org/latest/develop/west/build-flash-debug.html#sysbuild-multi-domain-builds">multiple
+images</a>
+in one operation using <a href="https://docs.zephyrproject.org/latest/build/sysbuild/index.html">System Build
+(Sysbuild)</a>.
+Each build system managed by Sysbuild is referred to as a domain, and the
+<code>--domain</code> flag can be used to perform the specified operation for only the
+specified domain.</p>
+<p>While we typically want to target all domains when building and flashing, <code>west debug</code> is a great example of how the <code>--domain</code> flag can be useful. For example,
+if we were building the Zephyr <code>blinky</code> sample for the nRF54LM20, using the FLPR
+for GPIO control via Nordic&rsquo;s <a href="https://nrfconnectdocs.nordicsemi.com/ncs/latest/nrf/applications/hpf/hpf.html">High Performance Framework
+(HPF)</a>
+(stay tuned for a future post on HPF), we would use the following command to
+build the <code>blinky</code> application for the application core and the GPIO application
+for the FLPR core.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp nrf/samples/zephyr/basic/blinky -- -DSB_CONFIG_HPF=y -DSB_CONFIG_HPF_GPIO=y -DSB_CONFIG_HPF_GPIO_BACKEND_ICMSG=y -DEXTRA_DTC_OVERLAY_FILE=&#34;./boards/nrf54lm20dk_nrf54lm20b_cpuapp_hpf_gpio.overlay&#34;
+</span></span></code></pre></div><p>In the resulting <code>build/</code> directory, we would see a top-level <code>domains.yaml</code>
+file with the following contents.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="font-weight:bold">default</span>: blinky
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">build_dir</span>: &lt;local-path&gt;/build
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">domains</span>:
+</span></span><span style="display:flex;"><span>  - <span style="font-weight:bold">name</span>: blinky
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">build_dir</span>: &lt;local-application-path&gt;/build/blinky
+</span></span><span style="display:flex;"><span>  - <span style="font-weight:bold">name</span>: hpf_gpio
+</span></span><span style="display:flex;"><span>    <span style="font-weight:bold">build_dir</span>: &lt;local-application-path&gt;/build/hpf_gpio
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">flash_order</span>:
+</span></span><span style="display:flex;"><span>  - blinky
+</span></span><span style="display:flex;"><span>  - hpf_gpio
+</span></span></code></pre></div><p>Issuing a <code>west flash</code> command would flash both of the images onto the device,
+but because we can only debug one core at a time, <code>west debug</code> with no flags
+would target the <code>default</code> domain (<code>blinky</code>) and connect to the application
+core. Specifying <code>hpf_gpio</code> would instead connect to the FLPR.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>west debug --domain hpf_gpio
+</span></span></code></pre></div><blockquote>
+<p>If you prefer a graphical UX, you could leverage this same functionality via
+Nordic&rsquo;s <a href="https://www.nordicsemi.com/Products/Development-tools/nRF-Connect-for-VS-Code">VSCode
+tooling</a>,
+as described in this
+<a href="https://devzone.nordicsemi.com/nordic/nordic-blog/b/blog/posts/debugging-applications-that-use-the-riscv-coprocessor-of-the-nrf54l-series">post</a>
+by my Nordic coworker <a href="https://www.linkedin.com/in/sebasti%C3%A1n-viviani-6569487/">Sebastian
+Viviani</a>.</p>
+</blockquote>
+<p>Behind the scenes, Zephyr includes board support files that help <code>west</code> know how
+to setup the debugging connection. If we were to look in each specific domain&rsquo;s
+<code>build/&lt;domain&gt;/zephyr/</code> directory, we would find a <code>runners.yaml</code> file. For
+example, the <code>hpf_gpio</code> domain in the previous build includes the following
+contents.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#007f7f"># Available runners configured by board.cmake.</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">runners</span>:
+</span></span><span style="display:flex;"><span>- nrfutil
+</span></span><span style="display:flex;"><span>- jlink
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007f7f"># Default flash runner if --runner is not given.</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">flash-runner</span>: nrfutil
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007f7f"># Default debug runner if --runner is not given.</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">debug-runner</span>: jlink
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007f7f"># Common runner configuration values.</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">config</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">board_dir</span>: &lt;local-application-path&gt;/zephyr/boards/nordic/nrf54lm20dk
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f"># Build outputs:</span>
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">elf_file</span>: zephyr.elf
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">hex_file</span>: zephyr.hex
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">bin_file</span>: zephyr.bin
+</span></span><span style="display:flex;"><span>  <span style="color:#007f7f"># Host tools:</span>
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">gdb</span>: &lt;local-zephyr-sdk-path&gt;/zephyr-sdk-1.0.1/gnu/riscv64-zephyr-elf/bin/riscv64-zephyr-elf-gdb
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">openocd</span>: &lt;local-zephyr-sdk-path&gt;/zephyr-sdk-1.0.1/hosttools/usr/bin/openocd
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">openocd_search</span>:
+</span></span><span style="display:flex;"><span>    - &lt;local-zephyr-sdk-path&gt;/zephyr-sdk-1.0.1/hosttools/opt/openocd/share/openocd/scripts
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007f7f"># Runner specific arguments</span>
+</span></span><span style="display:flex;"><span><span style="font-weight:bold">args</span>:
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">nrfutil</span>:
+</span></span><span style="display:flex;"><span>    []
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="font-weight:bold">jlink</span>:
+</span></span><span style="display:flex;"><span>    - --dt-flash=y
+</span></span><span style="display:flex;"><span>    - --device=nRF54LM20A_RV32
+</span></span><span style="display:flex;"><span>    - --speed=4000
+</span></span></code></pre></div><p>If we were to look at the <a href="https://github.com/zephyrproject-rtos/zephyr/tree/894020886d647a5f9b8a58bdf2cb8c211a62716b/boards/nordic/nrf54lm20dk">nRF54LM20 DK board support
+files</a>
+in the Zephyr source tree, we would find the following CMake snippet.</p>
+<p><code>boards/nordic/nrf54lm20dk/board.cmake</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>if(CONFIG_SOC_NRF54LM20A_CPUAPP OR CONFIG_SOC_NRF54LM20B_CPUAPP)
+</span></span><span style="display:flex;"><span>  board_runner_args(jlink &#34;--device=nRF54LM20A_M33&#34; &#34;--speed=4000&#34;)
+</span></span><span style="display:flex;"><span>elseif(CONFIG_SOC_NRF54LM20A_CPUFLPR OR CONFIG_SOC_NRF54LM20B_CPUFLPR)
+</span></span><span style="display:flex;"><span>  board_runner_args(jlink &#34;--device=nRF54LM20A_RV32&#34; &#34;--speed=4000&#34;)
+</span></span><span style="display:flex;"><span>endif()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>if(CONFIG_TFM_FLASH_MERGED_BINARY)
+</span></span><span style="display:flex;"><span>  set_property(TARGET runners_yaml_props_target PROPERTY hex_file tfm_merged.hex)
+</span></span><span style="display:flex;"><span>endif()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>include(${ZEPHYR_BASE}/boards/common/nrfutil.board.cmake)
+</span></span><span style="display:flex;"><span>include(${ZEPHYR_BASE}/boards/common/jlink.board.cmake)
+</span></span></code></pre></div><p>The <code>args.jlink</code> flags at the bottom of the <code>runners.yaml</code> file are sourced from
+these <code>board_runner_args()</code> CMake macros, and they are passed to
+<code>JLinkGDBServer</code> when invoking <code>west debug</code> for the corresponding domain.
+Because J-Link has <a href="https://kb.segger.com/Nordic_Semiconductor_nRF54Lxx">native multi-core
+support</a> for the nRF54L
+series, the <code>--device</code> flag can be used to tell <code>JLinkGDBServer</code> to consult its
+internal database for information on how to connect to each of the respective
+cores.</p>
+<blockquote>
+<p>If the debugger is not already knowledgeable of the SoC architecture, it may
+be necessary to provide more detailed information. For example, see the
+nRF54H20 <a href="https://github.com/zephyrproject-rtos/zephyr/blob/653d367889f55dbcf6d4bc09cc7dbf97894a4251/boards/nordic/nrf54h20dk/support/nrf54h20_cpuapp.JLinkScript">J-Link
+script</a>
+for connecting to the application core.</p>
+</blockquote>
+<p>In fact, if we were to connect to the FLPR core on the nRF54LM20 using <code>JLinkExe -device nRF54LM20A_RV32</code> directly, we would see the following sequence of lines
+in the initial output.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Found SW-DP with ID 0x6BA02477
+</span></span><span style="display:flex;"><span>RISC-V behind DAP detected
+</span></span><span style="display:flex;"><span>DPIDR: 0x6BA02477
+</span></span><span style="display:flex;"><span>CoreSight SoC-400 or earlier
+</span></span><span style="display:flex;"><span>AP[1] (AHB-AP) specified by user as debug AP.
+</span></span><span style="display:flex;"><span>AP map scan skipped.
+</span></span><span style="display:flex;"><span>AP map:
+</span></span><span style="display:flex;"><span>  AP[0]: AHB-AP, APAddr = 0x00000000
+</span></span><span style="display:flex;"><span>  AP[1]: AHB-AP, APAddr = 0x01000000
+</span></span><span style="display:flex;"><span>  AP[2]: MEM-AP, APAddr = 0x02000000
+</span></span><span style="display:flex;"><span>Core base addr: 0x5004C400 (user configured)
+</span></span></code></pre></div><p>In my nRF54LM20 KMU post, I included the following diagram from the nRF54LM20
+datasheet that describes the debug architecture, including the three Access
+Ports (APs) that are available via the Debug Access Port (DAP).</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/debugger_lies_1.png"
+    alt="access-port-0"
+  />
+</div>
+<p>The datasheet also includes a table describing the functionality of each access
+port.</p>
+
+
+
+
+
+<table class="center-table">
+<thead>
+<tr>
+<th style="text-align:center">AP ID</th>
+<th style="text-align:center">Type</th>
+<th style="text-align:center">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">0</td>
+<td style="text-align:center">AHB-AP</td>
+<td style="text-align:center">CM33 access port</td>
+</tr>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:center">AHB-AP</td>
+<td style="text-align:center">AUX access port</td>
+</tr>
+<tr>
+<td style="text-align:center">2</td>
+<td style="text-align:center">CTRL-AP</td>
+<td style="text-align:center">Control access port</td>
+</tr>
+</tbody>
+</table>
+
+
+<p>As observed in the <code>JLinkExe</code> output, it opts to forego scanning the access port
+map in favor of connecting directly to the second
+<a href="https://support.arm.com/documentation/100536/0302/Debug-Access-Port/AHB-AP">AHB-AP</a>
+(<code>AP[1]</code>), which it knows to be the access port for the RISC-V FLPR core. If
+instead invoking <code>JLinkExe -device nRF54LM20A_M33</code> to debug the Cortex-M33
+application core, the following output would be observed.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Found SW-DP with ID 0x6BA02477
+</span></span><span style="display:flex;"><span>DPIDR: 0x6BA02477
+</span></span><span style="display:flex;"><span>CoreSight SoC-400 or earlier
+</span></span><span style="display:flex;"><span>AP map detection skipped. Manually configured AP map found.
+</span></span><span style="display:flex;"><span>AP[0]: AHB-AP (IDR: Not set, ADDR: 0x00000000)
+</span></span><span style="display:flex;"><span>AP[1]: APB-AP (IDR: Not set, ADDR: 0x00000000)
+</span></span><span style="display:flex;"><span>AP[2]: MEM-AP (IDR: Not set, ADDR: 0x00000000)
+</span></span><span style="display:flex;"><span>Iterating through AP map to find AHB-AP to use
+</span></span><span style="display:flex;"><span>AP[0]: Core found
+</span></span><span style="display:flex;"><span>AP[0]: AHB-AP ROM base: 0xE00FE000
+</span></span><span style="display:flex;"><span>CPUID register: 0x411FD210. Implementer code: 0x41 (ARM)
+</span></span></code></pre></div><p>In this case the J-Link once again reports that the AP map is known, but instead
+of selecting an access port immediately, it iterates through the map looking for
+the Cortex-M33 core. While the underlying logic is hidden in the closed source
+<code>JLinkArm.dll</code> library that underlies most J-Link tooling, it is likely that the
+default behavior for Arm cores, even those on devices known to the J-Link, is to
+leverage the information offered by the <a href="https://support.arm.com/documentation/ihi0031/h">Arm Debug Interface
+(ADI)</a> to discover the core and
+its capabilities.</p>
+<p>The ADI specifies the architecture of a Debug Access Port (DAP), which consists
+of a <a href="https://support.arm.com/documentation/ihi0031/a/Overview-of-the-ARM-Debug-Interface-and-its-components/The-external-interface--the-Debug-Port--DP-">Debug Port
+(DP)</a>
+and one or more <a href="https://support.arm.com/documentation/ihi0031/a/Overview-of-the-ARM-Debug-Interface-and-its-components/The-resource-interface--the-Access-Ports--APs-">Access Ports
+(APs)</a>.</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/access_port_1.png"
+    alt="access-port-1"
+  />
+</div>
+<p>There are multiple types of debug ports: <a href="https://support.arm.com/documentation/ihi0031/a/The-JTAG-Debug-Port--JTAG-DP-">JTAG
+(JTAG-DP)</a>,
+<a href="https://support.arm.com/documentation/ihi0031/a/The-Serial-Wire-Debug-Port--SW-DP-">Serial Wire
+(SW-DP)</a>,
+and Serial Wire / JTAG (SWJ-DP). Likewise, there are multiple types of access
+ports, with the Advanced High-performance Bus Access Port (AHB-AP) itself being
+a type of <a href="https://support.arm.com/documentation/ihi0031/a/The-Memory-Access-Port--MEM-AP-">Memory Access Port
+(MEM-AP)</a>,
+and the Control Access Port (CTRL-AP) being a custom AP implementation by
+Nordic. There are a minimum set of registers for DPs and APs respectively, which
+must be provided by any implementation. The following diagram outlines the
+interaction between the DP and MEM-APs (and thus AHB-APs).</p>
+
+
+
+<div class="center-img">
+  <img
+    src="../../static/access_port_2.png"
+    alt="access-port-2"
+  />
+</div>
+<p>This diagram gives a hint to how a debug probe, such as the J-Link, may go about
+discovering the access ports that are available on a given DAP, even if the SoC
+is not already known. The first relevant register is the DP&rsquo;s AP Select
+(<code>SELECT</code>) register (highlighted in the DP registers above). It can be used to
+select an access port (<code>APSEL</code>) and the register bank (<code>APBANKSEL</code>) within the
+access port.</p>
+
+
+
+
+
+<table class="center-table">
+<thead>
+<tr>
+<th style="text-align:center">APSEL</th>
+<th style="text-align:center">RES0</th>
+<th style="text-align:center">APBANKSEL</th>
+<th style="text-align:center">DPBANKSEL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">XXXXXXXX</td>
+<td style="text-align:center">XXXXXXXXXXXXXXXX</td>
+<td style="text-align:center">XXXX</td>
+<td style="text-align:center">XXXX</td>
+</tr>
+<tr>
+<td style="text-align:center">[31:24]</td>
+<td style="text-align:center">[23:8]</td>
+<td style="text-align:center">[7:4]</td>
+<td style="text-align:center">[3:0]</td>
+</tr>
+</tbody>
+</table>
+
+
+<p>If the value in the <code>APSEL</code> bits does not correspond to an access port on the
+DAP, the ADI defines the following behavior.</p>
+<blockquote>
+<p>If there is no AP with the ID APSEL, all AP transactions
+return zero on reads and are ignored on writes.</p>
+</blockquote>
+<p>After successfully selecting an access port, the AP&rsquo;s <a href="https://support.arm.com/documentation/ihi0031/a/Access-Port--AP--Registers-Overview-and-the-Common-AP-Register/The-common-Access-Port-register--the-IDR/The-Identification-Register--IDR">identification
+register</a>
+(<code>IDR</code>) (highlighted in the MEM-AP registers above), which is the only register
+that must be implemented by all APs, can be used to understand the attributes of
+the AP. It is always the last register in the AP register space, located at
+<code>0xFC</code>.</p>
+
+
+
+
+
+<table class="center-table">
+<thead>
+<tr>
+<th style="text-align:center">Revision</th>
+<th style="text-align:center">Designer</th>
+<th style="text-align:center">Class</th>
+<th style="text-align:center">RES0</th>
+<th style="text-align:center">Variant</th>
+<th style="text-align:center">Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">XXXX</td>
+<td style="text-align:center">XXXXXXXXXXX</td>
+<td style="text-align:center">XXXX</td>
+<td style="text-align:center">XXXXX</td>
+<td style="text-align:center">XXXX</td>
+<td style="text-align:center">XXXX</td>
+</tr>
+<tr>
+<td style="text-align:center">[31:28]</td>
+<td style="text-align:center">[27:17]</td>
+<td style="text-align:center">[16:13]</td>
+<td style="text-align:center">[12:8]</td>
+<td style="text-align:center">[7:4]</td>
+<td style="text-align:center">[3:0]</td>
+</tr>
+</tbody>
+</table>
+
+
+<p>For the most part, debuggers hide the specific reads and writes to DP and AP
+registers behind higher levels of abstractions, such as reading a memory address
+or advancing the program counter of a CPU. However, J-Link does support lower
+level commands to read and write directly to DPs (<code>ReadDP</code> / <code>WriteDP</code>) and APs
+(<code>ReadAP</code> / <code>WriteAP</code>). If you wanted to manually scan the AP map, you could use
+the following sequence of commands.</p>
+<p>Write to DP register <code>2</code> (<code>SELECT</code>), setting the <code>APSEL</code> value to <code>0</code> and the
+<code>APBANKSEL</code> value to <code>0xF</code>, which will allow for targeting the <code>IDR</code> register
+(<code>0xFC</code>) on subsequent AP reads.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>J-Link&gt; WriteDP 2 0x000000F0
+</span></span><span style="display:flex;"><span>Writing DP register 2 = 0x000000F0 (0 write repetitions needed)
+</span></span></code></pre></div><p>Read AP register <code>3</code> (<code>IDR</code> in bank <code>0xF</code>).</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>J-Link&gt; ReadAP 3
+</span></span><span style="display:flex;"><span>Reading AP register 3 = 0x84770001 (0 read repetitions needed)
+</span></span></code></pre></div><p>The resulting value (<code>0x84770001</code>) can be decoded to provide information about
+the AP, which we already know to be an AHB-AP.</p>
+
+
+
+
+
+<table class="center-table">
+<thead>
+<tr>
+<th style="text-align:center">Revision</th>
+<th style="text-align:center">Designer</th>
+<th style="text-align:center">Class</th>
+<th style="text-align:center">RES0</th>
+<th style="text-align:center">Variant</th>
+<th style="text-align:center">Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">1000</td>
+<td style="text-align:center">01000111011</td>
+<td style="text-align:center">1000</td>
+<td style="text-align:center">00000</td>
+<td style="text-align:center">0000</td>
+<td style="text-align:center">0001</td>
+</tr>
+<tr>
+<td style="text-align:center">Revision 8</td>
+<td style="text-align:center">Arm Limited</td>
+<td style="text-align:center">Mem-AP</td>
+<td style="text-align:center">RESERVED</td>
+<td style="text-align:center">-</td>
+<td style="text-align:center">AMBA AHB3 bus</td>
+</tr>
+</tbody>
+</table>
+
+
+<p>Issuing the same sequence of commands with <code>APSEL</code> set to <code>1</code> once again informs
+us that the second access port is also an AHB-AP.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>J-Link&gt; WriteDP 2 0x010000F0
+</span></span><span style="display:flex;"><span>Writing DP register 2 = 0x010000F0 (0 write repetitions needed)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>J-Link&gt; ReadAP 3
+</span></span><span style="display:flex;"><span>Reading AP register 3 = 0x84770001 (0 read repetitions needed)
+</span></span></code></pre></div><p>However, reading the third access port (<code>2</code>), returns a different <code>IDR</code> value.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>J-Link&gt; WriteDP 2 0x020000F0
+</span></span><span style="display:flex;"><span>Writing DP register 2 = 0x020000F0 (0 write repetitions needed)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>J-Link&gt; ReadAP 3
+</span></span><span style="display:flex;"><span>Reading AP register 3 = 0x32880000 (0 read repetitions needed)
+</span></span></code></pre></div><p>This is expected given that the third AP is a Nordic CTRL-AP (<code>0x32880000</code>).
+Decoding the fields in the register, we can identity Nordic&rsquo;s <a href="https://github.com/openocd-org/openocd/blob/8da0578d7bce3e134821ccf10911182788debc32/src/helper/jep106.inc#L332">JEDEC
+manufacturing
+code</a>
+in the <code>DESIGNER</code> field, as <a href="https://docs.nordicsemi.com/r/bundle/ps_nrf54lm20a/page/ctrl-ap.html-register.idr">specified in the nRF54LM20
+datasheet</a>.</p>
+
+
+
+
+
+<table class="center-table">
+<thead>
+<tr>
+<th style="text-align:center">Revision</th>
+<th style="text-align:center">Designer</th>
+<th style="text-align:center">Class</th>
+<th style="text-align:center">RES0</th>
+<th style="text-align:center">Variant</th>
+<th style="text-align:center">Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">0011</td>
+<td style="text-align:center">00101000100</td>
+<td style="text-align:center">0000</td>
+<td style="text-align:center">00000</td>
+<td style="text-align:center">0000</td>
+<td style="text-align:center">0000</td>
+</tr>
+<tr>
+<td style="text-align:center">Revision 3</td>
+<td style="text-align:center">Nordic VLSI ASA</td>
+<td style="text-align:center">Undefined</td>
+<td style="text-align:center">RESERVED</td>
+<td style="text-align:center">-</td>
+<td style="text-align:center">CTRL-AP</td>
+</tr>
+</tbody>
+</table>
+
+
+<p>An attempt to select a fourth access port (<code>3</code>) results in a read of the <code>IDR</code>
+register returning <code>0x00000000</code>, indicating that we have likely reached the end
+of the AP map.</p>
+<p>Though silicon vendors will typically make understanding the low level details
+of the debug interface extraneous, having at least cursory knowledge of how a
+debugger enables you to access and control various components of an SoC can be
+useful. Direct DP and AP register accesses may be necessary in the event that
+you are reverse engineering an unknown chip, authoring your own debug tooling,
+or attempting to verify the security state of your product.</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2026
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
