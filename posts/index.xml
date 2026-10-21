@@ -6,7 +6,17 @@
     <description>Recent content in Posts on Daniel Mangum</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Wed, 07 Oct 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 21 Oct 2026 01:41:34 -0600</lastBuildDate><atom:link href="https://danielmangum.com/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Your MCU Likely Escaped the eMudhra Intermediate CA Compromise</title>
+      <link>https://danielmangum.com/posts/mcu-emudhra-intermediate-ca-compromise/</link>
+      <pubDate>Wed, 21 Oct 2026 01:41:34 -0600</pubDate>
+      
+      <guid>https://danielmangum.com/posts/mcu-emudhra-intermediate-ca-compromise/</guid>
+      <description>If you are a software engineer, or generally work in the tech industry, there is a good chance that you heard about the eMudhra Intermediate CA Compromise that was disclosed yesterday (October 20, 2026). If you don&amp;rsquo;t, you may have noticed an uptick in software updates for various products that you use.
+I won&amp;rsquo;t go through the entire background of the situation as there are plenty of other posts, including the now public bug report from Mozilla, that describe the details of the compromise.</description>
+    </item>
+    
     <item>
       <title>What&#39;s on that Access Port?</title>
       <link>https://danielmangum.com/posts/whats-on-that-access-port/</link>

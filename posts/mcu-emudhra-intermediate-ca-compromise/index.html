@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>
+  Your MCU Likely Escaped the eMudhra Intermediate CA Compromise · Daniel Mangum
+</title>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+
+
+
+
+<meta name="author" content="Daniel Mangum">
+<meta name="description" content="If you are a software engineer, or generally work in the tech industry, there is a good chance that you heard about the eMudhra Intermediate CA Compromise that was disclosed yesterday (October 20, 2026). If you don&rsquo;t, you may have noticed an uptick in software updates for various products that you use.
+I won&rsquo;t go through the entire background of the situation as there are plenty of other posts, including the now public bug report from Mozilla, that describe the details of the compromise.">
+<meta name="keywords" content="blog,developer,personal">
+
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:image" content="https://danielmangum.com/images/twitter-card.png"/>
+
+<meta name="twitter:title" content="Your MCU Likely Escaped the eMudhra Intermediate CA Compromise"/>
+<meta name="twitter:description" content="If you are a software engineer, or generally work in the tech industry, there is a good chance that you heard about the eMudhra Intermediate CA Compromise that was disclosed yesterday (October 20, 2026). If you don&rsquo;t, you may have noticed an uptick in software updates for various products that you use.
+I won&rsquo;t go through the entire background of the situation as there are plenty of other posts, including the now public bug report from Mozilla, that describe the details of the compromise."/>
+
+<meta property="og:title" content="Your MCU Likely Escaped the eMudhra Intermediate CA Compromise" />
+<meta property="og:description" content="If you are a software engineer, or generally work in the tech industry, there is a good chance that you heard about the eMudhra Intermediate CA Compromise that was disclosed yesterday (October 20, 2026). If you don&rsquo;t, you may have noticed an uptick in software updates for various products that you use.
+I won&rsquo;t go through the entire background of the situation as there are plenty of other posts, including the now public bug report from Mozilla, that describe the details of the compromise." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://danielmangum.com/posts/mcu-emudhra-intermediate-ca-compromise/" /><meta property="og:image" content="https://danielmangum.com/images/twitter-card.png"/><meta property="article:section" content="posts" />
+<meta property="article:published_time" content="2026-10-21T01:41:34-06:00" />
+<meta property="article:modified_time" content="2026-10-21T01:41:34-06:00" />
+
+
+
+
+<link rel="canonical" href="https://danielmangum.com/posts/mcu-emudhra-intermediate-ca-compromise/">
+
+
+<link rel="preload" href="https://danielmangum.com/fonts/forkawesome-webfont.woff2?v=1.2.0" as="font" type="font/woff2" crossorigin>
+
+
+  
+  
+  <link rel="stylesheet" href="https://danielmangum.com/css/coder.min.36f76aaf39a14ecf5c3a3c6250dcaf06c238b3d8365d17d646f95cb1874e852b.css" integrity="sha256-NvdqrzmhTs9cOjxiUNyvBsI4s9g2XRfWRvlcsYdOhSs=" crossorigin="anonymous" media="screen" />
+
+
+
+
+
+
+  
+    
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/coder-dark.min.216e36d3eaf6f4cdfd67dc1200c49a8169e6478102977b3e9ac51a064c57054c.css" integrity="sha256-IW420&#43;r29M39Z9wSAMSagWnmR4ECl3s&#43;msUaBkxXBUw=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+ 
+  
+    
+    <link rel="stylesheet" href="https://danielmangum.com/css/custom.min.7eb906735c986306997653e3c0f049b4c53e1ab1f240f25728f2c1c67d31cd61.css" integrity="sha256-frkGc1yYYwaZdlPjwPBJtMU&#43;GrHyQPJXKPLBxn0xzWE=" crossorigin="anonymous" media="screen" />
+  
+
+
+
+
+
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-32x32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="https://danielmangum.com/images/favicon-16x16.png" sizes="16x16">
+
+<link rel="apple-touch-icon" href="https://danielmangum.com/images/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://danielmangum.com/images/apple-touch-icon.png">
+
+<link rel="manifest" href="https://danielmangum.com/site.webmanifest">
+<link rel="mask-icon" href="https://danielmangum.com/images/safari-pinned-tab.svg" color="#5bbad5">
+
+
+
+
+<meta name="generator" content="Hugo 0.111.3">
+
+
+
+
+
+  </head>
+
+
+
+
+
+
+<body class="preload-transitions colorscheme-auto">
+  
+<div class="float-container">
+    <a id="dark-mode-toggle" class="colorscheme-toggle">
+        <i class="fa fa-adjust fa-fw" aria-hidden="true"></i>
+    </a>
+</div>
+
+
+  <main class="wrapper">
+    <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://danielmangum.com/">
+      Daniel Mangum
+    </a>
+    
+      <input type="checkbox" id="menu-toggle" />
+      <label class="menu-button float-right" for="menu-toggle">
+        <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+      </label>
+      <ul class="navigation-list">
+        
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/categories/risc-v-bytes/">[RISC-V Bytes]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/risc-v-tips/">[RISC-V Tips]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/posts/">[Blog]</a>
+            </li>
+          
+            <li class="navigation-item">
+              <a class="navigation-link" href="https://danielmangum.com/about/">[About]</a>
+            </li>
+          
+        
+        
+      </ul>
+    
+  </section>
+</nav>
+
+
+    <div class="content">
+      
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">
+            <a class="title-link" href="https://danielmangum.com/posts/mcu-emudhra-intermediate-ca-compromise/">
+              Your MCU Likely Escaped the eMudhra Intermediate CA Compromise
+            </a>
+          </h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fa fa-calendar" aria-hidden="true"></i>
+              <time datetime="2026-10-21T01:41:34-06:00">
+                October 21, 2026
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fa fa-clock-o" aria-hidden="true"></i>
+              7-minute read
+            </span>
+          </div>
+          
+          
+          
+        </div>
+      </header>
+
+      <div class="post-content">
+        
+        <p>If you are a software engineer, or generally work in the tech industry, there is
+a good chance that you heard about the <a href="https://emudhra.we-have-a-problem.com/">eMudhra Intermediate CA
+Compromise</a> that was <a href="https://groups.google.com/a/mozilla.org/g/dev-security-policy/c/0R3XLJL6FuE?pli=1">disclosed
+yesterday</a>
+(October 20, 2026). If you don&rsquo;t, you may have noticed an uptick in software
+updates for various products that you use.</p>
+<p>I won&rsquo;t go through the entire background of the situation as there are plenty of
+other posts, including the <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2083449">now public bug
+report</a> from Mozilla, that
+describe the details of the compromise. However, I have had a number of folks
+reach out regarding the impact on IoT devices, specifically microcontroller
+(MCU) class devices. Some of them may have been motivated by the discourse
+around the compromise, such as <a href="https://bsky.app/profile/swtch.com/post/3mydfmedrrc2d">Russ Cox&rsquo;s Bluesky
+post</a>, which included the
+following sentence.</p>
+<blockquote>
+<p>IOT boxes that can&rsquo;t or don&rsquo;t update are now trivially MITM&rsquo;able forever.</p>
+</blockquote>
+<p>Scott Helme&rsquo;s
+<a href="https://scotthelme.co.uk/eight-bits-of-trust-emudhras-ca-keys-cracked-in-milliseconds/">post</a>,
+which is at the top of Hacker News as of writing, also included a strong
+warning.</p>
+<blockquote>
+<p><strong>IoT, embedded and OT devices.</strong> Cameras, routers, cars, medical devices,
+smart appliances, payment terminals and industrial controllers phoning home
+for commands and updates. Their bundles are frozen until 2039, which is the
+&ldquo;cannot be contained&rdquo; point made real.</p>
+</blockquote>
+<p>IoT is a tricky moniker these days. If you consider a single board computer,
+like a Raspberry Pi (or really anything running Linux), to be an IoT device,
+then there is a good chance that the aforementioned assertions are correct. You
+hopefully have an OTA update solution for these devices, and <strong>you should update
+them as soon as possible</strong>. On the other hand, if you have a fleet of MCUs, you
+probably are not (directly) impacted by the compromise. In order to understand
+why, it is necessary to have at least a cursory understanding of public key
+infrastructure (PKI), and specifically web PKI.</p>
+<p>On the device you are reading this post on, there is a bundle of root
+certificate authority (CA) certificates. In fact, there are almost certainly
+multiple CA certificate bundles because your platform (i.e. operating system)
+ships a bundle, and your browser might as well. Mozilla has maintained a
+dedicated <a href="https://wiki.mozilla.org/CA">CA Certificate Program</a> since the
+<a href="https://blog.mozilla.org/security/2019/02/14/why-does-mozilla-maintain-our-own-root-certificate-store/">initial launch of
+Firefox</a>,
+and Chrome followed suit when it <a href="https://blog.chromium.org/2022/09/announcing-launch-of-chrome-root-program.html">announced its root program in
+2022</a>.
+These root certificates are &ldquo;trust anchors&rdquo; that allow internet services that
+you communicate with to prove that they are who they say they are. Every website
+that you navigate to over HTTPS in your browser is verifying its identity by
+presenting one or more certificates that can be traced back to one of the CA
+certificates in the client&rsquo;s bundle. For example, when you visited this blog
+post, the server that hosts it presented your browser with the following
+certificate chain.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Certificate chain
+</span></span><span style="display:flex;"><span> 0 s:CN=danielmangum.com
+</span></span><span style="display:flex;"><span>   i:C=US, O=Let&#39;s Encrypt, CN=YR1
+</span></span><span style="display:flex;"><span>   a:PKEY: RSA, 2048 (bit); sigalg: sha256WithRSAEncryption
+</span></span><span style="display:flex;"><span>   v:NotBefore: Aug 24 08:02:52 2026 GMT; NotAfter: Nov 22 08:02:51 2026 GMT
+</span></span><span style="display:flex;"><span> 1 s:C=US, O=Let&#39;s Encrypt, CN=YR1
+</span></span><span style="display:flex;"><span>   i:C=US, O=ISRG, CN=Root YR
+</span></span><span style="display:flex;"><span>   a:PKEY: RSA, 2048 (bit); sigalg: sha256WithRSAEncryption
+</span></span><span style="display:flex;"><span>   v:NotBefore: Sep  3 00:00:00 2025 GMT; NotAfter: Sep  2 23:59:59 2028 GMT
+</span></span><span style="display:flex;"><span> 2 s:C=US, O=ISRG, CN=Root YR
+</span></span><span style="display:flex;"><span>   i:C=US, O=Internet Security Research Group, CN=ISRG Root X1
+</span></span><span style="display:flex;"><span>   a:PKEY: RSA, 4096 (bit); sigalg: sha256WithRSAEncryption
+</span></span><span style="display:flex;"><span>   v:NotBefore: May 13 00:00:00 2026 GMT; NotAfter: Sep  2 23:59:59 2032 GMT
+</span></span></code></pre></div><p>You can use <code>openssl s_client -showcerts -verify 5 -connect danielmangum.com:443</code> to see it for yourself.</p>
+<p>The first certificate (<code>danielmangum.com</code>) specifies that it is signed by the
+second (<code>YR1</code>), and the second by the third (<code>Root YR</code>). The third specifies its
+issuer as <code>ISRG Root X1</code>, which is the <em>very</em> popular Let&rsquo;s Encrypt root CA
+certificate that is present in
+<a href="https://chromium.googlesource.com/chromium/src/+/main/net/data/ssl/chrome_root_store/root_store.md">every</a>
+<a href="https://ccadb.my.salesforce-sites.com/mozilla/IncludedRootCertificateReport">major</a>
+<a href="https://support.apple.com/en-us/126047">trust</a>
+<a href="https://ccadb.my.salesforce-sites.com/microsoft/IncludedCACertificateReportForMSFT">store</a>.
+Because <code>ISRG Root X1</code> is present in your trust store and the server sent you
+the necessary set of certificates to establish a chain of trust to that trusted
+root, you can be confident that you are in fact talking to <code>danielmangum.com</code>.
+Let&rsquo;s Encrypt has a <a href="https://letsencrypt.org/certificates/">helpful diagram</a>
+describing this chain of trust.</p>
+<p>While establishing a secure connection to this site specifically may not be
+critical, this system is what allows us to perform sensitive operations, such as
+sending private messages, managing our bank accounts, and paying for items with
+a credit card without fear of an attacker stealing the data. In the eMudhra
+compromise, eight intermediate CA certificates, similar to <code>Root YR</code> and <code>YR1</code>
+above, had their private keys accessible on the public internet. The private
+keys also happened to be extremely weak, with the top 376 bits of the P-384 keys
+being all zeroes. One of the private keys was literally the number <code>4</code>
+(<code>00000100</code>). This means that someone with even moderate technical capabilities
+could easily issue themselves a leaf certificate (like <code>danielmangum.com</code>), then
+present the leaf and the intermediate, and it would be trusted by every trust
+store that included eMudhra&rsquo;s root CA certificate. Unfortunately, that included
+all the same major root programs.</p>
+<p>Some clients, namely browsers, also require that a leaf certificate be included
+in a <a href="https://certificate.transparency.dev/">certificate transparency (CT) log</a>
+in order to be trusted. This has allowed for the major browsers to <a href="https://emudhra.we-have-a-problem.com/#cause">assert with
+relative confidence</a> that users of
+their software were not impacted, whereas other software very well may have
+been.</p>
+<blockquote>
+<p>The private keys for the intermediate certificates were incorrectly generated
+by the CA. This means that anyone can recover them from the certificates.</p>
+</blockquote>
+<blockquote>
+<p>This would have been possible since the certificates were created in April
+2025. There are no entries in the certificate transparency logs for these
+intermediates in that period, indicating that CT-enforcing clients like
+Firefox, Chrome, Edge and Safari could not have been attacked.</p>
+</blockquote>
+<blockquote>
+<p>However, many clients outside of the browser ecosystem do not enforce
+Certificate Transparency. We do not know if attackers exploited the flawed key
+generation to target these clients.</p>
+</blockquote>
+<p>The disclosure of this compromise led to a mad dash across <a href="https://groups.google.com/g/golang-announce/c/66pojueaQek">programming
+languages</a>,
+<a href="https://github.com/astral-sh/uv/releases/tag/0.13.4">developer tools</a>, <a href="https://bugs.launchpad.net/ubuntu/+source/ca-certificates/+bug/2171507">OS
+packages</a>,
+and essentially any software involved with establishing a <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security">TLS
+connection</a>, to either
+filter for these compromised intermediates, or reject the eMudhra root CA
+certificate entirely. To say the issue is widespread would be an understatement.</p>
+<p>So why are MCUs unlikely to be impacted? In short, because of resource
+constraints. While including a bundle, or multiple bundles, of
+<a href="https://en.wikipedia.org/wiki/X.509">X.509</a> certificates on a server, desktop
+machine, or even a single board computer has trivial impact (what&rsquo;s a few
+kilobytes among friends?), we have to be much more judicious when targeting
+devices that often have less than, sometimes much less than, 1 MB of
+non-volatile storage. Furthermore, rather than relying on an OS or browser
+vendor to go through the painstaking process of evaluating and monitoring
+candidate root CA certificates, we are typically responsible for the entire
+system, either building bare metal applications or leveraging lightweight Real
+Time Operating Systems (RTOS).</p>
+<p>For example, the <a href="https://github.com/zephyrproject-rtos/zephyr/tree/1405adc9a6042353ff791573d913fa6b202580a6/samples/net/sockets/http_get">HTTP
+GET</a>
+sample in the <a href="https://github.com/zephyrproject-rtos/zephyr">Zephyr RTOS</a>
+connects to <code>google.com</code>. Its trust chain looks as follows.</p>
+<div class="highlight"><pre tabindex="0" style="color:#e5e5e5;background-color:#000;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-fallback" data-lang="fallback"><span style="display:flex;"><span>Certificate chain
+</span></span><span style="display:flex;"><span> 0 s:CN=*.google.com
+</span></span><span style="display:flex;"><span>   i:C=US, O=Google Trust Services, CN=WE2
+</span></span><span style="display:flex;"><span>   a:PKEY: EC, (prime256v1); sigalg: ecdsa-with-SHA256
+</span></span><span style="display:flex;"><span>   v:NotBefore: Sep 28 18:38:33 2026 GMT; NotAfter: Dec 21 18:38:32 2026 GMT
+</span></span><span style="display:flex;"><span> 1 s:C=US, O=Google Trust Services, CN=WE2
+</span></span><span style="display:flex;"><span>   i:C=US, O=Google Trust Services LLC, CN=GTS Root R4
+</span></span><span style="display:flex;"><span>   a:PKEY: EC, (prime256v1); sigalg: ecdsa-with-SHA384
+</span></span><span style="display:flex;"><span>   v:NotBefore: Dec 13 09:00:00 2023 GMT; NotAfter: Feb 20 14:00:00 2029 GMT
+</span></span><span style="display:flex;"><span> 2 s:C=US, O=Google Trust Services LLC, CN=GTS Root R4
+</span></span><span style="display:flex;"><span>   i:C=BE, O=GlobalSign nv-sa, OU=Root CA, CN=GlobalSign Root CA
+</span></span><span style="display:flex;"><span>   a:PKEY: EC, (secp384r1); sigalg: sha256WithRSAEncryption
+</span></span><span style="display:flex;"><span>   v:NotBefore: Nov 15 03:43:21 2023 GMT; NotAfter: Jan 28 00:00:42 2028 GMT
+</span></span></code></pre></div><p>Rather than having a generic set of root CA certificates that covers the
+majority of the internet, the sample only includes the <a href="https://github.com/zephyrproject-rtos/zephyr/blob/1405adc9a6042353ff791573d913fa6b202580a6/samples/net/sockets/http_get/src/globalsign_r1.der">single root CA
+certificate</a>
+(<code>GlobalSign R1</code>) that is needed to verify <code>google.com</code>. It is nearly 1 KB (DER
+encoded) on its own, but the size of the certificate is not the only
+consideration. Enabling all signing algorithms, curves, and hashing algorithms
+used throughout the certificate chain can have a significant impact on code size
+as well. Additionally, buffer sizes must be configured to accommodate the full
+chain; the longer the chain, the more memory that needs to be allocated.</p>
+<p>These constraints can lead to frustrating errors and complex debugging sessions.
+However, there is something to be said for building a system that is only
+focused on accomplishing a fixed, well defined set of tasks. When situations
+like the eMudhra compromise arise, I find myself appreciating the inherent
+limitations of these devices and the intention that goes into building the
+firmware that runs on them. Perhaps this event is an opportunity for us to
+evaluate whether some of that intention can be applied in other domains.</p>
+<p>Unless your MCU needs to connect to a server that uses a chain of trust rooted
+in an eMudhra root CA certificate, and you included it (or the <a href="https://emudhra.we-have-a-problem.com/#intermediates">Sectigo root CA
+certfificate used for
+cross-signing</a>) in your
+firmware, your devices are likely safe from this specific vulnerability. Now all
+you have to do is make sure that you patch all of your CI environments,
+developer tooling, cloud services, and productivity software.</p>
+
+      </div>
+
+
+      <footer>
+        
+
+
+        
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+    </div>
+
+    <footer class="footer">
+  <section class="container">
+    ©
+    
+    2026
+     Daniel Mangum 
+    ·
+    
+    Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+  </section>
+</footer>
+
+  </main>
+
+  
+
+  
+  
+  <script src="https://danielmangum.com/js/coder.min.27afce394fb6284f521b3fbc9f6a8326342333c3092267f3944d770489876fed.js" integrity="sha256-J6/OOU&#43;2KE9SGz&#43;8n2qDJjQjM8MJImfzlE13BImHb&#43;0="></script>
+  
+
+  
+
+  
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-116820283-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+</body>
+
+</html>
